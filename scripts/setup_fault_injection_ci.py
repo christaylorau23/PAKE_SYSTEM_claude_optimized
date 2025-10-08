@@ -16,7 +16,7 @@ import pytest
 class FaultInjectionCIRunner:
     """CI runner for fault injection tests"""
 
-    def __init__(self) -> None:
+def __init__(self, test_dir: Any = None) -> None:
         self.test_dir = Path(test_dir)
         self.fault_injection_tests = self.test_dir / "test_fault_injection.py"
         self.config_file = self.test_dir / "fault_injection_config.py"

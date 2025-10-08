@@ -438,7 +438,11 @@ class IssueTrackerFactory:
 class FlakyTestIssueManager:
     """Manager for creating and tracking flaky test issues."""
 
-    def __init__(self, config: IssueTrackerConfig | None = None, template: IssueTemplate | None = None) -> None:
+    def __init__(
+        self,
+        config: IssueTrackerConfig | None = None,
+        template: IssueTemplate | None = None,
+    ) -> None:
         self.config = config or IssueTrackerConfig()
         self.template = template or IssueTemplate()
         self.tracker_factory = IssueTrackerFactory()
@@ -623,7 +627,9 @@ def get_issue_manager() -> FlakyTestIssueManager | None:
     return _issue_manager
 
 
-def configure_issue_tracker(config: IssueTrackerConfig, template: IssueTemplate | None = None) -> None:
+def configure_issue_tracker(
+    config: IssueTrackerConfig, template: IssueTemplate | None = None
+) -> None:
     """Configure the global issue tracker."""
     global _issue_manager
     _issue_manager = FlakyTestIssueManager(config, template)

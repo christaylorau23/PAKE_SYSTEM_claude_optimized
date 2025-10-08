@@ -45,9 +45,9 @@ class WorkerCapability:
 
     name: str
     description: str
-    input_types: List[str]
-    output_types: List[str]
-    performance_metrics: Dict[str, Any]
+    input_types: list[str]
+    output_types: list[str]
+    performance_metrics: dict[str, Any]
 
 
 class BaseWorkerAgent(ABC):
@@ -60,7 +60,13 @@ class BaseWorkerAgent(ABC):
     - Performance tracking
     """
 
-    def __init__(self, worker_id: str | None = None, worker_type: str = "base", message_bus: Any = None, capabilities: List[WorkerCapability] | None = None) -> None:
+    def __init__(
+        self,
+        worker_id: str | None = None,
+        worker_type: str = "base",
+        message_bus: Any = None,
+        capabilities: list[WorkerCapability] | None = None,
+    ) -> None:
         """Initialize base worker agent."""
         self.worker_id = worker_id or f"{worker_type}_{uuid.uuid4().hex[:8]}"
         self.worker_type = worker_type
@@ -144,7 +150,6 @@ class BaseWorkerAgent(ABC):
             try:
                 await self._heartbeat_task
             except asyncio.CancelledError as e:
-
                 logger.debug(f"Exception in base_worker.py: {e}")
 
                 # Continue gracefully
@@ -167,7 +172,7 @@ class BaseWorkerAgent(ABC):
 
         logger.info("Worker %s stopped", self.worker_id)
 
-    async def get_health_status(self) -> Dict[str, Any]:
+    async def get_health_status(self) -> dict[str, Any]:
         """Get worker health status."""
         return {
             "worker_id": self.worker_id,
@@ -183,7 +188,7 @@ class BaseWorkerAgent(ABC):
         }
 
     @abstractmethod
-    async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_task(self, task_data: dict[str, Any]) -> dict[str, Any]:
         """Process task data and return result.
 
         Must be implemented by subclasses to handle specific task types.
@@ -436,17 +441,19 @@ class WorkerCapabilityBuilder:
         self.description = description
         return self
 
-    def with_input_types(self, input_types: List[str]) -> "WorkerCapabilityBuilder":
+    def with_input_types(self, input_types: list[str]) -> "WorkerCapabilityBuilder":
         """Add input types."""
         self.input_types.extend(input_types)
         return self
 
-    def with_output_types(self, output_types: List[str]) -> "WorkerCapabilityBuilder":
+    def with_output_types(self, output_types: list[str]) -> "WorkerCapabilityBuilder":
         """Add output types."""
         self.output_types.extend(output_types)
         return self
 
-    def with_performance_metrics(self, metrics: Dict[str, Any]) -> "WorkerCapabilityBuilder":
+    def with_performance_metrics(
+        self, metrics: dict[str, Any]
+    ) -> "WorkerCapabilityBuilder":
         """Add performance metrics."""
         self.performance_metrics.update(metrics)
         return self

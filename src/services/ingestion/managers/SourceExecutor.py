@@ -34,7 +34,7 @@ class SourceExecutor(SourceExecutorInterface):
         self,
         source: IngestionSource,
         plan: IngestionPlan,
-    ) -> tuple[list[ContentItem], Dict[str, Any]]:
+    ) -> tuple[list[ContentItem], dict[str, Any]]:
         """Execute ingestion for a single source."""
         logger.info(
             "Executing source %s (ID: %s)", source.source_type, source.source_id

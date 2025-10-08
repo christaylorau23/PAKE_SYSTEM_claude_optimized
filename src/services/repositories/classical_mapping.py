@@ -10,9 +10,9 @@ the dependency: the ORM layer depends on the domain model, not the other way aro
 from datetime import datetime
 import logging
 
-import sqlalchemy
-import psycopg2
 import asyncpg
+import psycopg2
+import sqlalchemy
 from sqlalchemy import (
     JSON,
     Boolean,

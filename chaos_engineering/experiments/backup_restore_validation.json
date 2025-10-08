@@ -1,0 +1,102 @@
+{
+  "version": "1.0.0",
+  "title": "PAKE System Backup and Restore Validation",
+  "description": "Tests disaster recovery capability through backup restoration as specified in Section 3.2 of the Engineering Guide",
+  "tags": ["backup", "restore", "disaster-recovery", "rto"],
+  "steady-state-hypothesis": {
+    "title": "Backup system is operational",
+    "probes": [
+      {
+        "type": "probe",
+        "name": "backup-system-healthy",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "probes.system_health_probe",
+          "func": "check_backup_system_health"
+        }
+      },
+      {
+        "type": "probe",
+        "name": "recent-backup-available",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "probes.system_health_probe",
+          "func": "check_recent_backup_available"
+        }
+      }
+    ]
+  },
+  "method": [
+    {
+      "type": "action",
+      "name": "identify-latest-backup",
+      "provider": {
+        "type": "python",
+        "module": "activities.infrastructure_activities",
+        "func": "identify_latest_backup"
+      }
+    },
+    {
+      "type": "action",
+      "name": "provision-restore-environment",
+      "provider": {
+        "type": "python",
+        "module": "activities.infrastructure_activities",
+        "func": "provision_restore_environment"
+      }
+    },
+    {
+      "type": "action",
+      "name": "restore-database-from-backup",
+      "provider": {
+        "type": "python",
+        "module": "activities.database_activities",
+        "func": "restore_database_from_backup"
+      }
+    },
+    {
+      "type": "probe",
+      "name": "measure-restore-time",
+      "provider": {
+        "type": "python",
+        "module": "probes.system_health_probe",
+        "func": "measure_restore_time"
+      },
+      "tolerance": 14400,
+      "timeout": 18000
+    },
+    {
+      "type": "probe",
+      "name": "validate-data-integrity",
+      "provider": {
+        "type": "python",
+        "module": "probes.database_probe",
+        "func": "validate_restored_data_integrity"
+      },
+      "tolerance": true
+    },
+    {
+      "type": "probe",
+      "name": "test-application-functionality",
+      "provider": {
+        "type": "python",
+        "module": "probes.application_probe",
+        "func": "test_application_functionality"
+      },
+      "tolerance": true
+    }
+  ],
+  "rollbacks": [
+    {
+      "type": "action",
+      "name": "cleanup-restore-environment",
+      "provider": {
+        "type": "python",
+        "module": "activities.infrastructure_activities",
+        "func": "cleanup_restore_environment"
+      }
+    }
+  ]
+}

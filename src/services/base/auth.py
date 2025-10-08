@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 """Enterprise Authentication and Security
 Task T039-T045 - Phase 18 Production System Integration.
@@ -12,18 +13,17 @@ import os
 from typing import Any, Dict
 from uuid import UUID, uuid4
 
-import sqlalchemy
-import psycopg2
 import asyncpg
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+import psycopg2
+import sqlalchemy
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, select
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from utils.logger import get_logger
 
 # Security configuration with enterprise secrets management
@@ -149,7 +149,7 @@ class AuthService:
 
     @staticmethod
     def create_access_token(
-        data: Dict[str, Any], expires_delta: timedelta | None = None
+        data: dict[str, Any], expires_delta: timedelta | None = None
     ) -> str:
         """Create JWT access token."""
         to_encode = data.copy()
@@ -162,7 +162,7 @@ class AuthService:
         return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     @staticmethod
-    def create_refresh_token(data: Dict[str, Any]) -> str:
+    def create_refresh_token(data: dict[str, Any]) -> str:
         """Create JWT refresh token."""
         to_encode = data.copy()
         expire = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
@@ -170,7 +170,7 @@ class AuthService:
         return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
     @staticmethod
-    def verify_token(token: str) -> Dict[str, Any]:
+    def verify_token(token: str) -> dict[str, Any]:
         """Verify and decode JWT token."""
         try:
             return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -251,7 +251,9 @@ class SecurityMiddleware:
         return True
 
     @staticmethod
-    async def log_security_event(self, event_type: str, user_id: str, details: str) -> None:
+    async def log_security_event(
+        self, event_type: str, user_id: str, details: str
+    ) -> None:
         """Log security events."""
         # In production, this would log to a security monitoring system
         print(f"Security Event: {event_type} - User: {user_id} - Details: {details}")

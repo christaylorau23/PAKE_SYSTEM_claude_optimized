@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Social Media Distribution Network - Master Integration
@@ -34,7 +35,7 @@ except ImportError as e:
 class SocialMediaMaster:
     """Master controller for the complete social media distribution network"""
 
-    def __init__(self) -> None:
+def __init__(self, config_path: Any = None, config_path: Any = None) -> None:
         """Initialize the master social media system"""
         self.logger = self._setup_logging()
         self.config = self._load_configuration(config_path)
@@ -189,8 +190,8 @@ class SocialMediaMaster:
     async def create_and_optimize_post(
         self,
         content: str,
-        platforms: List[str] = None,
-        media_files: List[str] = None,
+        platforms: list[str] = None,
+        media_files: list[str] = None,
         schedule_time: datetime = None,
         campaign_id: str = None,
     ) -> dict:

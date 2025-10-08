@@ -79,7 +79,7 @@ class TestProductionOrchestrator:
         return manager
 
     @pytest_asyncio.fixture
-    async def production_orchestrator(self) -> None:
+async def production_orchestrator(self, base_config: Any = None, production_config: Any = None, mock_cognitive_engine: Any = None, mock_n8n_manager: Any = None) -> None:
         """Create production orchestrator instance"""
         orchestrator = ProductionIngestionOrchestrator(
             config=base_config,
@@ -95,7 +95,7 @@ class TestProductionOrchestrator:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_initialize_with_real_api_configurations(self) -> None:
+async def test_should_initialize_with_real_api_configurations(self, production_config: Any = None) -> None:
         """
         Test: Should initialize production services with real API endpoints
         and proper authentication.
@@ -356,7 +356,7 @@ class TestProductionOrchestrator:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_monitor_api_health_status(self) -> None:
+async def test_should_monitor_api_health_status(self, production_orchestrator: Any = None) -> None:
         """
         Test: Should continuously monitor API health and update status
         with response times and error tracking.
@@ -378,7 +378,7 @@ class TestProductionOrchestrator:
                 assert isinstance(status.is_healthy, bool)
 
     @pytest.mark.asyncio
-    async def test_should_handle_api_health_check_failures(self) -> None:
+async def test_should_handle_api_health_check_failures(self, production_orchestrator: Any = None) -> None:
         """
         Test: Should gracefully handle API health check failures and
         mark services as unhealthy without crashing.
@@ -491,7 +491,7 @@ class TestProductionOrchestrator:
         assert session1.closed
 
     @pytest.mark.asyncio
-    async def test_should_handle_production_configuration_variations(self) -> None:
+async def test_should_handle_production_configuration_variations(self, base_config: Any = None) -> None:
         """
         Test: Should handle various production configuration combinations
         gracefully including missing API keys.
@@ -523,7 +523,7 @@ class TestProductionOrchestrator:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_extend_base_orchestrator_functionality(self) -> None:
+async def test_should_extend_base_orchestrator_functionality(self, production_orchestrator: Any = None, production_orchestrator: Any = None, production_orchestrator: Any = None, production_orchestrator: Any = None, production_orchestrator: Any = None, production_orchestrator: Any = None) -> None:
         """
         Test: Should properly extend base orchestrator while maintaining
         all existing functionality and adding production features.

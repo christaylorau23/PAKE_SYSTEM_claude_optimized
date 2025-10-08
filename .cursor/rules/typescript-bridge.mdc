@@ -1,0 +1,467 @@
+---
+description: "TypeScript standards for PAKE System Obsidian Bridge. Enforces strict type safety, Express.js patterns, async/await usage, and Node.js v22.18.0 compatibility."
+globs: ["src/bridge/**/*.ts", "src/bridge/**/*.js"]
+alwaysApply: false
+---
+
+# TypeScript Standards for PAKE Obsidian Bridge
+
+You are an expert in TypeScript, Node.js, Express.js, and modern JavaScript development. Your responses MUST produce type-safe, maintainable, and performant TypeScript code.
+
+## 1. Type Safety (CRITICAL)
+
+### Strict Mode
+**MUST**: Use TypeScript strict mode. Configuration is in @src/bridge/tsconfig.json.
+
+**MUST**: Define interfaces for ALL data contracts and API payloads.
+
+```typescript
+// ✅ CORRECT - Explicit interface definitions
+interface NoteData {
+  id?: string;
+  title: string;
+  content: string;
+  type?: string;
+  tags?: string[];
+  confidence_score?: number;
+  source?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  data: T | null;
+  error: string | null;
+  timestamp: string;
+}
+
+// ❌ WRONG - Using 'any' or no types
+function processNote(note: any): any {  // Defeats TypeScript's purpose!
+  ...
+}
+```
+
+**RATIONALE**: TypeScript's type system prevents runtime errors, improves IDE support, and serves as executable documentation. The PAKE Bridge v2.0 uses strict typing throughout.
+
+### Avoid 'any'
+**MUST**: Use specific types or `unknown` instead of `any`.
+
+```typescript
+// ✅ CORRECT - Specific type or unknown
+function parseJson(jsonString: string): unknown {
+  return JSON.parse(jsonString);
+}
+
+function handleError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+// ❌ WRONG - Using 'any'
+function parseJson(jsonString: string): any {  // Type safety lost!
+  return JSON.parse(jsonString);
+}
+```
+
+## 2. Express.js Patterns
+
+### Type-Safe Route Handlers
+**MUST**: Use typed Request, Response, and NextFunction from Express.
+
+```typescript
+// ✅ CORRECT - Typed Express handlers
+import express, { Request, Response, NextFunction, Express } from 'express';
+
+app.post('/notes', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const noteData: NoteData = req.body;
+    // Validate noteData here
+    const result = await createNote(noteData);
+    res.status(201).json({
+      success: true,
+      data: result,
+      error: null,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);  // Pass to error handler
+  }
+});
+
+// ❌ WRONG - Untyped handlers
+app.post('/notes', async (req, res) => {  // No types!
+  const result = await createNote(req.body);
+  res.json(result);
+});
+```
+
+### Middleware Patterns
+**MUST**: Create reusable middleware with proper typing.
+
+```typescript
+// ✅ CORRECT - Typed middleware
+const requestLogger = (req: Request, res: Response, next: NextFunction): void => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path}`);
+
+  // Add request ID for tracing
+  req.headers['x-request-id'] = req.headers['x-request-id'] || uuidv4();
+  res.setHeader('x-request-id', req.headers['x-request-id'] as string);
+
+  next();
+};
+
+app.use(requestLogger);
+```
+
+### Error Handling
+**MUST**: Implement centralized error handling middleware.
+
+```typescript
+// ✅ CORRECT - Centralized error handler
+interface ErrorResponse {
+  success: false;
+  error: string;
+  details?: unknown;
+  timestamp: string;
+}
+
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Error:', err.message);
+
+  const errorResponse: ErrorResponse = {
+    success: false,
+    error: err.message,
+    details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    timestamp: new Date().toISOString()
+  };
+
+  res.status(500).json(errorResponse);
+});
+```
+
+## 3. Async/Await Patterns
+
+### Promise Handling
+**MUST**: Use async/await for ALL asynchronous operations.
+
+**MUST**: Wrap async operations in try-catch blocks.
+
+```typescript
+// ✅ CORRECT - Proper async/await with error handling
+async function loadNote(filePath: string): Promise<NoteData> {
+  try {
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const parsed = matter(fileContent);
+
+    return {
+      title: parsed.data.title,
+      content: parsed.content,
+      tags: parsed.data.tags || [],
+      created_at: parsed.data.created,
+      updated_at: parsed.data.updated
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to load note: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+// ❌ WRONG - Promise chains (harder to read and maintain)
+function loadNote(filePath: string): Promise<NoteData> {
+  return fs.readFile(filePath, 'utf-8')
+    .then(content => matter(content))
+    .then(parsed => ({
+      title: parsed.data.title,
+      content: parsed.content
+    }))
+    .catch(error => {
+      throw new Error(`Failed: ${error.message}`);
+    });
+}
+```
+
+## 4. Node.js v22.18.0 Compatibility
+
+### ES Modules
+**MUST**: Use ES module syntax (import/export), not CommonJS (require).
+
+```typescript
+// ✅ CORRECT - ES modules
+import express from 'express';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+export const createApp = (): Express => {
+  const app = express();
+  // ...
+  return app;
+};
+
+// ❌ WRONG - CommonJS (legacy)
+const express = require('express');
+const fs = require('fs').promises;
+
+module.exports = { createApp };
+```
+
+### Modern JavaScript Features
+**MUST**: Use modern JavaScript features supported by Node.js v22:
+- Optional chaining (`?.`)
+- Nullish coalescing (`??`)
+- Object spread
+- Async iterators
+
+```typescript
+// ✅ CORRECT - Modern syntax
+const port = process.env.PORT ?? 3001;
+const title = noteData?.frontmatter?.title ?? 'Untitled';
+
+// Object spread for immutability
+const updatedNote = {
+  ...existingNote,
+  updated_at: new Date().toISOString()
+};
+
+// ❌ WRONG - Legacy patterns
+const port = process.env.PORT || 3001;  // Fails for PORT=0
+const title = noteData && noteData.frontmatter && noteData.frontmatter.title || 'Untitled';
+```
+
+## 5. File System Operations
+
+### Use Promises API
+**MUST**: Use `fs.promises` or `fs/promises` for async file operations.
+
+**MUST**: Handle file system errors gracefully.
+
+```typescript
+// ✅ CORRECT - Promises API with error handling
+import { promises as fs } from 'fs';
+import path from 'path';
+
+async function ensureDirectory(dirPath: string): Promise<void> {
+  try {
+    await fs.access(dirPath);
+  } catch {
+    await fs.mkdir(dirPath, { recursive: true });
+  }
+}
+
+async function saveNote(noteData: NoteData): Promise<string> {
+  const filePath = path.join(VAULT_PATH, `${noteData.id}.md`);
+
+  try {
+    await ensureDirectory(path.dirname(filePath));
+    await fs.writeFile(filePath, formatNote(noteData), 'utf-8');
+    return filePath;
+  } catch (error) {
+    throw new Error(`Failed to save note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// ❌ WRONG - Callback API (deprecated)
+import fs from 'fs';
+
+fs.writeFile(filePath, content, (err) => {  // Callback hell!
+  if (err) throw err;
+});
+```
+
+## 6. Configuration Management
+
+### Environment Variables
+**MUST**: Use environment variables with fallback values.
+
+**MUST**: Validate configuration at startup.
+
+```typescript
+// ✅ CORRECT - Environment configuration
+interface Config {
+  PORT: number;
+  VAULT_PATH: string;
+  MCP_SERVER_URL: string;
+  MAX_FILE_SIZE: string;
+  LOG_LEVEL: string;
+}
+
+const CONFIG: Config = {
+  PORT: parseInt(process.env.BRIDGE_PORT || '3001', 10),
+  VAULT_PATH: process.env.VAULT_PATH || path.join(__dirname, '..', '..', '..', 'vault'),
+  MCP_SERVER_URL: process.env.MCP_SERVER_URL || 'http://localhost:8000',
+  MAX_FILE_SIZE: '50mb',
+  LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+};
+
+// Validate configuration
+if (!CONFIG.VAULT_PATH) {
+  throw new Error('VAULT_PATH must be configured');
+}
+
+// ❌ WRONG - Hard-coded values
+const PORT = 3001;  // Not configurable!
+const VAULT_PATH = 'D:\\Knowledge-Vault';  // Platform-specific!
+```
+
+## 7. Logging & Monitoring
+
+### Structured Logging
+**MUST**: Use structured logging with context.
+
+```typescript
+// ✅ CORRECT - Structured logging
+function logRequest(req: Request): void {
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level: 'info',
+    event: 'http_request',
+    method: req.method,
+    path: req.path,
+    request_id: req.headers['x-request-id'],
+    user_agent: req.headers['user-agent']
+  }));
+}
+
+// ❌ WRONG - Unstructured logging
+console.log(`Request: ${req.method} ${req.path}`);  // Hard to parse!
+```
+
+### Health Checks
+**MUST**: Implement health check endpoints for monitoring.
+
+```typescript
+// ✅ CORRECT - Health check endpoint
+app.get('/health', (req: Request, res: Response) => {
+  const health = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    service: 'obsidian-bridge',
+    version: '2.0.0'
+  };
+
+  res.status(200).json(health);
+});
+```
+
+## 8. Security Best Practices
+
+### CORS Configuration
+**MUST**: Configure CORS properly with specific origins.
+
+```typescript
+// ✅ CORRECT - Specific CORS configuration
+import cors from 'cors';
+
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// ❌ WRONG - Wildcard CORS
+app.use(cors({ origin: '*' }));  // Security risk!
+```
+
+### Input Validation
+**MUST**: Validate all input data before processing.
+
+```typescript
+// ✅ CORRECT - Input validation
+function validateNoteData(data: unknown): NoteData {
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('Invalid note data: must be an object');
+  }
+
+  const note = data as Partial<NoteData>;
+
+  if (!note.title || typeof note.title !== 'string') {
+    throw new Error('Invalid note data: title is required');
+  }
+
+  if (!note.content || typeof note.content !== 'string') {
+    throw new Error('Invalid note data: content is required');
+  }
+
+  return {
+    title: note.title,
+    content: note.content,
+    tags: Array.isArray(note.tags) ? note.tags : [],
+    type: note.type || 'note'
+  };
+}
+```
+
+## 9. Code Organization
+
+### Module Structure
+**MUST**: Follow clear module boundaries and single responsibility principle.
+
+```typescript
+// routes/notes.ts
+import { Router } from 'express';
+
+export const notesRouter = Router();
+
+notesRouter.get('/', listNotes);
+notesRouter.get('/:id', getNote);
+notesRouter.post('/', createNote);
+notesRouter.put('/:id', updateNote);
+notesRouter.delete('/:id', deleteNote);
+
+// main.ts
+import { notesRouter } from './routes/notes';
+
+app.use('/api/notes', notesRouter);
+```
+
+## 10. Testing
+
+**MUST**: Write tests using Jest with TypeScript.
+
+```typescript
+// ✅ CORRECT - TypeScript tests with Jest
+import request from 'supertest';
+import { app } from '../obsidian_bridge';
+
+describe('Notes API', () => {
+  describe('POST /api/notes', () => {
+    it('should create a new note with valid data', async () => {
+      const noteData: NoteData = {
+        title: 'Test Note',
+        content: 'Test content',
+        tags: ['test']
+      };
+
+      const response = await request(app)
+        .post('/api/notes')
+        .send(noteData)
+        .expect(201);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.title).toBe('Test Note');
+    });
+  });
+});
+```
+
+## Summary: TypeScript Checklist
+
+- [ ] All functions have explicit return types
+- [ ] Interfaces defined for all data structures
+- [ ] No usage of `any` type
+- [ ] Async/await used for all promises
+- [ ] Error handling with try-catch blocks
+- [ ] ES modules (import/export) used
+- [ ] Environment variables with fallbacks
+- [ ] CORS configured with specific origins
+- [ ] Input validation implemented
+- [ ] Structured logging with context
+
+**REMEMBER**: Reference @src/bridge/obsidian_bridge.ts for canonical TypeScript patterns in PAKE Bridge v2.0!

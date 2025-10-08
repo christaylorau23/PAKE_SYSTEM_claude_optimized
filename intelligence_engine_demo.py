@@ -202,14 +202,14 @@ class IntelligenceEngineDemo:
         Path(self.config["demo_data_path"]).mkdir(exist_ok=True)
         Path(self.config["obsidian_vault_path"]).mkdir(exist_ok=True)
 
-    def print_header(self) -> None:
+def print_header(self, level: LogLevel, title: Any = None) -> None:
         """Print formatted header for demo sections."""
         char = "=" if level == 1 else "-"
         print(f"\n{char * 80}")
         print(f"{title.center(80)}")
         print(f"{char * 80}\n")
 
-    def print_result(self) -> None:
+def print_result(self, title: Any = None, data: Any = None, data: Any = None, data: Any = None, max_items: Any = None, data: Any = None, max_items: Any = None, data: Any = None, max_items: Any = None, data: Any = None, data: Any = None, max_items: Any = None, data: Any = None) -> None:
         """Print formatted results."""
         print(f"📊 {title}:")
 

@@ -18,12 +18,12 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 import hashlib
+import json
 import logging
 import time
 from typing import Any, Dict, List
 
 import aiohttp
-import json
 import numpy as np
 import orjson  # Fast JSON parsing
 
@@ -68,7 +68,7 @@ class DataPoint:
     data_type: DataSourceType
     symbol: str | None
     timestamp: datetime
-    data: Dict[str, Any]
+    data: dict[str, Any]
     priority: DataPriority = DataPriority.MEDIUM
     hash_key: str | None = None
 
@@ -88,7 +88,7 @@ class DataStream:
     source_name: str
     data_type: DataSourceType
     endpoint_url: str
-    symbols: List[str]
+    symbols: list[str]
     update_frequency: float  # seconds
     priority: DataPriority
     parser_func: Callable
@@ -120,7 +120,7 @@ class DataIngestionPipeline:
 
         # Data streams configuration
         self.data_streams: dict[str, DataStream] = {}
-        self.active_connections: Dict[str, Any] = {}
+        self.active_connections: dict[str, Any] = {}
 
         # High-performance data queues (priority-based)
         self.data_queues: dict[DataPriority, asyncio.Queue] = {
@@ -454,7 +454,7 @@ class DataIngestionPipeline:
         finally:
             await session.close()
 
-    def _build_api_params(self, stream: DataStream) -> Dict[str, Any]:
+    def _build_api_params(self, stream: DataStream) -> dict[str, Any]:
         """Build API parameters for HTTP requests."""
         params = {}
 
@@ -719,7 +719,7 @@ class DataIngestionPipeline:
             except (ValueError, RuntimeError) as e:
                 logger.error("Error in health monitor: %s", e)
 
-    async def get_metrics(self) -> Dict[str, Any]:
+    async def get_metrics(self) -> dict[str, Any]:
         """Get current pipeline metrics."""
         return {
             "data_points_processed": self.metrics["data_points_processed"],
@@ -734,7 +734,7 @@ class DataIngestionPipeline:
 
     def _parse_alpha_vantage_quote(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         stream: DataStream,
     ) -> DataPoint | None:
         """Parse Alpha Vantage quote data."""
@@ -767,7 +767,7 @@ class DataIngestionPipeline:
 
     def _parse_yahoo_websocket(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         stream: DataStream,
     ) -> DataPoint | None:
         """Parse Yahoo Finance WebSocket data."""
@@ -792,7 +792,7 @@ class DataIngestionPipeline:
 
     def _parse_coinbase_websocket(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         stream: DataStream,
     ) -> DataPoint | None:
         """Parse Coinbase Pro WebSocket data."""
@@ -819,7 +819,7 @@ class DataIngestionPipeline:
 
     def _parse_coingecko_price(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         stream: DataStream,
     ) -> list[DataPoint]:
         """Parse CoinGecko price data."""
@@ -848,7 +848,7 @@ class DataIngestionPipeline:
 
     def _parse_news_api(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         stream: DataStream,
     ) -> list[DataPoint]:
         """Parse NewsAPI data."""
@@ -879,7 +879,7 @@ class DataIngestionPipeline:
 
     def _parse_reddit_posts(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         stream: DataStream,
     ) -> list[DataPoint]:
         """Parse Reddit API data."""
@@ -912,7 +912,7 @@ class DataIngestionPipeline:
 
     def _parse_fred_data(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         stream: DataStream,
     ) -> DataPoint | None:
         """Parse FRED economic data."""

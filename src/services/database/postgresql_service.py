@@ -13,10 +13,10 @@ import uuid
 
 import asyncpg
 from asyncpg import Pool
-import sqlalchemy as sa
-import sqlalchemy.exc
 import psycopg2
+import sqlalchemy as sa
 from sqlalchemy import JSON, UUID, Boolean, DateTime, Integer, String, Text
+import sqlalchemy.exc
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 
@@ -42,7 +42,7 @@ class User(Base):
     full_name: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
-    preferences: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
+    preferences: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -67,12 +67,12 @@ class SearchHistory(Base):
         nullable=True,
     )  # Nullable for anonymous searches
     query: Mapped[str] = mapped_column(Text, nullable=False)
-    sources: Mapped[List[str]] = mapped_column(JSON, nullable=False)
+    sources: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     results_count: Mapped[int] = mapped_column(Integer, default=0)
     execution_time_ms: Mapped[float] = mapped_column(sa.Float)
     cache_hit: Mapped[bool] = mapped_column(Boolean, default=False)
     quality_score: Mapped[float | None] = mapped_column(sa.Float)
-    query_metadata: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
+    query_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
@@ -89,10 +89,10 @@ class SavedSearch(Base):
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     query: Mapped[str] = mapped_column(Text, nullable=False)
-    sources: Mapped[List[str]] = mapped_column(JSON, nullable=False)
-    filters: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
+    sources: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    filters: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     is_public: Mapped[bool] = mapped_column(Boolean, default=False)
-    tags: Mapped[List[str] | None] = mapped_column(JSON)
+    tags: Mapped[list[str] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -113,7 +113,7 @@ class SystemMetrics(Base):
     )
     # 'search_performance', 'cache_stats', etc.
     metric_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    metric_data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    metric_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
@@ -155,9 +155,9 @@ class PostgreSQLService:
         self._async_url = f"postgresql+asyncpg://{self.config.username}:{
             self.config.REDACTED_SECRET
         }@{self.config.host}:{self.config.port}/{self.config.database}"
-        self._sync_url = f"postgresql://{self.config.username}:{self.config.REDACTED_SECRET}@{
-            self.config.host
-        }:{self.config.port}/{self.config.database}"
+        self._sync_url = f"postgresql://{self.config.username}:{
+            self.config.REDACTED_SECRET
+        }@{self.config.host}:{self.config.port}/{self.config.database}"
 
         logger.info("PostgreSQL service initialized")
 
@@ -230,7 +230,7 @@ class PostgreSQLService:
         REDACTED_SECRET_hash: str,
         full_name: str | None = None,
         is_admin: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create a new user."""
         async with self._session_maker() as session:
             user = User(
@@ -247,7 +247,7 @@ class PostgreSQLService:
             logger.info("Created user: %s", username)
             return self._user_to_dict(user)
 
-    async def get_user_by_username(self, username: str) -> Dict[str, Any] | None:
+    async def get_user_by_username(self, username: str) -> dict[str, Any] | None:
         """Get user by username."""
         async with self._session_maker() as session:
             result = await session.execute(
@@ -256,7 +256,7 @@ class PostgreSQLService:
             user = result.scalar_one_or_none()
             return self._user_to_dict(user) if user else None
 
-    async def get_user_by_id(self, user_id: str) -> Dict[str, Any] | None:
+    async def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
         """Get user by ID."""
         async with self._session_maker() as session:
             result = await session.execute(sa.select(User).where(User.id == user_id))
@@ -278,13 +278,13 @@ class PostgreSQLService:
     async def save_search_history(
         self,
         query: str,
-        sources: List[str],
+        sources: list[str],
         results_count: int,
         execution_time_ms: float,
         user_id: str | None = None,
         cache_hit: bool = False,
         quality_score: float | None = None,
-        metadata: Dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Save search to history."""
         async with self._session_maker() as session:
@@ -310,7 +310,7 @@ class PostgreSQLService:
         user_id: str,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get user's search history."""
         async with self._session_maker() as session:
             result = await session.execute(
@@ -327,7 +327,7 @@ class PostgreSQLService:
         self,
         limit: int = 10,
         days: int = 7,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get most popular search queries."""
         since = datetime.now(UTC) - timedelta(days=days)
 
@@ -356,10 +356,10 @@ class PostgreSQLService:
         user_id: str,
         name: str,
         query: str,
-        sources: List[str],
-        filters: Dict[str, Any] | None = None,
+        sources: list[str],
+        filters: dict[str, Any] | None = None,
         is_public: bool = False,
-        tags: List[str] | None = None,
+        tags: list[str] | None = None,
     ) -> str:
         """Save a search query."""
         async with self._session_maker() as session:
@@ -379,7 +379,7 @@ class PostgreSQLService:
             logger.info("Saved search: %s for user %s", name, user_id)
             return saved_search.id
 
-    async def get_user_saved_searches(self, user_id: str) -> list[Dict[str, Any]]:
+    async def get_user_saved_searches(self, user_id: str) -> list[dict[str, Any]]:
         """Get user's saved searches."""
         async with self._session_maker() as session:
             result = await session.execute(
@@ -395,7 +395,7 @@ class PostgreSQLService:
     async def save_system_metrics(
         self,
         metric_type: str,
-        metric_data: Dict[str, Any],
+        metric_data: dict[str, Any],
     ) -> None:
         """Save system performance metrics."""
         async with self._session_maker() as session:
@@ -407,7 +407,7 @@ class PostgreSQLService:
         self,
         metric_type: str,
         hours: int = 24,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get system metrics for analysis."""
         since = datetime.now(UTC) - timedelta(hours=hours)
 
@@ -423,7 +423,7 @@ class PostgreSQLService:
 
     # Analytics Methods
 
-    async def get_search_analytics(self, days: int = 30) -> Dict[str, Any]:
+    async def get_search_analytics(self, days: int = 30) -> dict[str, Any]:
         """Get comprehensive search analytics."""
         since = datetime.now(UTC) - timedelta(days=days)
 
@@ -497,7 +497,7 @@ class PostgreSQLService:
             logger.error("Failed to create user: %s", e)
             return None
 
-    async def get_user_by_username(self, username: str) -> Dict[str, Any] | None:
+    async def get_user_by_username(self, username: str) -> dict[str, Any] | None:
         """Get user by username."""
         try:
             async with self._pool.acquire() as conn:
@@ -514,7 +514,7 @@ class PostgreSQLService:
             logger.error("Failed to get user by username: %s", e)
             return None
 
-    async def get_user_by_email(self, email: str) -> Dict[str, Any] | None:
+    async def get_user_by_email(self, email: str) -> dict[str, Any] | None:
         """Get user by email."""
         try:
             async with self._pool.acquire() as conn:
@@ -531,7 +531,7 @@ class PostgreSQLService:
             logger.error("Failed to get user by email: %s", e)
             return None
 
-    async def get_user_by_id(self, user_id: str) -> Dict[str, Any] | None:
+    async def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
         """Get user by ID."""
         try:
             async with self._pool.acquire() as conn:
@@ -621,7 +621,7 @@ class PostgreSQLService:
 
     # Health Check
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Database health check."""
         try:
             async with self._pool.acquire() as conn:
@@ -651,7 +651,7 @@ class PostgreSQLService:
 
     # Helper Methods
 
-    def _user_to_dict(self, user: User) -> Dict[str, Any]:
+    def _user_to_dict(self, user: User) -> dict[str, Any]:
         """Convert User model to dictionary."""
         return {
             "id": user.id,
@@ -666,7 +666,7 @@ class PostgreSQLService:
             "last_login": user.last_login.isoformat() if user.last_login else None,
         }
 
-    def _search_history_to_dict(self, search: SearchHistory) -> Dict[str, Any]:
+    def _search_history_to_dict(self, search: SearchHistory) -> dict[str, Any]:
         """Convert SearchHistory model to dictionary."""
         return {
             "id": search.id,
@@ -681,7 +681,7 @@ class PostgreSQLService:
             "created_at": search.created_at.isoformat(),
         }
 
-    def _saved_search_to_dict(self, search: SavedSearch) -> Dict[str, Any]:
+    def _saved_search_to_dict(self, search: SavedSearch) -> dict[str, Any]:
         """Convert SavedSearch model to dictionary."""
         return {
             "id": search.id,
@@ -696,7 +696,7 @@ class PostgreSQLService:
             "updated_at": search.updated_at.isoformat(),
         }
 
-    def _system_metrics_to_dict(self, metrics: SystemMetrics) -> Dict[str, Any]:
+    def _system_metrics_to_dict(self, metrics: SystemMetrics) -> dict[str, Any]:
         """Convert SystemMetrics model to dictionary."""
         return {
             "id": metrics.id,

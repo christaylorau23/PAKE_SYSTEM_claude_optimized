@@ -24,7 +24,7 @@ class TestAuthenticationE2EComprehensive:
             yield client
 
     @pytest.fixture
-    async def authenticated_auth_client(self) -> None:
+async def authenticated_auth_client(self, auth_test_client: Any = None) -> None:
         """Create authenticated test client with valid JWT token"""
         # Register a test user
         user_data = {
@@ -512,7 +512,7 @@ class TestAuthenticationE2EComprehensive:
     # ============================================================================
 
     @pytest.mark.e2e_performance
-    async def test_authentication_performance_under_load(self) -> None:
+async def test_authentication_performance_under_load(self, user_data: Any = None, user_data: Any = None, user_data: Any = None) -> None:
         """Test authentication performance under load"""
         import time
 
@@ -531,7 +531,7 @@ class TestAuthenticationE2EComprehensive:
         # Act - Register users concurrently
         start_time = time.time()
 
-        async def register_user(self) -> None:
+async def register_user(self, user_data: Any = None) -> None:
             response = await self.auth_test_client.post("/auth/register", json=user_data)
             return response.status_code == 201
 
@@ -548,7 +548,7 @@ class TestAuthenticationE2EComprehensive:
         # Act - Login users concurrently
         start_time = time.time()
 
-        async def login_user(self) -> None:
+async def login_user(self, user_data: Any = None, user_data: Any = None) -> None:
             login_data = {
                 "username": user_data["username"],
                 "password": user_data["password"],

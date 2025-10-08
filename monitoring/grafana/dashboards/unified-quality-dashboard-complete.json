@@ -1,0 +1,480 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "PAKE System - Unified Quality Dashboard",
+    "description": "Complete implementation of engineering guide Table 1.1 metrics matrix",
+    "tags": ["pake-system", "quality", "engineering", "dashboard"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-7d",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Code Quality - New Code Smells",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sonarqube_new_code_smells_total{severity=\"total\"}",
+            "legendFormat": "New Code Smells"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 3},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "unit": "short",
+            "min": 0,
+            "max": 10
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+        "description": "Target: <5 per PR - Enforces Clean as You Code principle"
+      },
+      {
+        "id": 2,
+        "title": "Code Quality - Duplication on New Code",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sonarqube_new_duplication_percentage",
+            "legendFormat": "Duplication %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 2},
+                {"color": "red", "value": 3}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 10
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+        "description": "Target: <3% - Discourages copy-paste practices"
+      },
+      {
+        "id": 3,
+        "title": "Code Quality - Cognitive Complexity",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sonarqube_cognitive_complexity",
+            "legendFormat": "Complexity"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 10},
+                {"color": "red", "value": 20}
+              ]
+            },
+            "unit": "short",
+            "min": 0,
+            "max": 50
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+        "description": "Target: No increase - Maintains code understandability"
+      },
+      {
+        "id": 4,
+        "title": "Security - Critical Vulnerabilities",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sonarqube_new_critical_vulnerabilities_total",
+            "legendFormat": "New Critical Vulnerabilities"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "red", "value": 1}
+              ]
+            },
+            "unit": "short",
+            "min": 0,
+            "max": 5
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
+        "description": "Target: 0 - Non-negotiable security posture"
+      },
+      {
+        "id": 5,
+        "title": "Security - Security Hotspots",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sonarqube_new_security_hotspots_total",
+            "legendFormat": "New Security Hotspots"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "unit": "short",
+            "min": 0,
+            "max": 10
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 8},
+        "description": "Target: Review Required - Ensures manual review of potential issues"
+      },
+      {
+        "id": 6,
+        "title": "Test Coverage - New Code",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sonarqube_coverage_new_code_percentage",
+            "legendFormat": "New Code Coverage %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 70},
+                {"color": "green", "value": 80}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 8},
+        "description": "Target: >80% - Guarantees adequate testing of new functionality"
+      },
+      {
+        "id": 7,
+        "title": "Test Coverage - Overall Project",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sonarqube_coverage_overall_percentage",
+            "legendFormat": "Overall Coverage %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 60},
+                {"color": "green", "value": 80}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 8},
+        "description": "Target: Trend: Increasing - Tracks progress toward 80% coverage goal"
+      },
+      {
+        "id": 8,
+        "title": "Technical Debt - F821 Errors",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "pake_f821_errors_total",
+            "legendFormat": "F821 Errors"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 200},
+                {"color": "red", "value": 500}
+              ]
+            },
+            "unit": "short",
+            "min": 0,
+            "max": 1000
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8},
+        "description": "Target: <500 (30-day target) - Quantifiable measure of runtime risk elimination"
+      },
+      {
+        "id": 9,
+        "title": "Technical Debt - Security Violations",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "pake_security_violations_total",
+            "legendFormat": "S311/S603/S607 Violations"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 10}
+              ]
+            },
+            "unit": "short",
+            "min": 0,
+            "max": 20
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 16},
+        "description": "Target: <10 (30-day target) - Tracks high-severity security technical debt burndown"
+      },
+      {
+        "id": 10,
+        "title": "CI/CD Health - PR Build Time",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "github_actions_build_duration_seconds",
+            "legendFormat": "Build Time (seconds)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 480},
+                {"color": "red", "value": 600}
+              ]
+            },
+            "unit": "s",
+            "min": 0,
+            "max": 1200
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 16},
+        "description": "Target: <10 mins - Monitors developer feedback loop efficiency"
+      },
+      {
+        "id": 11,
+        "title": "CI/CD Health - Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(github_actions_builds_total{status=\"success\"}[5m]) / rate(github_actions_builds_total[5m]) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 95},
+                {"color": "green", "value": 98}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 16},
+        "description": "Target: >98% - Tracks CI pipeline reliability"
+      },
+      {
+        "id": 12,
+        "title": "Development Velocity - Feature Velocity",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "jira_story_points_completed_total",
+            "legendFormat": "Story Points Completed"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0}
+              ]
+            },
+            "unit": "short",
+            "min": 0
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 16},
+        "description": "Target: Stable or Increasing - Correlates quality initiatives with team productivity"
+      },
+      {
+        "id": 13,
+        "title": "Development Velocity - Bug to Feature Ratio",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(jira_bugs_total[7d]) / rate(jira_features_total[7d])",
+            "legendFormat": "Bug to Feature Ratio"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 0.3},
+                {"color": "red", "value": 0.5}
+              ]
+            },
+            "unit": "short",
+            "min": 0,
+            "max": 1
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 24},
+        "description": "Target: Trend: Decreasing - Measures reactive vs. proactive work ratio"
+      },
+      {
+        "id": 14,
+        "title": "Quality Metrics Trends (7 Days)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sonarqube_new_code_smells_total{severity=\"total\"}",
+            "legendFormat": "New Code Smells"
+          },
+          {
+            "expr": "sonarqube_new_duplication_percentage",
+            "legendFormat": "New Duplication %"
+          },
+          {
+            "expr": "sonarqube_coverage_new_code_percentage",
+            "legendFormat": "New Coverage %"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 6, "y": 24}
+      },
+      {
+        "id": 15,
+        "title": "Security Metrics Trends (7 Days)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sonarqube_new_critical_vulnerabilities_total",
+            "legendFormat": "New Critical Vulnerabilities"
+          },
+          {
+            "expr": "sonarqube_new_security_hotspots_total",
+            "legendFormat": "New Security Hotspots"
+          },
+          {
+            "expr": "pake_security_violations_total",
+            "legendFormat": "Security Violations"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 18, "y": 24}
+      },
+      {
+        "id": 16,
+        "title": "Quality Gates Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sonarqube_new_code_smells_total{severity=\"total\"}",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "sonarqube_new_duplication_percentage",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "sonarqube_new_critical_vulnerabilities_total",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "sonarqube_coverage_new_code_percentage",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32}
+      }
+    ],
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "schemaVersion": 30,
+    "version": 1,
+    "links": []
+  }
+}

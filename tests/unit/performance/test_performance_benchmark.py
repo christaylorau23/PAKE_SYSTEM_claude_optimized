@@ -21,7 +21,7 @@ class TestPerformanceBenchmark:
     """Test suite for Performance Benchmarking System"""
 
     @pytest.fixture
-    def benchmark_config(self) -> None:
+def benchmark_config(self, performance_benchmark_config: Any = None) -> None:
         """Configuration for performance benchmark testing."""
         return performance_benchmark_config
 
@@ -36,7 +36,7 @@ class TestPerformanceBenchmark:
         session.post.return_value.__aenter__.return_value = response
         return session
 
-    def test_performance_benchmark_initialization(self) -> None:
+def test_performance_benchmark_initialization(self, benchmark_config: Any = None, benchmark_config: Any = None) -> None:
         """Test performance benchmark initializes correctly."""
         from scripts.performance_benchmark import PerformanceBenchmark
 
@@ -68,7 +68,7 @@ class TestPerformanceBenchmark:
         assert usage.timestamp is not None
 
     @pytest.mark.asyncio
-    async def test_single_endpoint_benchmark(self) -> None:
+async def test_single_endpoint_benchmark(self, benchmark_config: Any = None, mock_aiohttp_session: Any = None) -> None:
         """Test benchmarking of a single API endpoint."""
         from scripts.performance_benchmark import BenchmarkResult, PerformanceBenchmark
 
@@ -92,7 +92,7 @@ class TestPerformanceBenchmark:
         assert result.timestamp is not None
 
     @pytest.mark.asyncio
-    async def test_post_endpoint_benchmark(self) -> None:
+async def test_post_endpoint_benchmark(self, benchmark_config: Any = None, mock_aiohttp_session: Any = None) -> None:
         """Test benchmarking of POST endpoints with payload."""
         from scripts.performance_benchmark import PerformanceBenchmark
 
@@ -114,7 +114,7 @@ class TestPerformanceBenchmark:
         assert result.duration_ms > 0
 
     @pytest.mark.asyncio
-    async def test_load_testing_concurrent_requests(self) -> None:
+async def test_load_testing_concurrent_requests(self, benchmark_config: Any = None, mock_aiohttp_session: Any = None) -> None:
         """Test load testing with concurrent requests."""
         from scripts.performance_benchmark import PerformanceBenchmark
 
@@ -192,7 +192,7 @@ class TestPerformanceBenchmark:
         assert 100.0 <= metrics.avg_duration_ms <= 150.0
 
     @pytest.mark.asyncio
-    async def test_comprehensive_benchmark_suite(self) -> None:
+async def test_comprehensive_benchmark_suite(self, benchmark_config: Any = None, mock_aiohttp_session: Any = None) -> None:
         """Test comprehensive benchmark suite execution."""
         from scripts.performance_benchmark import PerformanceBenchmark
 
@@ -266,7 +266,7 @@ class TestPerformanceBenchmark:
         assert "Performance Recommendations" in report
 
     @pytest.mark.asyncio
-    async def test_error_handling_and_timeouts(self) -> None:
+async def test_error_handling_and_timeouts(self, benchmark_config: Any = None) -> None:
         """Test error handling for failed requests and timeouts."""
         from scripts.performance_benchmark import BenchmarkResult, PerformanceBenchmark
 
@@ -326,7 +326,7 @@ class TestPerformanceBenchmark:
         assert any("resource" in issue.lower() for issue in issues)
 
     @pytest.mark.asyncio
-    async def test_real_time_monitoring_integration(self) -> None:
+async def test_real_time_monitoring_integration(self, benchmark_config: Any = None) -> None:
         """Test integration with real-time monitoring systems."""
         from scripts.performance_benchmark import PerformanceBenchmark
 
@@ -380,7 +380,7 @@ class TestPerformanceBenchmark:
             )
 
     @pytest.mark.asyncio
-    async def test_memory_usage_monitoring(self) -> None:
+async def test_memory_usage_monitoring(self, benchmark_config: Any = None) -> None:
         """Test memory usage monitoring during benchmarks."""
         import psutil
 
@@ -404,7 +404,7 @@ class TestPerformanceBenchmark:
         assert memory_growth < 100 * 1024 * 1024  # Less than 100MB growth
 
     @pytest.mark.asyncio
-    async def test_database_performance_benchmarking(self) -> None:
+async def test_database_performance_benchmarking(self, benchmark_config: Any = None) -> None:
         """Test database performance benchmarking capabilities."""
         from scripts.performance_benchmark import PerformanceBenchmark
 
@@ -435,7 +435,7 @@ class TestPerformanceBenchmark:
         )
 
     @pytest.mark.asyncio
-    async def test_cache_performance_benchmarking(self) -> None:
+async def test_cache_performance_benchmarking(self, benchmark_config: Any = None) -> None:
         """Test cache performance benchmarking."""
         from scripts.performance_benchmark import PerformanceBenchmark
 
@@ -463,7 +463,7 @@ class TestPerformanceBenchmark:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_full_system_benchmark(self) -> None:
+async def test_full_system_benchmark(self, benchmark_config: Any = None) -> None:
         """Test full system performance benchmark integration."""
         from scripts.performance_benchmark import PerformanceBenchmark
 
@@ -494,7 +494,7 @@ class TestPerformanceBenchmark:
         # Verify system resource tracking
         assert len(benchmark.resource_usage) > 0
 
-    def test_benchmark_results_persistence(self) -> None:
+def test_benchmark_results_persistence(self, benchmark_config: Any = None, tmp_path: Any = None) -> None:
         """Test benchmark results persistence and loading."""
 
         from scripts.performance_benchmark import PerformanceBenchmark
@@ -520,7 +520,7 @@ class TestPerformanceBenchmark:
         assert loaded_results["Health Check"]["metrics"]["avg_duration_ms"] == 85.5
 
     @pytest.mark.performance
-    def test_benchmark_execution_performance(self) -> None:
+def test_benchmark_execution_performance(self, benchmark_config: Any = None) -> None:
         """Test that benchmark execution itself is performant."""
         from scripts.performance_benchmark import PerformanceBenchmark
 

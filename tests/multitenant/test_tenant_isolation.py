@@ -61,7 +61,7 @@ class TestTenantIsolation:
         return [tenant1, tenant2]
 
     @pytest.fixture
-    async def test_users(self) -> None:
+async def test_users(self, test_tenants: Any = None, test_tenants: Any = None) -> None:
         """Create test users for each tenant"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
@@ -85,7 +85,7 @@ class TestTenantIsolation:
         return [user1, user2]
 
     @pytest.fixture
-    async def test_search_history(self) -> None:
+async def test_search_history(self, test_tenants: Any = None, test_tenants: Any = None, test_users: Any = None, test_users: Any = None) -> None:
         """Create test search history for each tenant"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
@@ -117,7 +117,7 @@ class TestTenantIsolation:
     # Database-Level Isolation Tests
 
     @pytest.mark.asyncio
-    async def test_tenant_data_isolation(self) -> None:
+async def test_tenant_data_isolation(self, test_tenants: Any = None, test_tenants: Any = None) -> None:
         """Test that tenant data is properly isolated at database level"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
@@ -137,7 +137,7 @@ class TestTenantIsolation:
         assert tenant1_users[0]["username"] != tenant2_users[0]["username"]
 
     @pytest.mark.asyncio
-    async def test_tenant_search_history_isolation(self) -> None:
+async def test_tenant_search_history_isolation(self, test_tenants: Any = None, test_tenants: Any = None) -> None:
         """Test that search history is properly isolated by tenant"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
@@ -158,7 +158,7 @@ class TestTenantIsolation:
         assert tenant1_searches[0]["id"] != tenant2_searches[0]["id"]
 
     @pytest.mark.asyncio
-    async def test_cross_tenant_access_prevention(self) -> None:
+async def test_cross_tenant_access_prevention(self, test_tenants: Any = None, test_tenants: Any = None, test_users: Any = None) -> None:
         """Test that cross-tenant access is prevented"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
@@ -175,7 +175,7 @@ class TestTenantIsolation:
         assert user_from_correct_tenant["id"] == user1_id
 
     @pytest.mark.asyncio
-    async def test_tenant_analytics_isolation(self) -> None:
+async def test_tenant_analytics_isolation(self, test_tenants: Any = None, test_tenants: Any = None) -> None:
         """Test that analytics are properly isolated by tenant"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
@@ -203,7 +203,7 @@ class TestTenantIsolation:
     # Application-Level Isolation Tests
 
     @pytest.mark.asyncio
-    async def test_tenant_aware_dal_isolation(self) -> None:
+async def test_tenant_aware_dal_isolation(self, test_tenants: Any = None, test_tenants: Any = None, db_service: Any = None, db_service: Any = None) -> None:
         """Test tenant-aware Data Access Layer isolation"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
@@ -231,7 +231,7 @@ class TestTenantIsolation:
         assert tenant2_users[0].tenant_id == tenant2_id
 
     @pytest.mark.asyncio
-    async def test_tenant_context_validation(self) -> None:
+async def test_tenant_context_validation(self, test_tenants: Any = None) -> None:
         """Test tenant context validation"""
         tenant1_id = test_tenants[0]["id"]
         invalid_tenant_id = str(uuid.uuid4())
@@ -246,7 +246,7 @@ class TestTenantIsolation:
         assert invalid_tenant_data is None
 
     @pytest.mark.asyncio
-    async def test_tenant_isolation_error_handling(self) -> None:
+async def test_tenant_isolation_error_handling(self, db_service: Any = None) -> None:
         """Test that tenant isolation errors are properly handled"""
         dal = TenantAwareDataAccessLayer(db_service)
 
@@ -261,7 +261,7 @@ class TestTenantIsolation:
     # Security Boundary Tests
 
     @pytest.mark.asyncio
-    async def test_tenant_resource_isolation(self) -> None:
+async def test_tenant_resource_isolation(self, test_tenants: Any = None, test_tenants: Any = None) -> None:
         """Test that tenant resources are properly isolated"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
@@ -296,7 +296,7 @@ class TestTenantIsolation:
         assert tenant1_activity[0]["id"] != tenant2_activity[0]["id"]
 
     @pytest.mark.asyncio
-    async def test_tenant_status_validation(self) -> None:
+async def test_tenant_status_validation(self, test_tenants: Any = None) -> None:
         """Test tenant status validation"""
         tenant1_id = test_tenants[0]["id"]
 
@@ -312,7 +312,7 @@ class TestTenantIsolation:
         assert updated_tenant["status"] == "suspended"
 
     @pytest.mark.asyncio
-    async def test_tenant_plan_limits(self) -> None:
+async def test_tenant_plan_limits(self, test_tenants: Any = None, test_tenants: Any = None) -> None:
         """Test tenant plan limits enforcement"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
@@ -332,7 +332,7 @@ class TestTenantIsolation:
     # Performance and Scalability Tests
 
     @pytest.mark.asyncio
-    async def test_tenant_query_performance(self) -> None:
+async def test_tenant_query_performance(self, test_tenants: Any = None) -> None:
         """Test that tenant-scoped queries perform well"""
         tenant1_id = test_tenants[0]["id"]
 
@@ -359,12 +359,12 @@ class TestTenantIsolation:
         assert len(users) == 11  # 1 original + 10 new users
 
     @pytest.mark.asyncio
-    async def test_concurrent_tenant_operations(self) -> None:
+async def test_concurrent_tenant_operations(self, test_tenants: Any = None, test_tenants: Any = None, count: Any = None, tenant_id: Any = None, tenant_id: Any = None) -> None:
         """Test concurrent operations across multiple tenants"""
         tenant1_id = test_tenants[0]["id"]
         tenant2_id = test_tenants[1]["id"]
 
-        async def create_users_for_tenant(self) -> None:
+async def create_users_for_tenant(self, count: Any = None, tenant_id: Any = None, tenant_id: Any = None) -> None:
             """Create users for a specific tenant"""
             for i in range(count):
                 await self.db_service.create_user(
@@ -420,7 +420,7 @@ class TestTenantIsolation:
         assert len(searches) == 0
 
     @pytest.mark.asyncio
-    async def test_tenant_deletion_cascade(self) -> None:
+async def test_tenant_deletion_cascade(self, test_tenants: Any = None, test_users: Any = None) -> None:
         """Test that tenant deletion cascades properly"""
         tenant1_id = test_tenants[0]["id"]
         user1_id = test_users[0]["id"]

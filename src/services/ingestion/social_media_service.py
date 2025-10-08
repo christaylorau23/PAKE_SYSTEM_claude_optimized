@@ -35,10 +35,10 @@ class SocialMediaQuery:
     """Immutable social media search query configuration."""
 
     platform: SocialPlatform
-    keywords: List[str] = field(default_factory=list)
-    hashtags: List[str] = field(default_factory=list)
-    accounts: List[str] = field(default_factory=list)  # @username or u/username
-    subreddits: List[str] = field(default_factory=list)  # Reddit only
+    keywords: list[str] = field(default_factory=list)
+    hashtags: list[str] = field(default_factory=list)
+    accounts: list[str] = field(default_factory=list)  # @username or u/username
+    subreddits: list[str] = field(default_factory=list)  # Reddit only
     date_range: dict[str, datetime] | None = None
     max_results: int = 100
     min_engagement: int = 0  # Minimum likes/upvotes/reactions
@@ -72,14 +72,14 @@ class SocialMediaPost:
     timestamp: datetime
     url: str
     engagement_metrics: dict[str, int]  # likes, shares, comments, etc.
-    hashtags: List[str] = field(default_factory=list)
-    mentions: List[str] = field(default_factory=list)
-    media_urls: List[str] = field(default_factory=list)
+    hashtags: list[str] = field(default_factory=list)
+    mentions: list[str] = field(default_factory=list)
+    media_urls: list[str] = field(default_factory=list)
     location: str | None = None
     language: str = "en"
     sentiment_score: float = 0.0  # -1 to 1
     quality_score: float = 0.0
-    thread_context: Dict[str, Any] | None = None
+    thread_context: dict[str, Any] | None = None
     original_post_id: str | None = None  # For retweets/reposts
 
 
@@ -114,14 +114,16 @@ class SocialMediaService:
     - Multi-language support
     """
 
-    def __init__(self, configs: List[SocialMediaConfig], cognitive_engine: Any = None) -> None:
+    def __init__(
+        self, configs: list[SocialMediaConfig], cognitive_engine: Any = None
+    ) -> None:
         """Initialize social media service with platform configurations."""
         self.configs = {config.platform: config for config in configs}
         self.cognitive_engine = cognitive_engine
         self._client_pool: dict[SocialPlatform, Any] = {}
         self._session_pool: dict[SocialPlatform, aiohttp.ClientSession] = {}
         self._post_cache: dict[str, SocialMediaPost] = {}
-        self._rate_limits: dict[SocialPlatform, Dict[str, Any]] = {}
+        self._rate_limits: dict[SocialPlatform, dict[str, Any]] = {}
 
         logger.info(
             "Initialized SocialMediaService for platforms: %s",
@@ -857,7 +859,7 @@ What fields do you think will be transformed next?""",
         )
         return content_items
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform social media service health check."""
         health_status = {
             "status": "healthy",
@@ -894,7 +896,9 @@ What fields do you think will be transformed next?""",
         self._rate_limits.clear()
         logger.info("SocialMediaService closed")
 
-    async def _create_twitter_client(self, config: SocialMediaConfig, session: aiohttp.ClientSession) -> Dict[str, Any]:
+    async def _create_twitter_client(
+        self, config: SocialMediaConfig, session: aiohttp.ClientSession
+    ) -> dict[str, Any]:
         """Create Twitter API v2 client."""
         credentials = config.api_credentials
         return {
@@ -904,7 +908,9 @@ What fields do you think will be transformed next?""",
             "authenticated": True,
         }
 
-    async def _create_linkedin_client(self, config: SocialMediaConfig, session: aiohttp.ClientSession) -> Dict[str, Any]:
+    async def _create_linkedin_client(
+        self, config: SocialMediaConfig, session: aiohttp.ClientSession
+    ) -> dict[str, Any]:
         """Create LinkedIn API client."""
         credentials = config.api_credentials
         return {
@@ -914,7 +920,9 @@ What fields do you think will be transformed next?""",
             "authenticated": True,
         }
 
-    async def _create_reddit_client(self, config: SocialMediaConfig, session: aiohttp.ClientSession) -> Dict[str, Any]:
+    async def _create_reddit_client(
+        self, config: SocialMediaConfig, session: aiohttp.ClientSession
+    ) -> dict[str, Any]:
         """Create Reddit API client."""
         credentials = config.api_credentials
         return {
@@ -926,7 +934,7 @@ What fields do you think will be transformed next?""",
 
     async def _parse_twitter_response(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
         """Parse Twitter API v2 response into SocialMediaPost objects."""
@@ -993,7 +1001,7 @@ What fields do you think will be transformed next?""",
 
     async def _parse_linkedin_response(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         query: SocialMediaQuery,
     ) -> list[SocialMediaPost]:
         """Parse LinkedIn API response into SocialMediaPost objects."""

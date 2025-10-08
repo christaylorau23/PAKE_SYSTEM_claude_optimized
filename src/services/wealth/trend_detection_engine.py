@@ -94,7 +94,7 @@ class TrendSignal:
     confidence: float  # 0.0 to 1.0
     data_points: int  # Number of data points supporting signal
     time_period: str  # "last_30_days", "last_quarter", etc.
-    raw_data: Dict[str, Any] = field(default_factory=dict)
+    raw_data: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -119,7 +119,7 @@ class EmergingTrend:
     signals: list[TrendSignal] = field(default_factory=list)
 
     # Investment opportunities
-    investment_opportunities: list[Dict[str, Any]] = field(default_factory=list)
+    investment_opportunities: list[dict[str, Any]] = field(default_factory=list)
 
     # Market potential
     estimated_market_size: float | None = None  # in billions USD
@@ -130,10 +130,10 @@ class EmergingTrend:
     last_updated: datetime = field(default_factory=datetime.utcnow)
 
     # Risk factors
-    risk_factors: List[str] = field(default_factory=list)
-    competitive_landscape: Dict[str, Any] = field(default_factory=dict)
+    risk_factors: list[str] = field(default_factory=list)
+    competitive_landscape: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "name": self.name,
@@ -179,9 +179,9 @@ class PatentAnalyzer:
 
     async def analyze_patent_trends(
         self,
-        keywords: List[str],
+        keywords: list[str],
         months_back: int = 12,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze patent filing trends for given keywords."""
         # Mock patent data - in production would use real USPTO API
         trend_data = {}
@@ -231,9 +231,9 @@ class ResearchPaperAnalyzer:
 
     async def analyze_research_trends(
         self,
-        keywords: List[str],
+        keywords: list[str],
         months_back: int = 12,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze research publication trends."""
         trend_data = {}
 
@@ -284,7 +284,7 @@ class ResearchPaperAnalyzer:
 
         return trend_data
 
-    async def _query_arxiv(self, keyword: str, months_back: int) -> Dict[str, Any]:
+    async def _query_arxiv(self, keyword: str, months_back: int) -> dict[str, Any]:
         """Query ArXiv for research papers."""
         # Calculate date range
         end_date = datetime.now(UTC)
@@ -300,7 +300,7 @@ class ResearchPaperAnalyzer:
             "query_keyword": keyword,
         }
 
-    async def _query_pubmed(self, keyword: str, months_back: int) -> Dict[str, Any]:
+    async def _query_pubmed(self, keyword: str, months_back: int) -> dict[str, Any]:
         """Query PubMed for biomedical research papers."""
         # Mock PubMed query
         total_papers = (
@@ -320,7 +320,7 @@ class ResearchPaperAnalyzer:
             "query_keyword": keyword,
         }
 
-    def _extract_research_areas(self, keyword: str) -> List[str]:
+    def _extract_research_areas(self, keyword: str) -> list[str]:
         """Extract related research areas for a keyword."""
         # Mock research area extraction - would use NLP in production
         area_mapping = {
@@ -368,9 +368,9 @@ class FundingAnalyzer:
 
     async def analyze_funding_trends(
         self,
-        keywords: List[str],
+        keywords: list[str],
         months_back: int = 12,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze startup funding trends in specific sectors."""
         trend_data = {}
 
@@ -425,7 +425,7 @@ class FundingAnalyzer:
         self,
         keyword: str,
         months_back: int,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate mock funding data for demonstration."""
         funding_rounds = []
 
@@ -481,7 +481,7 @@ class SentimentAnalyzer:
             except (ValueError, RuntimeError) as e:
                 logger.warning("Could not load sentiment pipeline: %s", e)
 
-    async def analyze_trend_sentiment(self, keywords: List[str]) -> Dict[str, Any]:
+    async def analyze_trend_sentiment(self, keywords: list[str]) -> dict[str, Any]:
         """Analyze social sentiment around trend keywords."""
         sentiment_data = {}
 
@@ -521,7 +521,7 @@ class SentimentAnalyzer:
 
         return sentiment_data
 
-    def _generate_mock_social_data(self, keyword: str) -> list[Dict[str, Any]]:
+    def _generate_mock_social_data(self, keyword: str) -> list[dict[str, Any]]:
         """Generate mock social media mentions."""
         mentions = []
         base_mentions = np.random.randint(50, 500)
@@ -546,7 +546,7 @@ class SentimentAnalyzer:
 
         return mentions
 
-    def _generate_mock_news_data(self, keyword: str) -> list[Dict[str, Any]]:
+    def _generate_mock_news_data(self, keyword: str) -> list[dict[str, Any]]:
         """Generate mock news mentions."""
         mentions = []
         base_mentions = np.random.randint(20, 100)
@@ -574,7 +574,7 @@ class SentimentAnalyzer:
 
     def _analyze_sentiment_scores(
         self,
-        mentions: list[Dict[str, Any]],
+        mentions: list[dict[str, Any]],
     ) -> dict[str, int]:
         """Analyze sentiment distribution."""
         positive = sum(1 for m in mentions if m["sentiment_score"] > 0.1)
@@ -588,7 +588,7 @@ class SentimentAnalyzer:
             "total": len(mentions),
         }
 
-    def _calculate_sentiment_momentum(self, mentions: list[Dict[str, Any]]) -> float:
+    def _calculate_sentiment_momentum(self, mentions: list[dict[str, Any]]) -> float:
         """Calculate sentiment momentum over time."""
         if len(mentions) < 10:
             return 0.0
@@ -814,12 +814,12 @@ class TrendDetectionEngine:
     async def _synthesize_category_trends(
         self,
         category: TrendCategory,
-        keywords: List[str],
-        patent_data: Dict[str, Any],
-        research_data: Dict[str, Any],
-        funding_data: Dict[str, Any],
-        sentiment_data: Dict[str, Any],
-        google_trends_data: Dict[str, Any] = None,
+        keywords: list[str],
+        patent_data: dict[str, Any],
+        research_data: dict[str, Any],
+        funding_data: dict[str, Any],
+        sentiment_data: dict[str, Any],
+        google_trends_data: dict[str, Any] = None,
     ) -> list[EmergingTrend]:
         """Synthesize trends for a specific category."""
         trends = []
@@ -1027,7 +1027,7 @@ class TrendDetectionEngine:
         keyword: str,
         category: TrendCategory,
         signals: list[TrendSignal],
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate investment opportunities based on trend analysis."""
         opportunities = []
 
@@ -1353,7 +1353,7 @@ class TrendDetectionEngine:
         keyword: str,
         category: TrendCategory,
         signals: list[TrendSignal],
-    ) -> List[str]:
+    ) -> list[str]:
         """Identify potential risk factors for the trend."""
         risk_factors = []
 
@@ -1401,7 +1401,7 @@ class TrendDetectionEngine:
         self,
         keyword: str,
         signals: list[TrendSignal],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze competitive landscape."""
         # Extract company information from signals
         companies = []
@@ -1521,7 +1521,7 @@ class TrendDetectionEngine:
             if trend.stage in [TrendStage.EMERGENCE, TrendStage.EARLY_ADOPTION]
         ]
 
-    def _display_emerging_trends(self, trends: List[EmergingTrend]) -> None:
+    def _display_emerging_trends(self, trends: list[EmergingTrend]) -> None:
         """Display emerging trends analysis."""
         print("\n🔍 EMERGING TREND ANALYSIS")
         print("=" * 60)
@@ -1537,10 +1537,12 @@ class TrendDetectionEngine:
         print(f"   Score: {trend.overall_score:.2f}")
         print(f"   Confidence: {trend.confidence:.1%}")
         print(f"   Momentum: {trend.momentum:+.2f}")
-        
+
         if trend.estimated_mainstream_date:
-            print(f"   Mainstream ETA: {trend.estimated_mainstream_date.strftime('%Y-%m')}")
-        
+            print(
+                f"   Mainstream ETA: {trend.estimated_mainstream_date.strftime('%Y-%m')}"
+            )
+
         print(f"   Market Size: ${trend.estimated_market_size:.0f}B (estimated)")
         print(f"   Growth Rate: {trend.growth_rate_estimate:.0f}% annually")
         print(f"   Investment Opportunities: {len(trend.investment_opportunities)}")
@@ -1552,20 +1554,23 @@ class TrendDetectionEngine:
         early_trends = engine.get_early_stage_trends()
         print("🚀 EARLY-STAGE TRENDS (Highest Upside Potential):")
         print("-" * 50)
-        
+
         for trend in early_trends[:3]:
             self._print_early_trend_summary(trend)
 
     def _print_early_trend_summary(self, trend: EmergingTrend) -> None:
         """Print summary for an early-stage trend."""
-        print(f"• {trend.name}: {trend.stage.value} stage, {trend.overall_score:.2f} score")
-        
+        print(
+            f"• {trend.name}: {trend.stage.value} stage, {trend.overall_score:.2f} score"
+        )
+
         # Show top investment opportunity
         if trend.investment_opportunities:
             top_opportunity = trend.investment_opportunities[0]
-            print(f"  → Top Play: {top_opportunity['symbol']} ({top_opportunity['name']})")
+            print(
+                f"  → Top Play: {top_opportunity['symbol']} ({top_opportunity['name']})"
+            )
         print()
-
 
     async def main_trend_detection_demo(self) -> None:
         """Demo of the trend detection engine."""
@@ -1591,15 +1596,21 @@ class TrendDetectionEngine:
         try:
             category = self._classify_keyword_category(google_opportunity.keyword)
             stage = self._determine_trend_stage(google_opportunity)
-            
+
             if stage is None:
                 return None  # Skip weak trends
-                
-            investment_opportunities = self._create_investment_opportunities(google_opportunity)
+
+            investment_opportunities = self._create_investment_opportunities(
+                google_opportunity
+            )
             overall_score = self._calculate_overall_score(google_opportunity)
-            
+
             return self._create_emerging_trend_from_google_data(
-                google_opportunity, category, stage, investment_opportunities, overall_score
+                google_opportunity,
+                category,
+                stage,
+                investment_opportunities,
+                overall_score,
             )
 
         except (ImportError, ModuleNotFoundError) as e:
@@ -1611,24 +1622,27 @@ class TrendDetectionEngine:
         trend_data = google_opportunity.trend_data
         if trend_data.trend_strength.value >= 4:  # VERY_STRONG or EXPLOSIVE
             return TrendStage.EARLY_ADOPTION
-        elif trend_data.trend_strength.value >= 3:  # STRONG
+        if trend_data.trend_strength.value >= 3:  # STRONG
             return TrendStage.EMERGENCE
-        else:
-            return None  # Skip weak trends
+        return None  # Skip weak trends
 
-    def _create_investment_opportunities(self, google_opportunity) -> List[Dict[str, Any]]:
+    def _create_investment_opportunities(
+        self, google_opportunity
+    ) -> list[dict[str, Any]]:
         """Create investment opportunities from Google Trends symbols."""
         investment_opportunities = []
         for symbol in google_opportunity.related_symbols:
-            investment_opportunities.append({
-                "symbol": symbol,
-                "name": f"{symbol} - {google_opportunity.keyword} exposure",
-                "correlation": 0.8,  # High correlation from Google Trends mapping
-                "risk_score": (
-                    0.6 if google_opportunity.risk_level == "medium" else 0.4
-                ),
-                "upside_potential": google_opportunity.potential_return / 100,
-            })
+            investment_opportunities.append(
+                {
+                    "symbol": symbol,
+                    "name": f"{symbol} - {google_opportunity.keyword} exposure",
+                    "correlation": 0.8,  # High correlation from Google Trends mapping
+                    "risk_score": (
+                        0.6 if google_opportunity.risk_level == "medium" else 0.4
+                    ),
+                    "upside_potential": google_opportunity.potential_return / 100,
+                }
+            )
         return investment_opportunities
 
     def _calculate_overall_score(self, google_opportunity) -> float:
@@ -1641,12 +1655,12 @@ class TrendDetectionEngine:
         ) / 3
 
     def _create_emerging_trend_from_google_data(
-        self, 
-        google_opportunity, 
-        category: TrendCategory, 
-        stage: TrendStage, 
-        investment_opportunities: List[Dict[str, Any]], 
-        overall_score: float
+        self,
+        google_opportunity,
+        category: TrendCategory,
+        stage: TrendStage,
+        investment_opportunities: list[dict[str, Any]],
+        overall_score: float,
     ) -> EmergingTrend:
         """Create EmergingTrend object from Google Trends data."""
         trend_data = google_opportunity.trend_data
@@ -1670,8 +1684,8 @@ class TrendDetectionEngine:
 
     async def _get_google_trends_for_category(
         self,
-        keywords: List[str],
-    ) -> Dict[str, Any]:
+        keywords: list[str],
+    ) -> dict[str, Any]:
         """Get Google Trends data for specific category keywords."""
         try:
             google_data = {}
@@ -1707,7 +1721,9 @@ class TrendDetectionEngine:
         # Fallback classification based on common terms
         return self._classify_by_common_terms(keyword_lower)
 
-    def _keyword_matches_category(self, keyword_lower: str, category_keywords: List[str]) -> bool:
+    def _keyword_matches_category(
+        self, keyword_lower: str, category_keywords: list[str]
+    ) -> bool:
         """Check if keyword matches any category keywords."""
         return any(
             cat_keyword in keyword_lower or keyword_lower in cat_keyword
@@ -1723,23 +1739,23 @@ class TrendDetectionEngine:
             EnergyClassifier(),
             FinanceClassifier(),
         ]
-        
+
         for classifier in classifiers:
             category = classifier.classify(keyword_lower)
             if category:
                 return category
-                
+
         # Default fallback
         return TrendCategory.TECHNOLOGY
 
 
 class TrendClassifier:
     """Base class for trend classification strategies."""
-    
-    def __init__(self, terms: List[str], category: TrendCategory):
+
+    def __init__(self, terms: list[str], category: TrendCategory):
         self.terms = terms
         self.category = category
-    
+
     def classify(self, keyword_lower: str) -> TrendCategory | None:
         """Classify keyword if it matches any terms."""
         if any(term in keyword_lower for term in self.terms):
@@ -1749,54 +1765,51 @@ class TrendClassifier:
 
 class AIMLClassifier(TrendClassifier):
     """Classifier for AI/ML related terms."""
-    
+
     def __init__(self):
         super().__init__(
-            ["ai", "artificial", "machine", "neural", "deep"],
-            TrendCategory.AI_ML
+            ["ai", "artificial", "machine", "neural", "deep"], TrendCategory.AI_ML
         )
 
 
 class TechnologyClassifier(TrendClassifier):
     """Classifier for general technology terms."""
-    
+
     def __init__(self):
         super().__init__(
-            ["quantum", "blockchain", "crypto", "5g", "iot"],
-            TrendCategory.TECHNOLOGY
+            ["quantum", "blockchain", "crypto", "5g", "iot"], TrendCategory.TECHNOLOGY
         )
 
 
 class HealthcareClassifier(TrendClassifier):
     """Classifier for healthcare/biotech terms."""
-    
+
     def __init__(self):
         super().__init__(
-            ["gene", "bio", "health", "medical", "therapy"],
-            TrendCategory.HEALTHCARE
+            ["gene", "bio", "health", "medical", "therapy"], TrendCategory.HEALTHCARE
         )
 
 
 class EnergyClassifier(TrendClassifier):
     """Classifier for energy/clean tech terms."""
-    
+
     def __init__(self):
         super().__init__(
             ["energy", "battery", "solar", "electric", "renewable"],
-            TrendCategory.ENERGY
+            TrendCategory.ENERGY,
         )
 
 
 class FinanceClassifier(TrendClassifier):
     """Classifier for fintech/finance terms."""
-    
+
     def __init__(self):
         super().__init__(
             ["fintech", "payment", "crypto", "digital", "finance"],
-            TrendCategory.FINANCE
+            TrendCategory.FINANCE,
         )
 
-    def get_google_trends_dashboard(self) -> Dict[str, Any]:
+    def get_google_trends_dashboard(self) -> dict[str, Any]:
         """Get Google Trends integration dashboard data."""
         try:
             if not self.google_trends_service:
@@ -1816,8 +1829,9 @@ class FinanceClassifier(TrendClassifier):
 
 
 if __name__ == "__main__":
+
     async def run_demo():
         engine = TrendDetectionEngine({})
         await engine.main_trend_detection_demo()
-    
+
     asyncio.run(run_demo())

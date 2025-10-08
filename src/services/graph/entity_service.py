@@ -186,8 +186,8 @@ class EntityService:
     def validate_entity(
         self,
         entity_type: EntityType,
-        properties: Dict[str, Any],
-    ) -> List[str]:
+        properties: dict[str, Any],
+    ) -> list[str]:
         """Validate entity properties against schema.
 
         Args:
@@ -223,7 +223,7 @@ class EntityService:
     async def create_entity(
         self,
         entity_type: EntityType,
-        properties: Dict[str, Any],
+        properties: dict[str, Any],
     ) -> str | None:
         """Create a new entity with validation.
 
@@ -297,7 +297,7 @@ class EntityService:
         self,
         title: str,
         abstract: str | None = None,
-        authors: List[str] | None = None,
+        authors: list[str] | None = None,
         doi: str | None = None,
         **kwargs,
     ) -> str | None:
@@ -336,7 +336,7 @@ class EntityService:
         from_entity_id: str,
         to_entity_id: str,
         relationship_type: RelationshipType,
-        properties: Dict[str, Any] | None = None,
+        properties: dict[str, Any] | None = None,
     ) -> str | None:
         """Create a relationship between entities.
 
@@ -375,7 +375,7 @@ class EntityService:
     async def find_or_create_entity(
         self,
         entity_type: EntityType,
-        properties: Dict[str, Any],
+        properties: dict[str, Any],
     ) -> str:
         """Find existing entity or create new one.
 
@@ -424,7 +424,7 @@ class EntityService:
             logger.error("Error in find_or_create_entity: %s", e)
             raise
 
-    async def get_entity_by_id(self, entity_id: str) -> Dict[str, Any] | None:
+    async def get_entity_by_id(self, entity_id: str) -> dict[str, Any] | None:
         """Get entity by ID."""
         try:
             if not self.neo4j_service.driver:
@@ -441,7 +441,7 @@ class EntityService:
         search_term: str,
         entity_types: list[EntityType] | None = None,
         limit: int = 50,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search entities by text."""
         try:
             if not self.neo4j_service.driver:
@@ -455,7 +455,7 @@ class EntityService:
             logger.error("Error searching entities: %s", e)
             return []
 
-    async def get_entity_relationships(self, entity_id: str) -> list[Dict[str, Any]]:
+    async def get_entity_relationships(self, entity_id: str) -> list[dict[str, Any]]:
         """Get all relationships for an entity."""
         try:
             if not self.neo4j_service.driver:
@@ -472,7 +472,7 @@ class EntityService:
         center_entity_id: str,
         depth: int = 2,
         max_nodes: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get knowledge subgraph around an entity."""
         try:
             if not self.neo4j_service.driver:
@@ -486,7 +486,7 @@ class EntityService:
             )
             return {"nodes": [], "relationships": []}
 
-    async def get_graph_statistics(self) -> Dict[str, Any]:
+    async def get_graph_statistics(self) -> dict[str, Any]:
         """Get knowledge graph statistics."""
         try:
             if not self.neo4j_service.driver:

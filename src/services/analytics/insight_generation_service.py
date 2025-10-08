@@ -58,12 +58,12 @@ class InsightRecommendation:
     priority: InsightPriority
     confidence: InsightConfidence
     confidence_score: float  # 0.0 to 1.0
-    supporting_data: List[str]
-    action_suggestions: List[str]
+    supporting_data: list[str]
+    action_suggestions: list[str]
     impact_assessment: str
     timeframe: str
     created_at: datetime
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 @dataclass
@@ -74,8 +74,8 @@ class PatternInsight:
     pattern_description: str
     frequency: int
     confidence: float
-    examples: List[str]
-    implications: List[str]
+    examples: list[str]
+    implications: list[str]
 
 
 @dataclass
@@ -85,7 +85,7 @@ class TrendInsight:
     trend_direction: str
     trend_strength: float
     trend_duration: str
-    key_drivers: List[str]
+    key_drivers: list[str]
     future_projection: str
     confidence: float
 
@@ -96,10 +96,10 @@ class AnomalyInsight:
 
     anomaly_type: str
     severity: str
-    affected_metrics: List[str]
+    affected_metrics: list[str]
     anomaly_description: str
-    potential_causes: List[str]
-    recommended_actions: List[str]
+    potential_causes: list[str]
+    recommended_actions: list[str]
 
 
 class InsightGenerationService:
@@ -122,7 +122,7 @@ class InsightGenerationService:
             "pattern_min_frequency": 3,
         }
 
-    def _load_insight_templates(self) -> dict[str, Dict[str, Any]]:
+    def _load_insight_templates(self) -> dict[str, dict[str, Any]]:
         """Load insight generation templates."""
         return {
             "trend_up": {
@@ -187,7 +187,7 @@ class InsightGenerationService:
             },
         }
 
-    def _initialize_pattern_library(self) -> dict[str, Dict[str, Any]]:
+    def _initialize_pattern_library(self) -> dict[str, dict[str, Any]]:
         """Initialize pattern recognition library."""
         return {
             "seasonal_patterns": {
@@ -584,7 +584,7 @@ class InsightGenerationService:
     async def _analyze_trend(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze trend in time series data."""
         try:
             values = [point[1] for point in time_series]
@@ -670,7 +670,7 @@ class InsightGenerationService:
 
     def _calculate_trend_confidence(
         self,
-        trend_analysis: Dict[str, Any],
+        trend_analysis: dict[str, Any],
     ) -> InsightConfidence:
         """Calculate confidence level for trend analysis."""
         strength = trend_analysis["trend_strength"]
@@ -738,7 +738,7 @@ class InsightGenerationService:
             return InsightConfidence.LOW
         return InsightConfidence.VERY_LOW
 
-    def _assess_trend_impact(self, trend_analysis: Dict[str, Any]) -> str:
+    def _assess_trend_impact(self, trend_analysis: dict[str, Any]) -> str:
         """Assess the impact of a trend."""
         direction = trend_analysis["direction"]
         strength = trend_analysis["trend_strength"]
@@ -775,7 +775,7 @@ class InsightGenerationService:
             return "Moderate impact - notable deviation worth monitoring"
         return "Low impact - minor deviation"
 
-    def _assess_pattern_impact(self, pattern_data: Dict[str, Any]) -> str:
+    def _assess_pattern_impact(self, pattern_data: dict[str, Any]) -> str:
         """Assess the impact of a pattern."""
         confidence = pattern_data["confidence"]
         frequency = pattern_data["frequency"]
@@ -788,7 +788,7 @@ class InsightGenerationService:
             return "Low impact - emerging pattern"
         return "Minimal impact - weak pattern"
 
-    def _assess_optimization_impact(self, optimization_analysis: Dict[str, Any]) -> str:
+    def _assess_optimization_impact(self, optimization_analysis: dict[str, Any]) -> str:
         """Assess the impact of optimization opportunities."""
         score = optimization_analysis["opportunity_score"]
 
@@ -803,7 +803,7 @@ class InsightGenerationService:
     async def _detect_all_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """Detect all types of patterns in time series."""
         patterns = {}
 
@@ -824,7 +824,7 @@ class InsightGenerationService:
     async def _detect_seasonal_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Detect seasonal patterns."""
         try:
             if len(time_series) < 24:  # Need at least 24 data points
@@ -860,7 +860,7 @@ class InsightGenerationService:
     async def _detect_cyclical_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Detect cyclical patterns."""
         try:
             if len(time_series) < 10:
@@ -901,7 +901,7 @@ class InsightGenerationService:
     async def _detect_threshold_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Detect patterns around thresholds."""
         try:
             if len(time_series) < 10:
@@ -956,7 +956,7 @@ class InsightGenerationService:
     async def _detect_spike_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Detect spike patterns."""
         try:
             if len(time_series) < 5:
@@ -989,7 +989,7 @@ class InsightGenerationService:
     async def _detect_trend_patterns(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Detect trend patterns."""
         try:
             if len(time_series) < 5:
@@ -1014,7 +1014,7 @@ class InsightGenerationService:
     async def _analyze_optimization_opportunities(
         self,
         time_series: list[tuple[datetime, float]],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze optimization opportunities."""
         try:
             if len(time_series) < 5:
@@ -1107,7 +1107,7 @@ class InsightGenerationService:
             logger.error("Insight ranking failed: %s", e)
             return insights
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check the health of the insight generation service."""
         try:
             # Test basic functionality

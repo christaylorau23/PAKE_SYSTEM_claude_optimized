@@ -1,3 +1,7 @@
+import asyncpg
+import psycopg2
+import sqlalchemy
+
 #!/usr/bin/env python3
 """
 PAKE System - Enhanced Pytest Configuration
@@ -9,11 +13,12 @@ the state left behind by previously run tests.
 """
 
 import asyncio
+from collections.abc import AsyncGenerator, Generator
 import logging
 import os
 from pathlib import Path
 import sys
-from typing import Any, AsyncGenerator, Dict, Generator, List, Optional
+from typing import Any, Dict, List, Optional
 
 try:
     import pytest
@@ -95,7 +100,7 @@ class TestIsolationManager:
 
     async def setup_test_isolation(
         self, test_name: str, isolation_level: str = "function"
-    ) -> AsyncGenerator[Dict[str, Any], None]:
+    ) -> AsyncGenerator[dict[str, Any], None]:
         """Set up complete isolation for a test."""
         logger.info(f"Setting up test isolation for: {test_name}")
 
@@ -129,7 +134,7 @@ class TestIsolationManager:
 
     async def _generate_test_data_for_test(
         self, test_name: str, engine: Any
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate appropriate test data based on test name and type."""
         # Determine test data requirements based on test name
         if "unit" in test_name.lower():
@@ -187,7 +192,7 @@ class TestIsolationManager:
 
         logger.info("All test isolation resources cleaned up")
 
-    def get_test_metrics(self) -> Dict[str, Any]:
+    def get_test_metrics(self) -> dict[str, Any]:
         """Get test execution metrics."""
         return self.test_metrics.copy()
 
@@ -219,7 +224,7 @@ async def test_isolation_manager() -> AsyncGenerator[TestIsolationManager, None]
 @pytest.fixture(scope="function")
 async def isolated_test_environment(
     request: pytest.FixtureRequest, test_isolation_manager: TestIsolationManager
-) -> AsyncGenerator[Dict[str, Any], None]:
+) -> AsyncGenerator[dict[str, Any], None]:
     """
     Function-scoped isolated test environment.
 
@@ -246,7 +251,7 @@ async def isolated_test_environment(
 @pytest.fixture(scope="module")
 async def module_isolated_test_environment(
     request: pytest.FixtureRequest, test_isolation_manager: TestIsolationManager
-) -> AsyncGenerator[Dict[str, Any], None]:
+) -> AsyncGenerator[dict[str, Any], None]:
     """
     Module-scoped isolated test environment.
 
@@ -268,19 +273,19 @@ async def module_isolated_test_environment(
 
 
 @pytest.fixture(scope="function")
-async def test_database(isolated_test_environment: Dict[str, Any]) -> Any:
+async def test_database(isolated_test_environment: dict[str, Any]) -> Any:
     """Get the isolated test database engine."""
     return isolated_test_environment["engine"]
 
 
 @pytest.fixture(scope="function")
-async def test_session(isolated_test_environment: Dict[str, Any]) -> Any:
+async def test_session(isolated_test_environment: dict[str, Any]) -> Any:
     """Get the isolated test database session."""
     return isolated_test_environment["session"]
 
 
 @pytest.fixture(scope="function")
-async def test_data(isolated_test_environment: Dict[str, Any]) -> Any:
+async def test_data(isolated_test_environment: dict[str, Any]) -> Any:
     """Get the generated test data for the test."""
     return isolated_test_environment["test_data"]
 
@@ -289,7 +294,7 @@ async def test_data(isolated_test_environment: Dict[str, Any]) -> Any:
 @pytest.fixture(scope="function")
 async def unit_test_environment(
     request: pytest.FixtureRequest, test_isolation_manager: TestIsolationManager
-) -> AsyncGenerator[Dict[str, Any], None]:
+) -> AsyncGenerator[dict[str, Any], None]:
     """Isolated environment optimized for unit tests."""
     test_name = f"unit_{request.node.name}"
     isolation_level = "function"
@@ -305,7 +310,7 @@ async def unit_test_environment(
 @pytest.fixture(scope="function")
 async def integration_test_environment(
     request: pytest.FixtureRequest, test_isolation_manager: TestIsolationManager
-) -> AsyncGenerator[Dict[str, Any], None]:
+) -> AsyncGenerator[dict[str, Any], None]:
     """Isolated environment optimized for integration tests."""
     test_name = f"integration_{request.node.name}"
     isolation_level = "function"
@@ -321,7 +326,7 @@ async def integration_test_environment(
 @pytest.fixture(scope="function")
 async def performance_test_environment(
     request: pytest.FixtureRequest, test_isolation_manager: TestIsolationManager
-) -> AsyncGenerator[Dict[str, Any], None]:
+) -> AsyncGenerator[dict[str, Any], None]:
     """Isolated environment optimized for performance tests."""
     test_name = f"performance_{request.node.name}"
     isolation_level = "function"
@@ -372,19 +377,19 @@ def fixture_registry() -> Any:
 
 
 @pytest.fixture(scope="function")
-async def basic_test_data(test_database: Any) -> Dict[str, Any]:
+async def basic_test_data(test_database: Any) -> dict[str, Any]:
     """Create basic test data for a test."""
     return await create_basic_test_scenario(test_database)
 
 
 @pytest.fixture(scope="function")
-async def comprehensive_test_data(test_database: Any) -> Dict[str, Any]:
+async def comprehensive_test_data(test_database: Any) -> dict[str, Any]:
     """Create comprehensive test data for integration tests."""
     return await create_comprehensive_test_scenario(test_database)
 
 
 @pytest.fixture(scope="function")
-async def performance_test_data(test_database: Any) -> Dict[str, Any]:
+async def performance_test_data(test_database: Any) -> dict[str, Any]:
     """Create performance test data for load testing."""
     return await create_performance_test_scenario(test_database)
 
@@ -462,7 +467,9 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     logger.info(f"Test session exit status: {exitstatus}")
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: List[pytest.Item]) -> None:
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
     """Modify test collection to add markers automatically."""
     for item in items:
         # Auto-mark tests based on directory structure

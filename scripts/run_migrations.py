@@ -1,3 +1,8 @@
+from typing import Any
+
+import psycopg2
+import sqlalchemy
+
 """
 Database Migration Runner for Intelligent Content Curation System
 
@@ -24,7 +29,7 @@ DATABASE_CONFIG = {
 }
 
 
-async def run_migration_file(self) -> None:
+async def run_migration_file(self, migration_file: Any = None) -> None:
     """Run a single migration file"""
     try:
         logger.info("Running migration: %s", self.migration_file.name)
@@ -43,7 +48,9 @@ async def run_migration_file(self) -> None:
         return True
 
     except (FileNotFoundError, PermissionError, OSError) as e:
-        logger.error("❌ Error running migration %s: %s", self.migration_file.name, str(e))
+        logger.error(
+            "❌ Error running migration %s: %s", self.migration_file.name, str(e)
+        )
         return False
 
 
@@ -93,7 +100,7 @@ async def run_all_migrations(self) -> None:
         return False
 
 
-async def verify_schema(self) -> None:
+async def verify_schema(self, pydantic: Any = None) -> None:
     """Verify that the schema was created correctly"""
     try:
         connection = await asyncpg.connect(**DATABASE_CONFIG)

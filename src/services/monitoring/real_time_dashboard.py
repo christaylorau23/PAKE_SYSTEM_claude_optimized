@@ -47,7 +47,7 @@ class MetricPoint:
     value: float
     labels: dict[str, str] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "timestamp": self.timestamp.isoformat(),
@@ -62,10 +62,10 @@ class SystemHealth:
 
     overall_status: HealthStatus = HealthStatus.UNKNOWN
     component_health: dict[str, HealthStatus] = field(default_factory=dict)
-    alerts: List[str] = field(default_factory=list)
+    alerts: list[str] = field(default_factory=list)
     last_check: datetime | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "overall_status": self.overall_status.value,
@@ -111,7 +111,9 @@ class MetricCollector(ABC):
 class IngestionMetrics(MetricCollector):
     """Collects ingestion pipeline metrics."""
 
-    def __init__(self, orchestrator_manager: Any | None = None, cache_manager: Any | None = None) -> None:
+    def __init__(
+        self, orchestrator_manager: Any | None = None, cache_manager: Any | None = None
+    ) -> None:
         self.orchestrator_manager = orchestrator_manager
         self.cache_manager = cache_manager
         self._start_time = time.time()
@@ -165,7 +167,9 @@ class IngestionMetrics(MetricCollector):
 class SystemHealthChecker:
     """Monitors system health and generates alerts."""
 
-    def __init__(self, config: DashboardConfig | None = None, metric_collector: Any | None = None) -> None:
+    def __init__(
+        self, config: DashboardConfig | None = None, metric_collector: Any | None = None
+    ) -> None:
         self.config = config or DashboardConfig()
         self.metric_collector = metric_collector
         self._alerts = []
@@ -297,7 +301,7 @@ class SystemHealthChecker:
         if message not in self._alerts:
             self._alerts.append(message)
 
-    def _get_active_alerts(self) -> List[str]:
+    def _get_active_alerts(self) -> list[str]:
         """Get current active alerts."""
         return self._alerts.copy()
 
@@ -437,7 +441,7 @@ class RealTimeMonitoringDashboard:
 
         self.metrics_history[metric_name] = valid_points
 
-    async def get_dashboard_data(self) -> Dict[str, Any]:
+    async def get_dashboard_data(self) -> dict[str, Any]:
         """Get comprehensive dashboard data."""
         return {
             "timestamp": datetime.now(UTC).isoformat(),
@@ -471,7 +475,7 @@ class RealTimeMonitoringDashboard:
         """Get current system health status."""
         return self.current_health
 
-    async def get_metrics_summary(self) -> Dict[str, Any]:
+    async def get_metrics_summary(self) -> dict[str, Any]:
         """Get metrics summary for API endpoints."""
         summary = {}
 

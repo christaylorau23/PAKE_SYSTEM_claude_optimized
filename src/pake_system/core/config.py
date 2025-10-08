@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = Field(default="HS256", env="ALGORITHM")
 
     # CORS settings
-    ALLOWED_HOSTS: List[str] = Field(default=["*"], env="ALLOWED_HOSTS")
+    ALLOWED_HOSTS: list[str] = Field(default=["*"], env="ALLOWED_HOSTS")
 
     # Database settings
     # Note: DATABASE_URL can come from Vault or environment variable
@@ -217,7 +217,7 @@ class Settings(BaseSettings):
 
     @field_validator("ALLOWED_HOSTS", mode="before")
     @classmethod
-    def parse_allowed_hosts(cls, v) -> List[str]:
+    def parse_allowed_hosts(cls, v) -> list[str]:
         """Parse ALLOWED_HOSTS from string or list."""
         if isinstance(v, str):
             return [host.strip() for host in v.split(",")]

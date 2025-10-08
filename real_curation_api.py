@@ -381,7 +381,7 @@ class RealDataManager:
             ).days
             if days_old < 30:
                 reasons.append("Recently published content")
-        except (ValueError, RuntimeError) as e as e:
+        except (ValueError, RuntimeError) as e:
 
             logger.debug(f"Exception in real_curation_api.py: {e}")
 
@@ -452,7 +452,7 @@ async def get_all_content(self) -> None:
 
 
 @app.get("/content/{content_id}")
-async def get_content_item(self) -> None:
+async def get_content_item(self, content_id: Any = None, content_id: Any = None) -> None:
     """Get specific content item."""
     if content_id not in data_manager.content_cache:
         raise HTTPException(status_code=404, detail="Content not found")
@@ -475,7 +475,7 @@ async def get_content_item(self) -> None:
 
 
 @app.get("/recommendations/{user_id}")
-async def get_recommendations(self) -> None:
+async def get_recommendations(self, interests: Any = None, user_id: str, limit: Any = None, user_id: str) -> None:
     """Get personalized recommendations for user."""
     user_interests = (
         [i.strip() for i in self.interests.split(",")]

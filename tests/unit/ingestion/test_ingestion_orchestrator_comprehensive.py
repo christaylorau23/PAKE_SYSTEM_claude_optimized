@@ -47,7 +47,7 @@ class TestIngestionOrchestratorComprehensive:
         )
 
     @pytest.fixture
-    def orchestrator(self) -> None:
+def orchestrator(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, ingestion_config: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Create IngestionOrchestrator instance with mocked dependencies"""
         with (
             patch(
@@ -77,7 +77,7 @@ class TestIngestionOrchestratorComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_functional
-    async def test_create_ingestion_plan_success(self) -> None:
+async def test_create_ingestion_plan_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful ingestion plan creation"""
         # Arrange
         topic = "artificial intelligence"
@@ -105,7 +105,7 @@ class TestIngestionOrchestratorComprehensive:
         )
 
     @pytest.mark.unit_functional
-    async def test_execute_ingestion_plan_success(self) -> None:
+async def test_execute_ingestion_plan_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful ingestion plan execution"""
         # Arrange
         plan = IngestionPlan(
@@ -146,7 +146,7 @@ class TestIngestionOrchestratorComprehensive:
         mock_dependencies["pubmed_service"].search.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_ingest_content_success(self) -> None:
+async def test_ingest_content_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful content ingestion with multiple sources"""
         # Arrange
         topic = "quantum computing"
@@ -209,7 +209,7 @@ class TestIngestionOrchestratorComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_edge_case
-    async def test_create_plan_with_minimal_context(self) -> None:
+async def test_create_plan_with_minimal_context(self, mock_dependencies: Any = None) -> None:
         """Test plan creation with minimal context"""
         # Arrange
         topic = "test topic"
@@ -230,7 +230,7 @@ class TestIngestionOrchestratorComprehensive:
         assert plan.context == minimal_context
 
     @pytest.mark.unit_edge_case
-    async def test_create_plan_with_special_characters(self) -> None:
+async def test_create_plan_with_special_characters(self, mock_dependencies: Any = None) -> None:
         """Test plan creation with special characters in topic"""
         # Arrange
         topic = "AI & Machine Learning: A Comprehensive Guide (2024)"
@@ -267,7 +267,7 @@ class TestIngestionOrchestratorComprehensive:
         assert result.total_sources_queried == 0
 
     @pytest.mark.unit_edge_case
-    async def test_ingest_content_with_very_long_topic(self) -> None:
+async def test_ingest_content_with_very_long_topic(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test content ingestion with very long topic string"""
         # Arrange
         long_topic = "artificial intelligence " * 50  # Very long topic
@@ -290,7 +290,7 @@ class TestIngestionOrchestratorComprehensive:
         assert result.success is True
 
     @pytest.mark.unit_edge_case
-    async def test_concurrent_ingestion_requests(self) -> None:
+async def test_concurrent_ingestion_requests(self, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test handling of concurrent ingestion requests"""
         # Arrange
         topics = ["topic1", "topic2", "topic3"]
@@ -330,7 +330,7 @@ class TestIngestionOrchestratorComprehensive:
             await self.orchestrator.create_ingestion_plan(invalid_topic, {})
 
     @pytest.mark.unit_error_handling
-    async def test_create_plan_cognitive_engine_failure(self) -> None:
+async def test_create_plan_cognitive_engine_failure(self, mock_dependencies: Any = None) -> None:
         """Test plan creation when cognitive engine fails"""
         # Arrange
         topic = "test topic"
@@ -345,7 +345,7 @@ class TestIngestionOrchestratorComprehensive:
             await self.orchestrator.create_ingestion_plan(topic, context)
 
     @pytest.mark.unit_error_handling
-    async def test_execute_plan_service_timeout(self) -> None:
+async def test_execute_plan_service_timeout(self, mock_dependencies: Any = None) -> None:
         """Test plan execution when services timeout"""
         # Arrange
         plan = IngestionPlan(
@@ -368,7 +368,7 @@ class TestIngestionOrchestratorComprehensive:
         assert "timeout" in result.error_message.lower()
 
     @pytest.mark.unit_error_handling
-    async def test_execute_plan_service_failure(self) -> None:
+async def test_execute_plan_service_failure(self, mock_dependencies: Any = None) -> None:
         """Test plan execution when services fail"""
         # Arrange
         plan = IngestionPlan(
@@ -391,7 +391,7 @@ class TestIngestionOrchestratorComprehensive:
         assert "unavailable" in result.error_message.lower()
 
     @pytest.mark.unit_error_handling
-    async def test_ingest_content_network_failure(self) -> None:
+async def test_ingest_content_network_failure(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test content ingestion when network fails"""
         # Arrange
         topic = "test topic"
@@ -419,7 +419,7 @@ class TestIngestionOrchestratorComprehensive:
         assert len(result.content_items) == 0
 
     @pytest.mark.unit_error_handling
-    async def test_performance_optimizer_failure(self) -> None:
+async def test_performance_optimizer_failure(self, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test handling of performance optimizer failures"""
         # Arrange
         plan = IngestionPlan(
@@ -449,7 +449,7 @@ class TestIngestionOrchestratorComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_performance
-    async def test_plan_creation_performance(self) -> None:
+async def test_plan_creation_performance(self, mock_dependencies: Any = None) -> None:
         """Test plan creation performance"""
         import time
 
@@ -474,7 +474,7 @@ class TestIngestionOrchestratorComprehensive:
         assert plan is not None
 
     @pytest.mark.unit_performance
-    async def test_execution_time_tracking(self) -> None:
+async def test_execution_time_tracking(self, mock_dependencies: Any = None) -> None:
         """Test execution time tracking accuracy"""
         # Arrange
         plan = IngestionPlan(
@@ -497,7 +497,7 @@ class TestIngestionOrchestratorComprehensive:
         assert result.execution_time < 10  # Should complete quickly in unit test
 
     @pytest.mark.unit_performance
-    async def test_memory_usage_with_large_results(self) -> None:
+async def test_memory_usage_with_large_results(self, mock_dependencies: Any = None) -> None:
         """Test memory usage with large result sets"""
         # Arrange
         plan = IngestionPlan(
@@ -526,7 +526,7 @@ class TestIngestionOrchestratorComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_security
-    async def test_context_data_sanitization(self) -> None:
+async def test_context_data_sanitization(self, mock_dependencies: Any = None) -> None:
         """Test that context data is properly sanitized"""
         # Arrange
         topic = "security test"
@@ -562,7 +562,7 @@ class TestIngestionOrchestratorComprehensive:
             await self.orchestrator.create_ingestion_plan(malicious_topic, {})
 
     @pytest.mark.unit_security
-    async def test_rate_limiting_integration(self) -> None:
+async def test_rate_limiting_integration(self, mock_dependencies: Any = None) -> None:
         """Test rate limiting integration"""
         # Arrange
         topic = "rate limit test"

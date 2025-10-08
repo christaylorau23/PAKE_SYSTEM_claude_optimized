@@ -159,7 +159,7 @@ class TestContentAnalysisService:
         )
 
     @pytest.mark.asyncio
-    async def test_content_analysis(self) -> None:
+async def test_content_analysis(self, sample_content: Any = None) -> None:
         """Test content analysis functionality"""
         result = await self.analysis_service.analyze_content(sample_content)
 
@@ -233,7 +233,7 @@ class TestRecommendationService:
         )
 
     @pytest.mark.asyncio
-    async def test_generate_recommendation(self) -> None:
+async def test_generate_recommendation(self, sample_content: Any = None, sample_user_profile: Any = None) -> None:
         """Test recommendation generation"""
         recommendation = await self.recommendation_service.generate_recommendation(
             content=sample_content,
@@ -254,7 +254,7 @@ class TestRecommendationService:
         )
 
     @pytest.mark.asyncio
-    async def test_batch_recommendations(self) -> None:
+async def test_batch_recommendations(self, sample_user_profile: Any = None) -> None:
         """Test batch recommendation generation"""
         contents = [
             ContentItem(
@@ -401,7 +401,7 @@ class TestFeatureExtractor:
         ]
 
     @pytest.mark.asyncio
-    async def test_extract_content_features(self) -> None:
+async def test_extract_content_features(self, sample_content: Any = None) -> None:
         """Test content feature extraction"""
         features = await self.feature_extractor.extract_content_features(sample_content)
 
@@ -420,7 +420,7 @@ class TestFeatureExtractor:
         assert "quality_score" in features.quality_features
 
     @pytest.mark.asyncio
-    async def test_extract_user_features(self) -> None:
+async def test_extract_user_features(self, sample_user_profile: Any = None, sample_interactions: Any = None) -> None:
         """Test user feature extraction"""
         features = await self.feature_extractor.extract_user_features(
             sample_user_profile,
@@ -441,7 +441,7 @@ class TestFeatureExtractor:
         assert "avg_hour_of_day" in features.temporal_features
 
     @pytest.mark.asyncio
-    async def test_get_feature_vector(self) -> None:
+async def test_get_feature_vector(self, sample_content: Any = None, sample_user_profile: Any = None, sample_interactions: Any = None) -> None:
         """Test feature vector generation"""
         content_features = await self.feature_extractor.extract_content_features(
             sample_content,
@@ -523,7 +523,7 @@ class TestModelTrainer:
         return interactions
 
     @pytest.mark.asyncio
-    async def test_train_content_quality_model(self) -> None:
+async def test_train_content_quality_model(self, sample_contents: Any = None, sample_interactions: Any = None) -> None:
         """Test content quality model training"""
         metrics = await self.model_trainer.train_content_quality_model(
             sample_contents,
@@ -536,7 +536,7 @@ class TestModelTrainer:
         assert metrics.training_time > 0
 
     @pytest.mark.asyncio
-    async def test_train_user_preference_model(self) -> None:
+async def test_train_user_preference_model(self, sample_users: Any = None, sample_interactions: Any = None) -> None:
         """Test user preference model training"""
         metrics = await self.model_trainer.train_user_preference_model(
             sample_users,
@@ -549,7 +549,7 @@ class TestModelTrainer:
         assert metrics.training_time > 0
 
     @pytest.mark.asyncio
-    async def test_predict_content_quality(self) -> None:
+async def test_predict_content_quality(self, sample_contents: Any = None, sample_contents: Any = None) -> None:
         """Test content quality prediction"""
         # Train model first
         await self.model_trainer.train_content_quality_model(sample_contents, [])
@@ -606,7 +606,7 @@ class TestPredictionEngine:
         ]
 
     @pytest.mark.asyncio
-    async def test_predict_content_quality(self) -> None:
+async def test_predict_content_quality(self, sample_content: Any = None) -> None:
         """Test content quality prediction"""
         result = await self.prediction_engine.predict_content_quality(sample_content)
 
@@ -618,7 +618,7 @@ class TestPredictionEngine:
         assert result.prediction_time_ms > 0
 
     @pytest.mark.asyncio
-    async def test_predict_user_preference(self) -> None:
+async def test_predict_user_preference(self, sample_user_profile: Any = None, sample_interactions: Any = None) -> None:
         """Test user preference prediction"""
         result = await self.prediction_engine.predict_user_preference(
             sample_user_profile,
@@ -632,7 +632,7 @@ class TestPredictionEngine:
         assert 0.0 <= result.confidence <= 1.0
 
     @pytest.mark.asyncio
-    async def test_predict_recommendation_score(self) -> None:
+async def test_predict_recommendation_score(self, sample_content: Any = None, sample_user_profile: Any = None, sample_interactions: Any = None) -> None:
         """Test recommendation score prediction"""
         result = await self.prediction_engine.predict_recommendation_score(
             sample_content,
@@ -648,7 +648,7 @@ class TestPredictionEngine:
         assert 0.0 <= result.confidence <= 1.0
 
     @pytest.mark.asyncio
-    async def test_prediction_caching(self) -> None:
+async def test_prediction_caching(self, sample_content: Any = None, sample_content: Any = None) -> None:
         """Test prediction caching functionality"""
         # First prediction (not cached)
         result1 = await self.prediction_engine.predict_content_quality(sample_content)
@@ -692,7 +692,7 @@ class TestCurationOrchestrator:
         )
 
     @pytest.mark.asyncio
-    async def test_curation_request(self) -> None:
+async def test_curation_request(self, sample_request: Any = None) -> None:
         """Test curation request processing"""
         response = await self.orchestrator.curate_content(sample_request)
 

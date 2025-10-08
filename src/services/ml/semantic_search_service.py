@@ -23,14 +23,14 @@ logger = logging.getLogger(__name__)
 class SearchEnhancement:
     """Enhanced search result with ML insights."""
 
-    original_result: Dict[str, Any]
+    original_result: dict[str, Any]
     semantic_score: float
     content_summary: str
-    key_topics: List[str]
+    key_topics: list[str]
     similarity_explanation: str
     relevance_score: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             **self.original_result,
@@ -52,7 +52,7 @@ class SearchAnalytics:
     query: str
     total_results: int
     avg_semantic_score: float
-    top_topics: List[str]
+    top_topics: list[str]
     search_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
@@ -132,7 +132,7 @@ class SemanticSearchService:
     async def enhance_search_results(
         self,
         query: str,
-        results: list[Dict[str, Any]],
+        results: list[dict[str, Any]],
     ) -> tuple[list[SearchEnhancement], SearchAnalytics]:
         """Enhance search results with semantic analysis and ranking.
 
@@ -202,9 +202,9 @@ class SemanticSearchService:
 
     async def _enhance_single_result(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         query: str,
-        query_keywords: List[str],
+        query_keywords: list[str],
     ) -> SearchEnhancement:
         """Enhance a single search result with ML insights."""
         # Extract content for analysis
@@ -248,7 +248,7 @@ class SemanticSearchService:
             relevance_score=relevance_score,
         )
 
-    def _extract_content_text(self, result: Dict[str, Any]) -> str:
+    def _extract_content_text(self, result: dict[str, Any]) -> str:
         """Extract text content from search result."""
         content_parts = []
 
@@ -259,7 +259,7 @@ class SemanticSearchService:
 
         return " ".join(content_parts).strip()
 
-    def _extract_keywords(self, text: str) -> List[str]:
+    def _extract_keywords(self, text: str) -> list[str]:
         """Extract meaningful keywords from text."""
         if not text:
             return []
@@ -284,7 +284,7 @@ class SemanticSearchService:
 
     def _calculate_semantic_similarity(
         self,
-        query_keywords: List[str],
+        query_keywords: list[str],
         content: str,
     ) -> float:
         """Calculate semantic similarity using simplified TF-IDF approach."""
@@ -344,7 +344,7 @@ class SemanticSearchService:
 
         return ". ".join(top_sentences) + "."
 
-    def _extract_topics(self, text: str) -> List[str]:
+    def _extract_topics(self, text: str) -> list[str]:
         """Extract key topics from text."""
         keywords = self._extract_keywords(text)
         keyword_counts = Counter(keywords)
@@ -372,7 +372,7 @@ class SemanticSearchService:
 
     def _generate_similarity_explanation(
         self,
-        query_keywords: List[str],
+        query_keywords: list[str],
         content: str,
         similarity_score: float,
     ) -> str:
@@ -399,9 +399,9 @@ class SemanticSearchService:
 
     def _calculate_relevance_score(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         semantic_score: float,
-        query_keywords: List[str],
+        query_keywords: list[str],
         content: str,
         title: str,
     ) -> float:
@@ -432,7 +432,7 @@ class SemanticSearchService:
         # Ensure score is between 0 and 1
         return max(0.0, min(1.0, relevance))
 
-    def get_search_insights(self) -> Dict[str, Any]:
+    def get_search_insights(self) -> dict[str, Any]:
         """Get insights from recent search history."""
         if not self.search_history:
             return {"message": "No search history available"}

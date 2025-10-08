@@ -4,15 +4,13 @@ Provides task creation, assignment, and tracking capabilities for
 automated incident response workflows.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 import logging
-from typing import Any, Dict, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List
 import uuid
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -69,14 +67,14 @@ class TaskContext:
 
     security_alert_id: str | None = None
     incident_id: str | None = None
-    affected_systems: List[str] = field(default_factory=list)
-    affected_users: List[str] = field(default_factory=list)
-    threat_indicators: Dict[str, Any] = field(default_factory=dict)
-    attached_logs: List[str] = field(default_factory=list)
-    network_context: Dict[str, Any] = field(default_factory=dict)
-    user_context: Dict[str, Any] = field(default_factory=dict)
-    system_context: Dict[str, Any] = field(default_factory=dict)
-    timeline: list[Dict[str, Any]] = field(default_factory=list)
+    affected_systems: list[str] = field(default_factory=list)
+    affected_users: list[str] = field(default_factory=list)
+    threat_indicators: dict[str, Any] = field(default_factory=dict)
+    attached_logs: list[str] = field(default_factory=list)
+    network_context: dict[str, Any] = field(default_factory=dict)
+    user_context: dict[str, Any] = field(default_factory=dict)
+    system_context: dict[str, Any] = field(default_factory=dict)
+    timeline: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -95,24 +93,24 @@ class Task:
     context: TaskContext | None = None
     due_date: datetime | None = None
     estimated_duration: timedelta | None = None
-    tags: List[str] = field(default_factory=list)
-    checklist: list[Dict[str, Any]] = field(default_factory=list)
-    comments: list[Dict[str, Any]] = field(default_factory=list)
-    attachments: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+    checklist: list[dict[str, Any]] = field(default_factory=list)
+    comments: list[dict[str, Any]] = field(default_factory=list)
+    attachments: list[str] = field(default_factory=list)
     parent_task_id: str | None = None
-    subtasks: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    subtasks: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # Security-specific fields
     security_alert_id: str | None = None
     incident_type: str | None = None
-    investigation_checklist: List[str] = field(default_factory=list)
-    recommended_actions: List[str] = field(default_factory=list)
+    investigation_checklist: list[str] = field(default_factory=list)
+    recommended_actions: list[str] = field(default_factory=list)
     attached_logs: str | None = None
-    network_context: Dict[str, Any] | None = None
-    user_context: Dict[str, Any] | None = None
-    system_context: Dict[str, Any] | None = None
-    timeline: list[Dict[str, Any]] | None = None
+    network_context: dict[str, Any] | None = None
+    user_context: dict[str, Any] | None = None
+    system_context: dict[str, Any] | None = None
+    timeline: list[dict[str, Any]] | None = None
 
 
 class TaskManager:
@@ -120,8 +118,8 @@ class TaskManager:
 
     def __init__(self) -> None:
         self.tasks: dict[str, Task] = {}
-        self.assignments: dict[str, List[str]] = {}  # assignee_id -> task_ids
-        self.task_history: list[Dict[str, Any]] = []
+        self.assignments: dict[str, list[str]] = {}  # assignee_id -> task_ids
+        self.task_history: list[dict[str, Any]] = []
         self.assignment_rules: list[Callable[[Task], str | None]] = []
 
         # Initialize default assignment rules
@@ -356,13 +354,13 @@ class TaskManager:
             if task.task_type == TaskType.SECURITY_INCIDENT
         ]
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get task management statistics."""
         total_tasks = len(self.tasks)
 
-        status_counts: Dict[str, int] = {}
-        priority_counts: Dict[str, int] = {}
-        type_counts: Dict[str, int] = {}
+        status_counts: dict[str, int] = {}
+        priority_counts: dict[str, int] = {}
+        type_counts: dict[str, int] = {}
 
         for task in self.tasks.values():
             status_counts[task.status.value] = (
@@ -390,7 +388,7 @@ class TaskManagementSystem:
 
     def __init__(self) -> None:
         self.task_manager = TaskManager()
-        self.workflows: Dict[str, Any] = {}
+        self.workflows: dict[str, Any] = {}
         self.notification_handlers: list[Callable] = []
 
     async def create_task(self, task: Task) -> str:

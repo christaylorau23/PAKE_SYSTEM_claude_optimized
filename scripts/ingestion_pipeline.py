@@ -1,5 +1,5 @@
-from typing import Dict
-from typing import List
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 PAKE+ Universal Ingestion Pipeline
@@ -58,8 +58,8 @@ class SourceConfig:
     credentials: dict[str, str] | None = None
     interval: int = 3600  # seconds
     enabled: bool = True
-    filters: Dict[str, Any] | None = None
-    metadata: Dict[str, Any] | None = None
+    filters: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
 
 
 @dataclass
@@ -73,8 +73,8 @@ class ContentItem:
     url: str
     published: datetime | None = None
     author: str | None = None
-    tags: List[str] = None
-    metadata: Dict[str, Any] = None
+    tags: list[str] = None
+    metadata: dict[str, Any] = None
 
     def __post_init__(self) -> None:
         if self.tags is None:
@@ -88,7 +88,7 @@ class ContentItem:
 class UniversalIngestionPipeline:
     """Main ingestion pipeline coordinator"""
 
-    def __init__(self) -> None:
+def __init__(self, config_path: Any = None, mcp_server_url: Any = None) -> None:
         self.config_path = config_path or "configs/ingestion.json"
         self.mcp_server_url = mcp_server_url
         self.sources: list[SourceConfig] = []
@@ -589,7 +589,7 @@ class UniversalIngestionPipeline:
 
         return result is not None
 
-    def _record_ingested_content(self) -> None:
+def _record_ingested_content(self, content_hash: Any = None, item: Any = None, item: Any = None, pake_id: Any = None, pake_id: Any = None, content_hash: Any = None) -> None:
         """Record content in local database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -770,7 +770,7 @@ class UniversalIngestionPipeline:
 
         return total_processed
 
-    async def run_continuous(self) -> None:
+async def run_continuous(self, min_interval: Any = None) -> None:
         """Run ingestion pipeline continuously"""
         logger.info("Starting continuous ingestion pipeline")
 
@@ -793,7 +793,7 @@ class UniversalIngestionPipeline:
                 logger.error("Error in continuous ingestion: %s", e)
                 await asyncio.sleep(300)  # Wait 5 minutes on error
 
-    def get_ingestion_statistics(self) -> Dict[str, Any]:
+    def get_ingestion_statistics(self) -> dict[str, Any]:
         """Get ingestion statistics from local database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()

@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from functools import wraps
 import hashlib
+import logging
 import os
 from pathlib import Path
 
@@ -9,7 +10,7 @@ import sys
 import threading
 from typing import Any
 import uuid
-import logging
+
 logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -19,7 +20,7 @@ from utils.logger import get_logger
 class CacheManager:
     """Simple in-memory cache manager for note operations."""
 
-    def __init__(self) -> None:
+def __init__(self, max_size: Any = None, default_ttl: Any = None) -> None:
         self.cache = {}
         self.timestamps = {}
         self.max_size = max_size
@@ -71,11 +72,11 @@ class CacheManager:
                 del self.timestamps[key]
 
 
-def with_error_handling(self) -> None:
+def with_error_handling(self, func: Callable, func: Callable, args: tuple, kwargs: Any = None, args: tuple, **kwargs: Any) -> None:
     """Decorator for consistent error handling in repository methods."""
 
     @wraps(func)
-    def wrapper(self) -> None:
+def wrapper(self, func: Callable, args: tuple, kwargs: Any = None, args: tuple, **kwargs: Any) -> None:
         try:
             return func(self, *args, **kwargs)
         except (ValueError, RuntimeError) as error:
@@ -96,7 +97,7 @@ class NoteRepository:
     Handles filesystem-based note operations with caching.
     """
 
-    def __init__(self) -> None:
+def __init__(self, vault_path: Any = None, cache_size: Any = None, cache_size: Any = None) -> None:
         # Set up paths
         self.vault_path = Path(vault_path or self._get_default_vault_path())
         self.inbox_path = self.vault_path / "00-Inbox"

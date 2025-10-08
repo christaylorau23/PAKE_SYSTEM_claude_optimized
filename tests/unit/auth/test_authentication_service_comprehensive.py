@@ -40,7 +40,7 @@ class TestAuthenticationServiceComprehensive:
         }
 
     @pytest.fixture
-    def auth_service(self) -> None:
+def auth_service(self, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None) -> None:
         """Create AuthenticationService instance with mocked dependencies"""
         with (
             patch("src.services.auth.src.index.RedisService") as mock_redis_class,
@@ -71,7 +71,7 @@ class TestAuthenticationServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_functional
-    async def test_initialize_success(self) -> None:
+async def test_initialize_success(self, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test successful service initialization"""
         # Arrange
         mock_services["redis"].connect.return_value = None
@@ -85,7 +85,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["rbacService"].initialize.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_user_registration_success(self) -> None:
+async def test_user_registration_success(self, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test successful user registration"""
         # Arrange
         registration_data = {
@@ -109,7 +109,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].createUser.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_user_login_success(self) -> None:
+async def test_user_login_success(self, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test successful user login"""
         # Arrange
         login_data = LoginRequestFactory()
@@ -136,7 +136,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].authenticateUser.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_token_refresh_success(self) -> None:
+async def test_token_refresh_success(self, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test successful token refresh"""
         # Arrange
         refresh_token = "refresh_token_123"
@@ -160,7 +160,7 @@ class TestAuthenticationServiceComprehensive:
         )
 
     @pytest.mark.unit_functional
-    async def test_user_logout_success(self) -> None:
+async def test_user_logout_success(self, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test successful user logout"""
         # Arrange
         session_id = "session_123"
@@ -178,7 +178,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["tokenService"].revokeToken.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_password_reset_request_success(self) -> None:
+async def test_password_reset_request_success(self, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test successful password reset request"""
         # Arrange
         email = "test@example.com"
@@ -200,7 +200,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["emailService"].sendPasswordResetEmail.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_password_reset_confirm_success(self) -> None:
+async def test_password_reset_confirm_success(self, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test successful password reset confirmation"""
         # Arrange
         reset_token = "reset_token_123"
@@ -226,7 +226,7 @@ class TestAuthenticationServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_edge_case
-    async def test_registration_with_minimal_data(self) -> None:
+async def test_registration_with_minimal_data(self, mock_services: Any = None) -> None:
         """Test user registration with minimal required data"""
         # Arrange
         minimal_data = {
@@ -248,7 +248,7 @@ class TestAuthenticationServiceComprehensive:
         assert result.email == minimal_data["email"]
 
     @pytest.mark.unit_edge_case
-    async def test_login_with_case_insensitive_username(self) -> None:
+async def test_login_with_case_insensitive_username(self, mock_services: Any = None) -> None:
         """Test login with case-insensitive username"""
         # Arrange
         username = "TestUser"
@@ -271,7 +271,7 @@ class TestAuthenticationServiceComprehensive:
         assert result["success"] is True
 
     @pytest.mark.unit_edge_case
-    async def test_token_refresh_with_expired_token(self) -> None:
+async def test_token_refresh_with_expired_token(self, mock_services: Any = None) -> None:
         """Test token refresh with expired refresh token"""
         # Arrange
         expired_token = "expired_refresh_token"
@@ -284,7 +284,7 @@ class TestAuthenticationServiceComprehensive:
             await self.auth_service.refreshToken(expired_token)
 
     @pytest.mark.unit_edge_case
-    async def test_password_reset_with_nonexistent_email(self) -> None:
+async def test_password_reset_with_nonexistent_email(self, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test password reset request with non-existent email"""
         # Arrange
         email = "nonexistent@example.com"
@@ -298,7 +298,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["userService"].getUserByEmail.assert_called_once_with(email)
 
     @pytest.mark.unit_edge_case
-    async def test_concurrent_login_attempts(self) -> None:
+async def test_concurrent_login_attempts(self, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test handling of concurrent login attempts"""
         import asyncio
 
@@ -332,7 +332,7 @@ class TestAuthenticationServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_error_handling
-    async def test_registration_with_invalid_email(self) -> None:
+async def test_registration_with_invalid_email(self, mock_services: Any = None) -> None:
         """Test user registration with invalid email format"""
         # Arrange
         invalid_data = {
@@ -352,7 +352,7 @@ class TestAuthenticationServiceComprehensive:
             await self.auth_service.registerUser(**invalid_data)
 
     @pytest.mark.unit_error_handling
-    async def test_registration_with_weak_password(self) -> None:
+async def test_registration_with_weak_password(self, mock_services: Any = None) -> None:
         """Test user registration with weak password"""
         # Arrange
         weak_password_data = {
@@ -374,7 +374,7 @@ class TestAuthenticationServiceComprehensive:
             await self.auth_service.registerUser(**weak_password_data)
 
     @pytest.mark.unit_error_handling
-    async def test_login_with_wrong_password(self) -> None:
+async def test_login_with_wrong_password(self, mock_services: Any = None) -> None:
         """Test login with wrong password"""
         # Arrange
         username = "testuser"
@@ -392,7 +392,7 @@ class TestAuthenticationServiceComprehensive:
         assert result["error"] == "Invalid credentials"
 
     @pytest.mark.unit_error_handling
-    async def test_login_with_nonexistent_user(self) -> None:
+async def test_login_with_nonexistent_user(self, mock_services: Any = None) -> None:
         """Test login with non-existent user"""
         # Arrange
         username = "nonexistent"
@@ -410,7 +410,7 @@ class TestAuthenticationServiceComprehensive:
         assert result["error"] == "User not found"
 
     @pytest.mark.unit_error_handling
-    async def test_login_with_disabled_account(self) -> None:
+async def test_login_with_disabled_account(self, mock_services: Any = None) -> None:
         """Test login with disabled account"""
         # Arrange
         username = "testuser"
@@ -428,7 +428,7 @@ class TestAuthenticationServiceComprehensive:
         assert result["error"] == "Account is disabled"
 
     @pytest.mark.unit_error_handling
-    async def test_redis_connection_failure(self) -> None:
+async def test_redis_connection_failure(self, mock_services: Any = None) -> None:
         """Test handling of Redis connection failures"""
         # Arrange
         mock_services["redis"].connect.side_effect = Exception(
@@ -440,7 +440,7 @@ class TestAuthenticationServiceComprehensive:
             await self.auth_service.initialize()
 
     @pytest.mark.unit_error_handling
-    async def test_email_service_failure(self) -> None:
+async def test_email_service_failure(self, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test handling of email service failures"""
         # Arrange
         email = "test@example.com"
@@ -459,7 +459,7 @@ class TestAuthenticationServiceComprehensive:
             await self.auth_service.requestPasswordReset(email)
 
     @pytest.mark.unit_error_handling
-    async def test_invalid_reset_token(self) -> None:
+async def test_invalid_reset_token(self, mock_services: Any = None) -> None:
         """Test password reset with invalid token"""
         # Arrange
         invalid_token = "invalid_reset_token"
@@ -476,7 +476,7 @@ class TestAuthenticationServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_performance
-    async def test_login_performance(self) -> None:
+async def test_login_performance(self, mock_services: Any = None) -> None:
         """Test login performance"""
         import time
 
@@ -505,7 +505,7 @@ class TestAuthenticationServiceComprehensive:
         assert execution_time < 5.0  # Should complete within 5 seconds
 
     @pytest.mark.unit_performance
-    async def test_token_refresh_performance(self) -> None:
+async def test_token_refresh_performance(self, mock_services: Any = None) -> None:
         """Test token refresh performance"""
         import time
 
@@ -531,7 +531,7 @@ class TestAuthenticationServiceComprehensive:
         assert execution_time < 3.0  # Should complete within 3 seconds
 
     @pytest.mark.unit_performance
-    async def test_concurrent_registrations(self) -> None:
+async def test_concurrent_registrations(self, mock_services: Any = None, user_num: Any = None, user_num: Any = None) -> None:
         """Test concurrent user registrations performance"""
         import asyncio
         import time
@@ -540,7 +540,7 @@ class TestAuthenticationServiceComprehensive:
         created_user = UserFactory()
         mock_services["userService"].createUser.return_value = created_user
 
-        async def register_user(self) -> None:
+async def register_user(self, user_num: Any = None, user_num: Any = None) -> None:
             return await self.auth_service.registerUser(
                 email=f"user{user_num}@example.com",
                 username=f"user{user_num}",
@@ -565,7 +565,7 @@ class TestAuthenticationServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_security
-    async def test_password_not_logged(self) -> None:
+async def test_password_not_logged(self, mock_services: Any = None) -> None:
         """Test that passwords are not logged during authentication"""
         # Arrange
         username = "testuser"
@@ -591,7 +591,7 @@ class TestAuthenticationServiceComprehensive:
         assert "password" not in str(result)
 
     @pytest.mark.unit_security
-    async def test_token_generation_security(self) -> None:
+async def test_token_generation_security(self, mock_services: Any = None) -> None:
         """Test that tokens are generated securely"""
         # Arrange
         username = "testuser"
@@ -618,7 +618,7 @@ class TestAuthenticationServiceComprehensive:
         assert len(result["refreshToken"]) > 0
 
     @pytest.mark.unit_security
-    async def test_session_management_security(self) -> None:
+async def test_session_management_security(self, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test that sessions are managed securely"""
         # Arrange
         session_id = "session_123"
@@ -636,7 +636,7 @@ class TestAuthenticationServiceComprehensive:
         mock_services["tokenService"].revokeToken.assert_called_once()
 
     @pytest.mark.unit_security
-    async def test_rate_limiting_integration(self) -> None:
+async def test_rate_limiting_integration(self, mock_services: Any = None) -> None:
         """Test that rate limiting is integrated with authentication"""
         # Arrange
         username = "testuser"
@@ -654,7 +654,7 @@ class TestAuthenticationServiceComprehensive:
         assert result["error"] == "Too many login attempts"
 
     @pytest.mark.unit_security
-    async def test_mfa_integration(self) -> None:
+async def test_mfa_integration(self, mock_services: Any = None, mock_services: Any = None) -> None:
         """Test that MFA is integrated with authentication"""
         # Arrange
         username = "testuser"

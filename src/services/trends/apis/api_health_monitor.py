@@ -80,7 +80,7 @@ class APIHealthMonitor:
         }
 
         # Circuit breaker states
-        self.circuit_breakers: dict[str, Dict[str, Any]] = defaultdict(
+        self.circuit_breakers: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "state": "closed",  # closed, open, half_open
                 "failure_count": 0,
@@ -329,12 +329,9 @@ class APIHealthMonitor:
                 return True
             return False
 
-        if breaker["state"] == "half_open":
-            return True
+        return breaker["state"] == "half_open"
 
-        return False
-
-    async def get_circuit_breaker_status(self) -> dict[str, Dict[str, Any]]:
+    async def get_circuit_breaker_status(self) -> dict[str, dict[str, Any]]:
         """Get status of all circuit breakers."""
         status = {}
         for api_name in self.apis:
@@ -355,7 +352,7 @@ class APIHealthMonitor:
         self,
         api_name: str,
         hours: int = 1,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get detailed performance metrics for an API."""
         metrics = self.metrics[api_name]
         cutoff_time = time.time() - (hours * 3600)

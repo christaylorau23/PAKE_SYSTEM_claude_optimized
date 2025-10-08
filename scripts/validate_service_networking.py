@@ -27,7 +27,7 @@ import yaml
 class ServiceNetworkingValidator:
     """Validates GitHub Actions service container networking configuration."""
 
-    def __init__(self) -> None:
+def __init__(self, workflow_path: Any = None) -> None:
         self.workflow_path = workflow_path
         self.issues: list[dict] = []
         self.warnings: list[dict] = []
@@ -59,7 +59,7 @@ class ServiceNetworkingValidator:
 
         return len(self.issues) == 0, self.issues, self.warnings
 
-    def _validate_job(self) -> None:
+def _validate_job(self, job_config: Any = None, job_name: Any = None, job_config: Any = None, job_name: Any = None, job_config: Any = None) -> None:
         """Validate a single job's service configuration."""
         # Check if job has services
         services = self.job_config.get("services", {})
@@ -77,7 +77,7 @@ class ServiceNetworkingValidator:
             # Host-based networking model
             self._validate_host_based_job(job_name, job_config, services)
 
-    def _validate_container_based_job(self) -> None:
+def _validate_container_based_job(self, job_config: Any = None, job_name: Any = None, job_name: Any = None, job_config: Any = None, services: Any = None) -> None:
         """
         Validate container-based networking (job runs in container).
 
@@ -109,7 +109,7 @@ class ServiceNetworkingValidator:
         # Check connection strings in env
         self._validate_connection_strings_container(job_name, job_config, services)
 
-    def _validate_host_based_job(self) -> None:
+def _validate_host_based_job(self, job_name: Any = None, job_name: Any = None, job_name: Any = None, job_config: Any = None, services: Any = None) -> None:
         """
         Validate host-based networking (job runs on runner host).
 
@@ -152,7 +152,7 @@ class ServiceNetworkingValidator:
         # Check connection strings in env
         self._validate_connection_strings_host(job_name, job_config, services)
 
-    def _validate_connection_strings_container(self) -> None:
+def _validate_connection_strings_container(self, job_config: Any = None, services: Any = None, job_name: Any = None, job_name: Any = None) -> None:
         """Validate connection strings for container-based networking."""
         # Extract env vars from steps
         env_vars = self._extract_env_vars(job_config)
@@ -168,7 +168,7 @@ class ServiceNetworkingValidator:
                     job_name, env_vars, service_name, use_localhost=False
                 )
 
-    def _validate_connection_strings_host(self) -> None:
+def _validate_connection_strings_host(self, job_config: Any = None, services: Any = None, job_name: Any = None, job_name: Any = None) -> None:
         """Validate connection strings for host-based networking."""
         # Extract env vars from steps
         env_vars = self._extract_env_vars(job_config)
@@ -184,7 +184,7 @@ class ServiceNetworkingValidator:
                     job_name, env_vars, service_name, use_localhost=True
                 )
 
-    def _check_postgres_connection(self) -> None:
+def _check_postgres_connection(self, use_localhost: Any = None, service_name: Any = None, job_name: Any = None, service_name: Any = None, use_localhost: Any = None) -> None:
         """Check PostgreSQL connection string."""
         database_url = self.env_vars.get("DATABASE_URL", "")
 
@@ -209,7 +209,7 @@ class ServiceNetworkingValidator:
                     }
                 )
 
-    def _check_redis_connection(self) -> None:
+def _check_redis_connection(self, use_localhost: Any = None, service_name: Any = None, job_name: Any = None, service_name: Any = None, use_localhost: Any = None, job_name: Any = None, service_name: Any = None) -> None:
         """Check Redis connection string."""
         redis_url = self.self.env_vars.get("REDIS_URL", "") or self.self.env_vars.get("REDIS_HOST", "")
 
@@ -292,7 +292,7 @@ options: >-
         return f"Add appropriate health check for {image}"
 
 
-def print_report(self) -> None:
+def print_report(self, workflow_path: Any = None, is_valid: Any = None, warnings: Any = None, issues: Any = None, issues: Any = None, issues: Any = None, warnings: Any = None, warnings: Any = None, warnings: Any = None, issues: Any = None, issues: Any = None, warnings: Any = None) -> None:
     """Print validation report."""
     print(f"\n{'=' * 80}")
     print(f"🔍 Service Networking Validation: {workflow_path}")

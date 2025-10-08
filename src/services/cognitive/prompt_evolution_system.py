@@ -60,8 +60,8 @@ class PromptOrganism:
     full_prompt: str
     fitness_score: float
     performance_metrics: dict[str, float]
-    parent_ids: List[str]
-    mutation_history: List[str]
+    parent_ids: list[str]
+    mutation_history: list[str]
     created_at: datetime
     last_tested: datetime | None
     test_count: int
@@ -74,7 +74,7 @@ class EvolutionExperiment:
 
     experiment_id: str
     prompt_variants: list[PromptOrganism]
-    test_results: Dict[str, Any]
+    test_results: dict[str, Any]
     winner_id: str | None
     confidence_level: float
     sample_size: int
@@ -112,9 +112,9 @@ class PromptEvolutionSystem:
 
         # Evolution storage
         self.prompt_populations: dict[PromptCategory, list[PromptOrganism]] = {}
-        self.evolution_history: list[Dict[str, Any]] = []
+        self.evolution_history: list[dict[str, Any]] = []
         self.active_experiments: list[EvolutionExperiment] = []
-        self.performance_database: dict[str, list[Dict[str, Any]]] = {}
+        self.performance_database: dict[str, list[dict[str, Any]]] = {}
 
         # Genetic building blocks for prompt construction
         self.genetic_library = self._initialize_genetic_library()
@@ -535,7 +535,7 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
         genes: list[PromptGene],
         prompt: str,
         generation: int,
-        parent_ids: List[str] = None,
+        parent_ids: list[str] = None,
     ) -> PromptOrganism:
         """Create a new prompt organism."""
         organism_id = hashlib.sha256(prompt.encode()).hexdigest()[:12]
@@ -690,7 +690,9 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
 
         return child1, child2
 
-    async def _mutate_organism(self, organism: PromptOrganism, category: PromptCategory) -> None:
+    async def _mutate_organism(
+        self, organism: PromptOrganism, category: PromptCategory
+    ) -> None:
         """Mutate an organism by modifying its genes."""
         mutation_type = random.choice(["add", "remove", "modify"])
 
@@ -730,7 +732,7 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
             f"{mutation_type}_{datetime.now(UTC).isoformat()}",
         )
 
-    async def evolve_prompts(self) -> Dict[str, Any]:
+    async def evolve_prompts(self) -> dict[str, Any]:
         """Manually trigger prompt evolution cycle."""
         self.logger.info("Manual prompt evolution triggered")
 
@@ -760,7 +762,7 @@ This log tracks the autonomous evolution of prompts in the PAKE system. The evol
         population = self.prompt_populations[category]
         return max(population, key=lambda x: x.fitness_score)
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get current status of prompt evolution system."""
         return {
             "evolution_stage": self.evolution_stage.value,

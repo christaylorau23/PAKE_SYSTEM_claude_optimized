@@ -29,26 +29,31 @@ from src.services.tenant.tenant_management_service import (
 
 logger = logging.getLogger(__name__)
 
+
 # Mock dependencies for TDD (will be injected from main server)
 def get_tenant_service() -> Any:
     """Get tenant service instance."""
     return None  # Will be injected from main server
 
+
 def get_security_enforcer() -> Any:
     """Get security enforcer instance."""
     return None  # Will be injected from main server
+
 
 def get_tenant_orchestrators() -> Any:
     """Get tenant orchestrators instance."""
     return None  # Will be injected from main server
 
+
 # Mock metrics for TDD (will be replaced with real metrics)
 class MockMetrics:
     def labels(self, **kwargs):
         return self
-    
+
     def inc(self):
         pass
+
 
 TENANT_OPERATIONS = MockMetrics()
 

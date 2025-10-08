@@ -9,9 +9,9 @@ import logging
 from typing import Any, Dict, List
 import uuid
 
-import sqlalchemy
-import psycopg2
 import asyncpg
+import psycopg2
+import sqlalchemy
 
 from ..ml.feature_extractor import FeatureExtractor
 from ..ml.model_trainer import ModelTrainer
@@ -34,8 +34,8 @@ class CurationRequest:
 
     user_id: str
     query: str | None = None
-    interests: List[str] = field(default_factory=list)
-    content_types: List[str] = field(default_factory=list)
+    interests: list[str] = field(default_factory=list)
+    content_types: list[str] = field(default_factory=list)
     max_results: int = 20
     include_explanations: bool = True
     freshness_days: int = 30
@@ -63,7 +63,7 @@ class SystemHealth:
 
     services_healthy: dict[str, bool]
     models_loaded: dict[str, bool]
-    cache_status: Dict[str, Any]
+    cache_status: dict[str, Any]
     performance_metrics: dict[str, float]
     last_updated: datetime = field(default_factory=datetime.now)
 
@@ -256,11 +256,10 @@ class CurationOrchestrator:
         try:
             # Get interactions from the last 90 days
             since_date = datetime.now(UTC) - timedelta(days=90)
-            interactions = await self.user_preference_service.get_user_interactions(
+            return await self.user_preference_service.get_user_interactions(
                 user_id,
                 since_date=since_date,
             )
-            return interactions
 
         except (ValueError, RuntimeError) as e:
             logger.error("Error getting user interactions for %s: %s", user_id, e)
@@ -326,7 +325,7 @@ class CurationOrchestrator:
 
     async def _discover_by_interests(
         self,
-        interests: List[str],
+        interests: list[str],
         max_results: int,
     ) -> list[ContentItem]:
         """Discover content based on user interests."""
@@ -517,7 +516,7 @@ class CurationOrchestrator:
         user_id: str,
         content_id: str,
         feedback_type: str,
-        feedback_data: Dict[str, Any],
+        feedback_data: dict[str, Any],
     ) -> bool:
         """Process user feedback for learning."""
         try:

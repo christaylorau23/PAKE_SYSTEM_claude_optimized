@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class LintingFixer:
     """Comprehensive linting issues fixer"""
 
-    def __init__(self) -> None:
+def __init__(self, root_dir: Any = None) -> None:
         self.root_dir = Path(root_dir)
         self.fixed_files = []
         self.errors_fixed = 0

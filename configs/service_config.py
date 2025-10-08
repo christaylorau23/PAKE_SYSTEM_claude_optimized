@@ -291,7 +291,9 @@ class ServiceConfig:
     - Singleton pattern
     """
 
-    def __init__(self, config_file: str | None = None, environment: str | None = None) -> None:
+    def __init__(
+        self, config_file: str | None = None, environment: str | None = None
+    ) -> None:
         """Initialize service configuration.
 
         Args:

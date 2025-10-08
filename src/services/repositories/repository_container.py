@@ -7,10 +7,9 @@ business logic and data access concerns.
 import logging
 from typing import Any, Dict, TypeVar
 
-import sqlalchemy
-import psycopg2
 import asyncpg
-
+import psycopg2
+import sqlalchemy
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .abstract_repositories import (
@@ -38,7 +37,7 @@ class RepositoryContainer:
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
-        self._repositories: Dict[str, Any] = {}
+        self._repositories: dict[str, Any] = {}
         self._initialize_repositories()
 
     def _initialize_repositories(self) -> None:
@@ -122,7 +121,7 @@ class RepositoryContainer:
         self._repositories[name] = repository
         logger.info("Registered custom repository: %s", name)
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on all repositories."""
         health_status = {
             "status": "healthy",
@@ -166,7 +165,7 @@ class FakeRepositoryContainer:
     """Container with fake repositories for unit testing."""
 
     def __init__(self) -> None:
-        self._repositories: Dict[str, Any] = {}
+        self._repositories: dict[str, Any] = {}
         self._initialize_fake_repositories()
 
     def _initialize_fake_repositories(self) -> None:
@@ -196,7 +195,7 @@ class FakeRepositoryContainer:
             raise ValueError(msg)
         return self._repositories[repository_name]
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Fake health check always returns healthy."""
         return {
             "status": "healthy",

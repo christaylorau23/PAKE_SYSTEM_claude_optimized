@@ -9,13 +9,12 @@ from datetime import UTC, datetime, timedelta
 import os
 import sys
 
-from services.trends.models.trend_signal import Platform, TrendLifecycle, TrendSignal
-
 from services.trends.apis.api_health_monitor import APIHealthMonitor
 from services.trends.apis.rate_limit_controller import RateLimitController
 from services.trends.intelligence.investment_mapper import InvestmentMapper
 from services.trends.intelligence.prediction_engine import PredictionEngine
 from services.trends.intelligence.trend_analyzer import TrendAnalyzer
+from services.trends.models.trend_signal import Platform, TrendLifecycle, TrendSignal
 from services.trends.streaming.stream_manager import StreamManager
 
 # Add src to path

@@ -1,3 +1,4 @@
+from typing import Any
 """Performance Testing Scripts.
 ===========================
 
@@ -53,7 +54,9 @@ def run_smoke_test(self) -> None:
     return True
 
 
-def run_load_test(self) -> None:
+def run_load_test(
+    self, environment: Any = None, environment: Any = None, scenario: Any = None
+) -> None:
     """Run comprehensive load test."""
     print(f"🚀 Starting PAKE System Load Test - {self.scenario.upper()}")
     print(f"Environment: {environment}")

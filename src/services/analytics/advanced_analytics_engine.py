@@ -55,10 +55,10 @@ class AdvancedInsight:
     priority: str  # "critical", "high", "medium", "low"
     severity: str  # "urgent", "warning", "info", "success"
     timestamp: datetime
-    data_sources: List[str] = field(default_factory=list)
-    metrics_involved: List[str] = field(default_factory=list)
-    supporting_evidence: Dict[str, Any] = field(default_factory=dict)
-    recommended_actions: List[str] = field(default_factory=list)
+    data_sources: list[str] = field(default_factory=list)
+    metrics_involved: list[str] = field(default_factory=list)
+    supporting_evidence: dict[str, Any] = field(default_factory=dict)
+    recommended_actions: list[str] = field(default_factory=list)
     predicted_impact: str | None = None
     time_sensitivity: str | None = None  # "immediate", "daily", "weekly", "monthly"
 
@@ -70,8 +70,8 @@ class SystemHealthScore:
     overall_score: float  # 0-100
     component_scores: dict[str, float]
     health_trends: dict[str, str]  # "improving", "declining", "stable"
-    critical_issues: List[str]
-    recommendations: List[str]
+    critical_issues: list[str]
+    recommendations: list[str]
     timestamp: datetime
 
 
@@ -82,9 +82,9 @@ class PredictiveReport:
     forecast_horizon: str
     predicted_metrics: dict[str, list[float]]
     confidence_intervals: dict[str, tuple[float, float]]
-    risk_factors: List[str]
-    opportunities: List[str]
-    scenario_analysis: dict[str, Dict[str, Any]]
+    risk_factors: list[str]
+    opportunities: list[str]
+    scenario_analysis: dict[str, dict[str, Any]]
 
 
 class AdvancedAnalyticsEngine:
@@ -118,7 +118,7 @@ class AdvancedAnalyticsEngine:
         time_range: str = "24h",
         include_predictions: bool = True,
         include_recommendations: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate a comprehensive analytics report."""
         try:
             logger.info("Generating comprehensive analytics report for %s", time_range)
@@ -260,7 +260,7 @@ class AdvancedAnalyticsEngine:
                 timestamp=datetime.now(UTC),
             )
 
-    async def _analyze_performance_trends(self, time_range: str) -> Dict[str, Any]:
+    async def _analyze_performance_trends(self, time_range: str) -> dict[str, Any]:
         """Analyze performance trends using trend analysis service."""
         try:
             # Get trend data for key performance metrics
@@ -294,7 +294,7 @@ class AdvancedAnalyticsEngine:
             logger.error("Performance trend analysis failed: %s", e)
             return {"error": str(e)}
 
-    async def _analyze_usage_patterns(self, time_range: str) -> Dict[str, Any]:
+    async def _analyze_usage_patterns(self, time_range: str) -> dict[str, Any]:
         """Analyze user usage patterns."""
         try:
             # Simulate usage pattern analysis
@@ -330,7 +330,7 @@ class AdvancedAnalyticsEngine:
             logger.error("Usage pattern analysis failed: %s", e)
             return {"error": str(e)}
 
-    async def _detect_anomalies(self, time_range: str) -> Dict[str, Any]:
+    async def _detect_anomalies(self, time_range: str) -> dict[str, Any]:
         """Detect anomalies in system behavior."""
         try:
             # Simulate anomaly detection
@@ -383,7 +383,7 @@ class AdvancedAnalyticsEngine:
             logger.error("Anomaly detection failed: %s", e)
             return {"error": str(e)}
 
-    async def _generate_correlations(self, time_range: str) -> Dict[str, Any]:
+    async def _generate_correlations(self, time_range: str) -> dict[str, Any]:
         """Generate correlation analysis between metrics."""
         try:
             # Use correlation engine if available
@@ -554,7 +554,7 @@ class AdvancedAnalyticsEngine:
     async def _generate_recommendations(
         self,
         insights: list[AdvancedInsight],
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate actionable recommendations based on insights."""
         try:
             recommendations = []
@@ -630,7 +630,7 @@ class AdvancedAnalyticsEngine:
     def _create_executive_summary(
         self,
         insights: list[AdvancedInsight],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create executive summary of key findings."""
         if not insights:
             return {

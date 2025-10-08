@@ -58,7 +58,7 @@ class NPlusOnePattern:
 class DatabaseProfiler:
     """Comprehensive database performance profiler."""
 
-    def __init__(self) -> None:
+def __init__(self, log_file: Any = None) -> None:
         self.log_file = Path(log_file)
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -83,18 +83,18 @@ class DatabaseProfiler:
         self.slow_query_threshold_ms = 1000.0  # 1 second
         self.n_plus_one_threshold = 5  # Minimum queries to consider N+1
 
-    def enable_profiling(self) -> None:
+def enable_profiling(self, engine: Any = None, statement: Any = None, parameters: Any = None, engine: Any = None, context: Any = None, statement: Any = None, statement: Any = None, statement: Any = None, statement: Any = None, conn: Any = None, parameters: Any = None, cursor: Any = None, statement: Any = None, statement: Any = None) -> None:
         """Enable database profiling for SQLAlchemy engine."""
 
         @event.listens_for(engine, "before_cursor_execute")
-        def receive_before_cursor_execute(self) -> None:
+def receive_before_cursor_execute(self, statement: Any = None, parameters: Any = None) -> None:
             """Called before cursor execution."""
             self.context._query_start_time = time.time()
             self.context._query_statement = statement
             self.context._query_parameters = parameters
 
         @event.listens_for(engine, "after_cursor_execute")
-        def receive_after_cursor_execute(self) -> None:
+def receive_after_cursor_execute(self, context: Any = None, statement: Any = None, statement: Any = None, statement: Any = None, statement: Any = None, conn: Any = None, parameters: Any = None, cursor: Any = None, statement: Any = None, statement: Any = None) -> None:
             """Called after cursor execution."""
             if hasattr(context, "_query_start_time"):
                 execution_time = (time.time() - self.context._query_start_time) * 1000
@@ -178,7 +178,7 @@ class DatabaseProfiler:
                 table_queries[query.table_name].append(query)
 
         # Detect N+1 patterns
-        for table, queries in table_queries.items():
+        for _table, queries in table_queries.items():
             if len(queries) >= self.n_plus_one_threshold:
                 # Check if queries are similar (same structure, different parameters)
                 query_patterns = defaultdict(list)
@@ -422,7 +422,7 @@ class SQLAlchemyOptimizer:
     """SQLAlchemy-specific optimization utilities."""
 
     @staticmethod
-    def optimize_relationships(self) -> None:
+def optimize_relationships(self, model_class: Any = None, relationship_name: Any = None, model_class: Any = None, relationship_name: Any = None, model_class: Any = None, relationship_name: Any = None) -> None:
         """Optimize relationship loading using eager loading."""
         from sqlalchemy.orm import joinedload, selectinload
 
@@ -436,7 +436,7 @@ class SQLAlchemyOptimizer:
         return self.session.query(model_class).options(selectinload(relationship_name))
 
     @staticmethod
-    def batch_load_relationships(self) -> None:
+def batch_load_relationships(self, model_class: Any = None, ids: Any = None, relationship_name: Any = None) -> None:
         """Batch load relationships for multiple objects."""
         from sqlalchemy.orm import selectinload
 
@@ -448,7 +448,7 @@ class SQLAlchemyOptimizer:
         )
 
     @staticmethod
-    def optimize_query_with_indexes(self) -> None:
+def optimize_query_with_indexes(self, table_name: Any = None, columns: Any = None) -> None:
         """Add query hints for index usage."""
         # This would be database-specific implementation
         # For PostgreSQL, you could use query hints

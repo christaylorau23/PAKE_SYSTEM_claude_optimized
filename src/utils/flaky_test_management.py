@@ -7,6 +7,7 @@ as specified in the enterprise testing standards.
 """
 
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
@@ -14,7 +15,7 @@ import json
 import logging
 from pathlib import Path
 import time
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 

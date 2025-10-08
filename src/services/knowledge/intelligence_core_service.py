@@ -11,15 +11,15 @@ async/await patterns, and production-ready performance.
 """
 
 import asyncio
-import hashlib
-import json
-import logging
-import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+import hashlib
+import json
+import logging
 from pathlib import Path
 from typing import Any
+import uuid
 
 import frontmatter
 
@@ -144,7 +144,7 @@ class IntelligenceCoreService:
     - Cross-system relationship discovery
     """
 
-    def __init__(self) -> None:
+def __init__(self, obsidian_vault_path: Any = None, neo4j_uri: Any = None, neo4j_user: Any = None, neo4j_REDACTED_SECRET: Any = None, vector_db_service: Any = None, nlp_service: Any = None, cache_service: Any = None) -> None:
         """Initialize the Intelligence Core Service.
 
         Args:
@@ -651,7 +651,6 @@ class IntelligenceCoreService:
     ) -> list[KnowledgeItem]:
         """Perform semantic search using vector database."""
         try:
-                pass
             # Search documents
             vector_results = await self.vector_db.semantic_search(
                 query_embedding=query_embedding,
@@ -710,7 +709,6 @@ class IntelligenceCoreService:
     ) -> list[KnowledgeItem]:
         """Perform hybrid search combining semantic and graph approaches."""
         try:
-                pass
             # Run both searches in parallel
             semantic_task = self._semantic_search(query, query_embedding)
             graph_task = self._graph_search(query)
@@ -853,7 +851,7 @@ class IntelligenceCoreService:
                 errors=[str(e)],
             )
 
-    def _serialize_knowledge_item(self, item: KnowledgeItem) -> Dict[str, Any]:
+def _serialize_knowledge_item(self, item: KnowledgeItem, Dict: Any = None) -> Dict[str, Any]:
         """Serialize knowledge item for caching."""
         return {
             **item.__dict__,
@@ -869,7 +867,7 @@ class IntelligenceCoreService:
             ),
         }
 
-    def _serialize_entity(self, entity: ExtractedEntity) -> Dict[str, Any]:
+def _serialize_entity(self, entity: ExtractedEntity, Dict: Any = None) -> Dict[str, Any]:
         """Serialize entity for caching."""
         return {
             **entity.__dict__,
@@ -881,14 +879,13 @@ class IntelligenceCoreService:
             ),
         }
 
-    def _serialize_relationship(self, rel: ExtractedRelationship) -> Dict[str, Any]:
+def _serialize_relationship(self, rel: ExtractedRelationship, Dict: Any = None) -> Dict[str, Any]:
         """Serialize relationship for caching."""
         return {**rel.__dict__, "relation_type": rel.relation_type.value}
 
-    async def get_service_stats(self) -> Dict[str, Any]:
+async def get_service_stats(self, Dict: Any = None) -> Dict[str, Any]:
         """Get comprehensive service statistics."""
         try:
-                pass
             # Get stats from dependent services
             vector_stats = await self.vector_db.get_database_stats()
             nlp_stats = await self.nlp_service.get_service_stats()
@@ -943,10 +940,9 @@ class IntelligenceCoreService:
             logger.error("Error getting service stats: %s", e)
             return {"error": str(e)}
 
-    async def health_check(self) -> Dict[str, Any]:
+async def health_check(self, Dict: Any = None) -> Dict[str, Any]:
         """Comprehensive health check for the intelligence core."""
         try:
-                pass
             # Check all components
             checks = {
                 "obsidian_vault": self.vault is not None,

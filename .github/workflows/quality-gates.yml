@@ -1,0 +1,125 @@
+name: Quality Gates and Technical Debt Management
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  quality-gates:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install poetry
+        poetry install --no-dev
+
+    - name: Run tests with coverage
+      run: |
+        poetry run pytest --cov=src --cov-report=xml --cov-report=html
+        poetry run pytest --junitxml=test-results.xml
+
+    - name: Run linting
+      run: |
+        poetry run ruff check src/ --output-format=json --output-file=ruff-report.json
+        poetry run ruff format --check src/
+
+    - name: Run type checking
+      run: |
+        poetry run mypy src/ --junit-xml=mypy-results.xml
+
+    - name: Run security scan
+      run: |
+        poetry run bandit -r src/ -f json -o bandit-report.json
+        poetry run safety check --json --output safety-report.json
+
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      with:
+        args: >
+          -Dsonar.projectKey=pake-system
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.python.xunit.reportPath=test-results.xml
+          -Dsonar.qualitygate.wait=true
+
+    - name: Quality Gate Status
+      if: always()
+      run: |
+        echo "Quality Gate Status: ${{ steps.sonarqube.outputs.quality-gate-status }}"
+        if [ "${{ steps.sonarqube.outputs.quality-gate-status }}" != "PASSED" ]; then
+          echo "Quality gate failed!"
+          exit 1
+        fi
+
+    - name: Generate Technical Debt Report
+      if: always()
+      run: |
+        python scripts/generate_technical_debt_report.py
+
+    - name: Create Jira Tickets for New Issues
+      if: failure()
+      run: |
+        python scripts/create_jira_tickets.py --sonar-report sonar-report.json
+
+    - name: Upload Quality Reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: quality-reports
+        path: |
+          coverage.xml
+          test-results.xml
+          ruff-report.json
+          bandit-report.json
+          safety-report.json
+          sonar-report.json
+          technical-debt-report.json
+
+  technical-debt-management:
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    if: always()
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install poetry
+        poetry install --no-dev
+
+    - name: Analyze Technical Debt
+      run: |
+        python scripts/analyze_technical_debt.py
+
+    - name: Generate Sprint Planning Report
+      run: |
+        python scripts/generate_sprint_planning_report.py
+
+    - name: Update Jira Backlog
+      run: |
+        python scripts/update_jira_backlog.py --debt-report technical-debt-analysis.json

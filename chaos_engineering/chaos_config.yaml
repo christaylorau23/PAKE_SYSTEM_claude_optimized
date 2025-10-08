@@ -1,0 +1,61 @@
+# PAKE System - Chaos Engineering Configuration
+# Section 3.2: Implementing Proactive Resilience
+
+version: "1.0.0"
+title: "PAKE System Chaos Engineering Configuration"
+
+environments:
+  staging:
+    url: "https://staging.pake-system.com"
+    database_url: "postgresql://staging_user:staging_password@staging-db:5432/pake_staging"
+    redis_url: "redis://staging-redis:6379/0"
+    kubeconfig: "/path/to/staging-kubeconfig"
+    prometheus_url: "http://staging-prometheus:9090"
+
+  production:
+    url: "https://pake-system.com"
+    database_url: "postgresql://prod_user:prod_password@prod-db:5432/pake_production"
+    redis_url: "redis://prod-redis:6379/0"
+    kubeconfig: "/path/to/prod-kubeconfig"
+    prometheus_url: "http://prod-prometheus:9090"
+
+experiments:
+  database_failover:
+    frequency: "monthly"
+    duration: "30m"
+    environment: "staging"
+    file: "experiments/database_failover_test.json"
+
+  api_instance_failure:
+    frequency: "weekly"
+    duration: "15m"
+    environment: "staging"
+    file: "experiments/api_instance_failure_test.json"
+
+  backup_restore:
+    frequency: "quarterly"
+    duration: "4h"
+    environment: "staging"
+    file: "experiments/backup_restore_validation.json"
+
+thresholds:
+  rto: 300  # 5 minutes
+  rpo: 0    # 0 data loss
+  max_error_rate: 0.01  # 1%
+  max_latency_ms: 2000  # 2 seconds
+  max_restore_time: 14400  # 4 hours
+
+monitoring:
+  prometheus:
+    enabled: true
+    url: "${CHAOS_PROMETHEUS_URL}"
+
+  grafana:
+    enabled: true
+    url: "http://staging-grafana:3000"
+    dashboard_id: "chaos-engineering"
+
+  alerting:
+    enabled: true
+    webhook_url: "${CHAOS_ALERT_WEBHOOK}"
+    slack_channel: "#chaos-engineering"

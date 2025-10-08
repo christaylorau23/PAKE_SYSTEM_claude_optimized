@@ -77,7 +77,7 @@ class HealthCheck:
     message: str
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     duration_ms: float | None = None
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -96,7 +96,7 @@ class ServiceConfig:
     log_level: str = "INFO"
     environment: str = "development"
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate configuration and return list of errors."""
         errors = []
 
@@ -446,9 +446,9 @@ def create_service_config(name: str, **kwargs) -> ServiceConfig:
 
 
 def validate_service_dependencies(
-    dependencies: List[str],
+    dependencies: list[str],
     logger: logging.Logger | None = None,
-) -> List[str]:
+) -> list[str]:
     """Validate that required service dependencies are available.
 
     Args:

@@ -59,12 +59,12 @@ class SecurityThreat:
     confidence: float
     description: str
     input_text: str
-    detected_patterns: List[str]
+    detected_patterns: list[str]
     timestamp: datetime = field(default_factory=datetime.utcnow)
     source_ip: str | None = None
     user_id: str | None = None
     session_id: str | None = None
-    additional_context: Dict[str, Any] = field(default_factory=dict)
+    additional_context: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -102,7 +102,9 @@ class SecurityConfig:
 class SecurityGuardError(PAKEException):
     """Security guard specific errors."""
 
-    def __init__(self, message: str, threat: SecurityThreat | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self, message: str, threat: SecurityThreat | None = None, **kwargs: Any
+    ) -> None:
         super().__init__(message, category=ErrorCategory.AUTHORIZATION, **kwargs)
         self.threat = threat
 
@@ -174,7 +176,7 @@ class PromptInjectionDetector:
         ]
         self.logger = get_logger(service_name="prompt-injection-detector")
 
-    def detect(self, text: str) -> tuple[bool, List[str], float]:
+    def detect(self, text: str) -> tuple[bool, list[str], float]:
         """Detect prompt injection attempts
         Returns: (is_injection, detected_patterns, confidence_score).
         """
@@ -601,7 +603,11 @@ class SecurityGuard:
 
 
 # Decorator for automatic security validation
-def secure_endpoint(config: SecurityConfig | None = None, input_param: str = "text", user_id_param: str = "user_id") -> None:
+def secure_endpoint(
+    config: SecurityConfig | None = None,
+    input_param: str = "text",
+    user_id_param: str = "user_id",
+) -> None:
     """Decorator to add security validation to endpoints."""
 
     def decorator(func: Callable) -> Callable:

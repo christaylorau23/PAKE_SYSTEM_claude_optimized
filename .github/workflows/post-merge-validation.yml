@@ -1,0 +1,92 @@
+name: Post-Merge Validation
+on:
+  push:
+    branches: [main, develop]
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.set-python-version.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
+      run: poetry install --with dev --no-dev
+
+    - name: Run integration tests
+      run: |
+        poetry run pytest -m integration --maxfail=1
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost/test_db
+        REDIS_URL: redis://localhost:6379
+
+    - name: Run performance tests
+      run: |
+        poetry run pytest -m performance --benchmark-only
+
+    - name: Build Docker image
+      run: |
+        docker build -t pake-system:${{ github.sha }} .
+
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging..."
+        # Add actual deployment steps here
+
+    - name: Run smoke tests
+      run: |
+        echo "Running smoke tests against staging..."
+        # Add actual smoke test steps here
+
+    - name: Notify team
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: "Post-merge validation failed for commit ${{ github.sha }}"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

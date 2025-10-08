@@ -347,7 +347,7 @@ class TestQueryExpansionEngine:
             assert result.expansion_time_ms >= 0
             assert isinstance(result.analysis, QueryAnalysis)
 
-    async def test_should_handle_concurrent_expansion_operations_safely(self) -> None:
+async def test_should_handle_concurrent_expansion_operations_safely(self, query: Any = None) -> None:
         """
         Test: Should handle concurrent query expansion operations
         without data corruption or race conditions.
@@ -362,7 +362,7 @@ class TestQueryExpansionEngine:
         ]
 
         # Define concurrent expansion operations
-        async def expand_operation(self) -> None:
+async def expand_operation(self, query: Any = None) -> None:
             return await self.expansion_engine.expand_query(query)
 
         # Run concurrent operations

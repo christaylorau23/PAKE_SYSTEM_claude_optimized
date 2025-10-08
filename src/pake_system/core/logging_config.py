@@ -73,7 +73,7 @@ class StructuredFormatter(logging.Formatter):
 def setup_logging(log_level: str = "INFO", enable_json: bool = True) -> None:
     """Setup enterprise logging configuration."""
     # Base configuration
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "version": 1,
         "disable_existing_loggers": False,
         "filters": {

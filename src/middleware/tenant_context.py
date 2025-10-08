@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Context variables for tenant isolation
 tenant_context: ContextVar[str | None] = ContextVar("tenant_context", default=None)
 user_context: ContextVar[str | None] = ContextVar("user_context", default=None)
-request_context: ContextVar[Dict[str, Any] | None] = ContextVar(
+request_context: ContextVar[dict[str, Any] | None] = ContextVar(
     "request_context",
     default=None,
 )
@@ -40,7 +40,7 @@ class TenantContext:
     tenant_plan: str
     user_id: str | None
     user_role: str | None
-    user_permissions: List[str]
+    user_permissions: list[str]
     request_id: str
     timestamp: datetime
     ip_address: str | None
@@ -65,7 +65,7 @@ class TenantConfig:
     require_tenant_context: bool = True
     allow_anonymous_access: bool = False
     validate_tenant_status: bool = True
-    allowed_tenant_statuses: List[str] = None
+    allowed_tenant_statuses: list[str] = None
 
     # Cross-Tenant Access
     allow_cross_tenant_access: bool = False
@@ -100,7 +100,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.config = config or TenantConfig()
         self.security = HTTPBearer(auto_error=False)
-        self._tenant_cache: dict[str, Dict[str, Any]] = {}
+        self._tenant_cache: dict[str, dict[str, Any]] = {}
         self._cache_timestamps: dict[str, datetime] = {}
 
         logger.info("Tenant context middleware initialized")
@@ -392,7 +392,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             msg = f"Path resolution failed: {e}"
             raise TenantResolutionError(msg)
 
-    async def _get_tenant_data(self, tenant_id: str) -> Dict[str, Any] | None:
+    async def _get_tenant_data(self, tenant_id: str) -> dict[str, Any] | None:
         """Get tenant data with caching."""
         if self.config.enable_tenant_caching:
             # Check cache
@@ -415,7 +415,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
 
         return tenant_data
 
-    async def _get_tenant_by_domain(self, domain: str) -> Dict[str, Any] | None:
+    async def _get_tenant_by_domain(self, domain: str) -> dict[str, Any] | None:
         """Get tenant data by domain with caching."""
         cache_key = f"domain:{domain}"
 
@@ -441,7 +441,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
     async def _fetch_tenant_from_database(
         self,
         tenant_id: str,
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Fetch tenant data from database."""
         # This would be implemented with actual database service
         # For now, return mock data
@@ -456,7 +456,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
     async def _fetch_tenant_by_domain_from_database(
         self,
         domain: str,
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Fetch tenant data by domain from database."""
         # This would be implemented with actual database service
         # For now, return mock data
@@ -580,7 +580,7 @@ def get_current_user_id() -> str | None:
     return user_context.get()
 
 
-def get_current_request_context() -> Dict[str, Any] | None:
+def get_current_request_context() -> dict[str, Any] | None:
     """Get current request context."""
     return request_context.get()
 
@@ -592,7 +592,7 @@ def create_tenant_jwt(
     tenant_id: str,
     user_id: str,
     user_role: str = "user",
-    permissions: List[str] = None,
+    permissions: list[str] = None,
     expires_hours: int = 24,
 ) -> str:
     """Create JWT token with tenant context."""
@@ -612,7 +612,7 @@ def create_tenant_jwt(
     )
 
 
-def validate_tenant_jwt(token: str, secret_key: str) -> Dict[str, Any]:
+def validate_tenant_jwt(token: str, secret_key: str) -> dict[str, Any]:
     """Validate JWT token and extract tenant context."""
     try:
         return jwt.decode(token, secret_key, algorithms=["HS256"])

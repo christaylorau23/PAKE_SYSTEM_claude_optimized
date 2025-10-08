@@ -1,4 +1,5 @@
 from typing import List
+
 """Intelligence GraphQL Service.
 
 FastAPI + GraphQL interface for unified querying across all knowledge stores
@@ -18,8 +19,6 @@ from datetime import UTC, datetime
 import json
 import logging
 
-import sqlalchemy
-import psycopg2
 import asyncpg
 
 # FastAPI and GraphQL
@@ -27,6 +26,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from graphene import Mutation
+import psycopg2
+import sqlalchemy
 import strawberry
 from strawberry.asgi import GraphQL
 
@@ -63,7 +64,7 @@ class EntityType:
     text: str
     entity_type: str
     confidence: float
-    mentions: List[str]
+    mentions: list[str]
     properties: strawberry.scalars.JSON
 
 
@@ -88,7 +89,7 @@ class KnowledgeItemType:
     content: str
     source_type: str
     source_path: str
-    tags: List[str]
+    tags: list[str]
     created_at: datetime
     updated_at: datetime
     entities: list[EntityType]
@@ -113,7 +114,7 @@ class TopicEvolutionType:
 
     topic_id: str
     topic_description: str
-    keywords: List[str]
+    keywords: list[str]
     coherence_score: float
     trend_direction: str
     growth_rate: float
@@ -140,10 +141,10 @@ class CommunityInsightType:
 
     community_id: str
     community_description: str
-    member_entities: List[str]
+    member_entities: list[str]
     community_size: int
     modularity_score: float
-    central_entities: List[str]
+    central_entities: list[str]
     significance: str
 
 
@@ -156,10 +157,10 @@ class SynthesisInsightType:
     description: str
     confidence_score: float
     significance: str
-    supporting_evidence: List[str]
-    actionable_recommendations: List[str]
+    supporting_evidence: list[str]
+    actionable_recommendations: list[str]
     time_horizon: str
-    categories: List[str]
+    categories: list[str]
     created_at: datetime
 
 
@@ -218,7 +219,7 @@ class AddKnowledgeItemInput:
     content: str
     source_type: str
     source_path: str
-    tags: List[str] | None = None
+    tags: list[str] | None = None
     frontmatter: strawberry.scalars.JSON | None = None
 
 
@@ -226,7 +227,7 @@ class AddKnowledgeItemInput:
 class AnalysisInput:
     """Input type for running comprehensive analysis."""
 
-    documents: List[str] | None = None
+    documents: list[str] | None = None
     include_topics: bool = True
     include_correlations: bool = True
     include_communities: bool = True
@@ -756,7 +757,17 @@ class IntelligenceGraphQLService:
     and production-ready performance.
     """
 
-    def __init__(self, obsidian_vault_path: str, neo4j_uri: str, neo4j_user: str, neo4j_REDACTED_SECRET: str, postgres_url: str, cache_service: CacheService | None = None, host: str = "localhost", port: int = 8000) -> None:
+    def __init__(
+        self,
+        obsidian_vault_path: str,
+        neo4j_uri: str,
+        neo4j_user: str,
+        neo4j_REDACTED_SECRET: str,
+        postgres_url: str,
+        cache_service: CacheService | None = None,
+        host: str = "localhost",
+        port: int = 8000,
+    ) -> None:
         """Initialize the GraphQL service.
 
         Args:

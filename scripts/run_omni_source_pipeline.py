@@ -25,7 +25,15 @@ project_root = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, project_root)
 
 
-async def run_omni_source_research(self) -> None:
+async def run_omni_source_research(
+    self,
+    topic: Any = None,
+    context: Any = None,
+    topic: Any = None,
+    save_to_vault: Any = None,
+    topic: Any = None,
+    topic: Any = None,
+) -> None:
     """
     Execute comprehensive omni-source research ingestion
 
@@ -167,7 +175,9 @@ async def run_omni_source_research(self) -> None:
     return result
 
 
-async def save_results_to_vault(self) -> None:
+async def save_results_to_vault(
+    self, topic: Any = None, topic: Any = None, topic: Any = None
+) -> None:
     """Save research results to Obsidian vault"""
 
     print("💾 Saving results to Obsidian vault...")

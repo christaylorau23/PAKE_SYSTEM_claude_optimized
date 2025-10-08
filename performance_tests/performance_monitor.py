@@ -67,7 +67,7 @@ class PerformanceMetrics:
 class PerformanceMonitor:
     """Real-time performance monitoring system."""
 
-    def __init__(self) -> None:
+def __init__(self, config_file: Any = None) -> None:
         self.config_file = Path(config_file)
         self.config_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -235,7 +235,7 @@ class PerformanceMonitor:
         # In production, this would query your application metrics
         return 12  # Simulated queue length of 12
 
-    def _check_thresholds(self) -> None:
+def _check_thresholds(self, metrics: Any = None, metrics: Any = None, metrics: Any = None, metrics: Any = None, metrics: Any = None, metrics: Any = None) -> None:
         """Check metrics against thresholds and generate alerts."""
         thresholds = self.config["thresholds"]
 
@@ -305,7 +305,7 @@ class PerformanceMonitor:
                 self.metrics.queue_length,
             )
 
-    def _create_alert(self) -> None:
+def _create_alert(self, alert_type: Any = None, alert_type: Any = None, severity: Any = None, alert_type: Any = None, severity: Any = None, message: str, metrics: Any = None, threshold: Any = None, current_value: Any = None, message: str) -> None:
         """Create and process performance alert."""
         alert_id = f"{alert_type}_{int(time.time())}"
 
@@ -342,7 +342,7 @@ class PerformanceMonitor:
 
         self.logger.warning("Performance alert: %s", message)
 
-    def _send_alert(self) -> None:
+def _send_alert(self, alert: Any = None) -> None:
         """Send alert to all registered handlers."""
         for handler in self.alert_handlers:
             try:
@@ -350,7 +350,7 @@ class PerformanceMonitor:
             except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in alert handler: %s", e)
 
-    def add_alert_handler(self) -> None:
+def add_alert_handler(self, handler: Any = None) -> None:
         """Add custom alert handler."""
         self.alert_handlers.append(handler)
 

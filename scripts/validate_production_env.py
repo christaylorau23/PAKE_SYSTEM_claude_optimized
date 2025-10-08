@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 Production Environment Validation Script
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def validate_REDACTED_SECRET_strength(
     REDACTED_SECRET: str, min_length: int = 12
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Validate REDACTED_SECRET meets security requirements"""
     issues = []
 
@@ -43,7 +44,7 @@ def validate_REDACTED_SECRET_strength(
     }
 
 
-def validate_api_key(api_key: str, service: str) -> Dict[str, Any]:
+def validate_api_key(api_key: str, service: str) -> dict[str, Any]:
     """Validate API key format"""
     patterns = {
         "openai": r"^sk-[A-Za-z0-9]{48}$",

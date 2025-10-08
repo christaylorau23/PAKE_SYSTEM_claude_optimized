@@ -59,7 +59,7 @@ class LogIssue:
 class ForensicAnalyzer:
     """Main forensic analysis engine."""
 
-    def __init__(self) -> None:
+def __init__(self, artifacts_dir: Any = None) -> None:
         self.artifacts_dir = artifacts_dir
         self.issues: list[LogIssue] = []
 
@@ -365,7 +365,7 @@ class ForensicAnalyzer:
         return "***"
 
 
-def generate_local_snapshot(self) -> None:
+def generate_local_snapshot(self, output_dir: Any = None, output_dir: Any = None, output_dir: Any = None, output_dir: Any = None) -> None:
     """Generate local environment snapshot for comparison."""
     self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -402,7 +402,7 @@ def generate_local_snapshot(self) -> None:
     print(f"✅ Local snapshot saved to {output_dir}")
 
 
-def print_report(self) -> None:
+def print_report(self, results: Any = None, results: Any = None, results: Any = None, results: Any = None, results: Any = None, results: Any = None, results: Any = None, results: Any = None) -> None:
     """Print formatted analysis report."""
     print("\n" + "=" * 80)
     print("📋 FORENSIC CI ANALYSIS REPORT")

@@ -244,7 +244,7 @@ class TestCriticalUserJourneysE2E:
 
     @pytest.mark.e2e
     @pytest.mark.e2e_performance
-    async def test_system_performance_under_load(self) -> None:
+async def test_system_performance_under_load(self, query: Any = None) -> None:
         """Test system performance under concurrent load"""
         # Arrange
         login_response = self.test_client.post(
@@ -257,7 +257,7 @@ class TestCriticalUserJourneysE2E:
         # Act: Concurrent search requests
         start_time = time.time()
 
-        async def perform_search(self) -> None:
+async def perform_search(self, query: Any = None) -> None:
             async with httpx.AsyncClient(app=app, base_url="http://test") as client:
                 response = await client.post(
                     "/search",

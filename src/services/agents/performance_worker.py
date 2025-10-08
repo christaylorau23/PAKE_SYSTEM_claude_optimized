@@ -120,7 +120,7 @@ class PerformanceWorker(BaseWorkerAgent):
 
         logger.info("PerformanceWorker %s initialized", self.worker_id)
 
-    async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_task(self, task_data: dict[str, Any]) -> dict[str, Any]:
         """Process performance optimization task.
 
         Handles various performance tasks including deduplication,
@@ -154,7 +154,7 @@ class PerformanceWorker(BaseWorkerAgent):
                 "result": None,
             }
 
-    async def _process_deduplication(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _process_deduplication(self, task_data: dict[str, Any]) -> dict[str, Any]:
         """Process content deduplication."""
         content_items_data = task_data.get("content_items", [])
         strategy = task_data.get("strategy", "content_hash")
@@ -216,8 +216,8 @@ class PerformanceWorker(BaseWorkerAgent):
 
     async def _process_metrics_collection(
         self,
-        task_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        task_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Process performance metrics collection."""
         metric_types = task_data.get("metric_types", ["system", "application"])
         time_window = task_data.get("time_window", 60)  # seconds
@@ -265,8 +265,8 @@ class PerformanceWorker(BaseWorkerAgent):
 
     async def _process_cache_optimization(
         self,
-        task_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        task_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Process cache optimization."""
         cache_data = task_data.get("cache_data", {})
         optimization_goals = task_data.get("goals", ["hit_rate", "memory_efficiency"])
@@ -317,8 +317,8 @@ class PerformanceWorker(BaseWorkerAgent):
 
     async def _process_system_monitoring(
         self,
-        task_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        task_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Process system monitoring and alerting."""
         monitoring_targets = task_data.get(
             "targets",
@@ -432,8 +432,8 @@ class PerformanceWorker(BaseWorkerAgent):
 
     async def _process_resource_analysis(
         self,
-        task_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        task_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Process resource usage analysis and optimization."""
         analysis_type = task_data.get("type", "comprehensive")
 
@@ -551,8 +551,8 @@ class PerformanceWorker(BaseWorkerAgent):
 
     async def _deduplicate_by_hash(
         self,
-        content_items: list[Dict[str, Any]],
-    ) -> list[Dict[str, Any]]:
+        content_items: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """Deduplicate content using hash-based comparison."""
         seen_hashes = set()
         unique_items = []
@@ -569,9 +569,9 @@ class PerformanceWorker(BaseWorkerAgent):
 
     async def _deduplicate_by_fuzzy_match(
         self,
-        content_items: list[Dict[str, Any]],
+        content_items: list[dict[str, Any]],
         threshold: float,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Deduplicate content using fuzzy string matching."""
         unique_items = []
 
@@ -596,18 +596,18 @@ class PerformanceWorker(BaseWorkerAgent):
 
     async def _deduplicate_by_semantic(
         self,
-        content_items: list[Dict[str, Any]],
+        content_items: list[dict[str, Any]],
         threshold: float,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Deduplicate content using semantic similarity (simplified)."""
         # Simplified semantic deduplication - would use embeddings in production
         return await self._deduplicate_by_fuzzy_match(content_items, threshold * 0.9)
 
     async def _deduplicate_combined(
         self,
-        content_items: list[Dict[str, Any]],
+        content_items: list[dict[str, Any]],
         threshold: float,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Deduplicate using combined approach."""
         # First pass: hash-based
         hash_unique = await self._deduplicate_by_hash(content_items)
@@ -632,7 +632,7 @@ class PerformanceWorker(BaseWorkerAgent):
 
         return len(intersection) / len(union) if union else 0.0
 
-    async def _collect_system_metrics(self) -> Dict[str, Any]:
+    async def _collect_system_metrics(self) -> dict[str, Any]:
         """Collect system-level performance metrics."""
         return {
             "cpu": {
@@ -658,7 +658,7 @@ class PerformanceWorker(BaseWorkerAgent):
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    async def _collect_application_metrics(self) -> Dict[str, Any]:
+    async def _collect_application_metrics(self) -> dict[str, Any]:
         """Collect application-level performance metrics."""
         current_process = psutil.Process()
 
@@ -677,7 +677,7 @@ class PerformanceWorker(BaseWorkerAgent):
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    async def _collect_worker_metrics(self) -> Dict[str, Any]:
+    async def _collect_worker_metrics(self) -> dict[str, Any]:
         """Collect worker-specific performance metrics."""
         return {
             "worker_performance": {
@@ -695,7 +695,7 @@ class PerformanceWorker(BaseWorkerAgent):
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    async def _analyze_performance_trends(self) -> Dict[str, Any]:
+    async def _analyze_performance_trends(self) -> dict[str, Any]:
         """Analyze performance trends from historical data."""
         if len(self.performance_history) < 2:
             return {
@@ -745,8 +745,8 @@ class PerformanceWorker(BaseWorkerAgent):
 
     async def _analyze_cache_performance(
         self,
-        cache_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        cache_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Analyze cache performance metrics."""
         # Simplified cache analysis
         hit_rate = cache_data.get("hit_rate", 0.8)
@@ -768,7 +768,7 @@ class PerformanceWorker(BaseWorkerAgent):
         self,
         hit_rate: float,
         memory_usage: float,
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate cache optimization recommendations."""
         recommendations = []
 
@@ -807,7 +807,7 @@ class PerformanceWorker(BaseWorkerAgent):
         """Performance worker specific cleanup logic."""
         logger.info("PerformanceWorker %s cleanup completed", self.worker_id)
 
-    async def get_health_status(self) -> Dict[str, Any]:
+    async def get_health_status(self) -> dict[str, Any]:
         """Get performance worker specific health status."""
         base_health = await super().get_health_status()
 
@@ -847,10 +847,10 @@ async def create_performance_worker(
 
 # Task creation helpers
 def create_deduplication_task_data(
-    content_items: list[Dict[str, Any]],
+    content_items: list[dict[str, Any]],
     strategy: str = "content_hash",
     threshold: float = 0.85,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create task data for content deduplication."""
     return {
         "operation": "deduplication",
@@ -861,9 +861,9 @@ def create_deduplication_task_data(
 
 
 def create_metrics_collection_task_data(
-    metric_types: List[str] = None,
+    metric_types: list[str] = None,
     time_window: int = 60,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create task data for metrics collection."""
     return {
         "operation": "performance_metrics",
@@ -873,9 +873,9 @@ def create_metrics_collection_task_data(
 
 
 def create_system_monitoring_task_data(
-    targets: List[str] = None,
+    targets: list[str] = None,
     thresholds: dict[str, float] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create task data for system monitoring."""
     return {
         "operation": "system_monitoring",

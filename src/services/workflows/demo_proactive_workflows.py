@@ -20,8 +20,10 @@ logger = logging.getLogger(__name__)
 
 class MockSecurityAlert:
     """Mock security alert for demonstration purposes."""
-    
-    def __init__(self, id: str, severity: str, pattern_type: str, message: str, **kwargs) -> None:
+
+    def __init__(
+        self, id: str, severity: str, pattern_type: str, message: str, **kwargs
+    ) -> None:
         self.id = id
         self.timestamp = datetime.now(UTC)
         self.severity = severity

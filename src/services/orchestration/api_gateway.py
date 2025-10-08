@@ -5,10 +5,11 @@ This is the MINIMAL implementation to make TDD tests pass.
 Following TDD Green Phase - just enough to pass tests, then refactor.
 """
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 import time
+from typing import Any
 import uuid
-from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse

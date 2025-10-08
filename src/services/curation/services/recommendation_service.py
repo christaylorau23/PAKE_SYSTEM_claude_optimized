@@ -50,7 +50,7 @@ class RecommendationRequest:
     include_explanation: bool = True
     diversity_factor: float = 0.2  # 0.0 = pure relevance, 1.0 = maximum diversity
     recency_bias: float = 0.1  # How much to favor recent content
-    categories: List[str] | None = None  # Specific categories to focus on
+    categories: list[str] | None = None  # Specific categories to focus on
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ class RecommendationResult:
     total_candidates: int
     processing_time_ms: float
     explanation: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class RecommendationService:
@@ -85,7 +85,12 @@ class RecommendationService:
     collaborative filtering, and hybrid approaches with real-time learning.
     """
 
-    def __init__(self, enable_collaborative: bool = True, enable_diversity: bool = True, min_interactions_for_cf: int = 5) -> None:
+    def __init__(
+        self,
+        enable_collaborative: bool = True,
+        enable_diversity: bool = True,
+        min_interactions_for_cf: int = 5,
+    ) -> None:
         """Initialize recommendation service.
 
         Args:

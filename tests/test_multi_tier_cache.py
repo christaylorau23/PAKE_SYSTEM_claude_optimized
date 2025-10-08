@@ -43,7 +43,7 @@ class TestMultiTierCacheManager:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     @pytest.fixture
-    def cache_config(self) -> None:
+def cache_config(self, temp_cache_dir: Any = None) -> None:
         """Standard cache configuration"""
         return CacheConfig(
             memory_max_size=1024 * 1024,  # 1MB
@@ -59,7 +59,7 @@ class TestMultiTierCacheManager:
         )
 
     @pytest.fixture
-    def redis_config(self) -> None:
+def redis_config(self, temp_cache_dir: Any = None) -> None:
         """Redis-enabled cache configuration"""
         return CacheConfig(
             memory_max_size=1024 * 1024,
@@ -70,14 +70,14 @@ class TestMultiTierCacheManager:
         )
 
     @pytest_asyncio.fixture
-    async def cache_manager(self) -> None:
+async def cache_manager(self, cache_config: Any = None) -> None:
         """Create cache manager instance"""
         manager = MultiTierCacheManager(cache_config)
         yield manager
         await manager.close()
 
     @pytest_asyncio.fixture
-    async def redis_cache_manager(self) -> None:
+async def redis_cache_manager(self, redis_config: Any = None) -> None:
         """Create Redis-enabled cache manager instance"""
         manager = MultiTierCacheManager(redis_config)
         yield manager
@@ -113,7 +113,7 @@ class TestMultiTierCacheManager:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_set_and_get_cache_entries_successfully(self) -> None:
+async def test_should_set_and_get_cache_entries_successfully(self, sample_cache_key: Any = None, sample_data: Any = None, sample_cache_key: Any = None, sample_data: Any = None) -> None:
         """
         Test: Should set and retrieve cache entries with proper
         data integrity and metadata preservation.
@@ -148,7 +148,7 @@ class TestMultiTierCacheManager:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_should_delete_cache_entries_from_all_tiers(self) -> None:
+async def test_should_delete_cache_entries_from_all_tiers(self, sample_cache_key: Any = None, sample_data: Any = None, sample_cache_key: Any = None, sample_cache_key: Any = None, sample_cache_key: Any = None) -> None:
         """
         Test: Should delete cache entries from all tiers
         and confirm successful removal.
@@ -169,7 +169,7 @@ class TestMultiTierCacheManager:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_should_support_ttl_expiration(self) -> None:
+async def test_should_support_ttl_expiration(self, sample_cache_key: Any = None, sample_data: Any = None, sample_cache_key: Any = None, sample_cache_key: Any = None) -> None:
         """
         Test: Should respect TTL (Time To Live) settings and automatically
         expire cache entries after specified duration.
@@ -193,7 +193,7 @@ class TestMultiTierCacheManager:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_promote_frequently_accessed_items_to_memory(self) -> None:
+async def test_should_promote_frequently_accessed_items_to_memory(self, sample_cache_key: Any = None, sample_data: Any = None, sample_cache_key: Any = None) -> None:
         """
         Test: Should promote frequently accessed items from disk to memory
         tier for improved performance.
@@ -273,7 +273,7 @@ class TestMultiTierCacheManager:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_memory_tier_should_respect_size_limits(self) -> None:
+async def test_memory_tier_should_respect_size_limits(self, cache_config: Any = None) -> None:
         """
         Test: Memory tier should respect size limits and evict entries
         when capacity is exceeded.
@@ -354,7 +354,7 @@ class TestMultiTierCacheManager:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_disk_tier_should_persist_data_across_restarts(self) -> None:
+async def test_disk_tier_should_persist_data_across_restarts(self, temp_cache_dir: Any = None) -> None:
         """
         Test: Disk tier should persist data across service restarts
         and maintain data integrity.
@@ -387,7 +387,7 @@ class TestMultiTierCacheManager:
         assert retrieved_entry.value["message"] == "This should persist"
 
     @pytest.mark.asyncio
-    async def test_disk_tier_should_handle_file_corruption_gracefully(self) -> None:
+async def test_disk_tier_should_handle_file_corruption_gracefully(self, temp_cache_dir: Any = None, temp_cache_dir: Any = None) -> None:
         """
         Test: Disk tier should handle file corruption gracefully
         without crashing the application.
@@ -417,7 +417,7 @@ class TestMultiTierCacheManager:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_track_comprehensive_cache_statistics(self) -> None:
+async def test_should_track_comprehensive_cache_statistics(self, sample_cache_key: Any = None, sample_data: Any = None, sample_cache_key: Any = None) -> None:
         """
         Test: Should track comprehensive cache statistics including
         hits, misses, hit rates, and performance metrics.
@@ -448,7 +448,7 @@ class TestMultiTierCacheManager:
         assert total_hits > 0 or total_misses > 0
 
     @pytest.mark.asyncio
-    async def test_should_calculate_hit_rate_accurately(self) -> None:
+async def test_should_calculate_hit_rate_accurately(self, sample_data: Any = None) -> None:
         """
         Test: Should calculate cache hit rate accurately based on
         hits and misses across all tiers.
@@ -489,7 +489,7 @@ class TestMultiTierCacheManager:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_support_tag_based_invalidation(self) -> None:
+async def test_should_support_tag_based_invalidation(self, sample_data: Any = None, sample_data: Any = None) -> None:
         """
         Test: Should support tag-based cache invalidation for
         efficient bulk cache clearing.
@@ -558,13 +558,13 @@ class TestMultiTierCacheManager:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_handle_concurrent_access_safely(self) -> None:
+async def test_should_handle_concurrent_access_safely(self, base_id: Any = None, sample_data: Any = None, base_id: Any = None, base_id: Any = None) -> None:
         """
         Test: Should handle concurrent cache access safely without
         data corruption or race conditions.
         """
 
-        async def concurrent_cache_operations(self) -> None:
+async def concurrent_cache_operations(self, base_id: Any = None, sample_data: Any = None, base_id: Any = None, base_id: Any = None) -> None:
             for i in range(5):
                 key = CacheKey(namespace="concurrent", key=f"item_{base_id}_{i}")
                 await self.cache_manager.set(key, {**sample_data, "id": f"{base_id}_{i}"})
@@ -615,7 +615,7 @@ class TestMultiTierCacheManager:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_provide_comprehensive_health_status(self) -> None:
+async def test_should_provide_comprehensive_health_status(self, sample_cache_key: Any = None, sample_data: Any = None, sample_cache_key: Any = None) -> None:
         """
         Test: Should provide comprehensive health check information
         including tier status, statistics, and configuration.
@@ -652,7 +652,7 @@ class TestMultiTierCacheManager:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_cleanup_resources_properly(self) -> None:
+async def test_should_cleanup_resources_properly(self, cache_config: Any = None, sample_data: Any = None, cache_config: Any = None) -> None:
         """
         Test: Should properly clean up resources when cache manager
         is closed.

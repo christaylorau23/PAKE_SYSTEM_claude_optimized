@@ -89,13 +89,13 @@ class SentimentAnalysis:
 class TopicExtraction:
     """Extracted topics and keywords."""
 
-    primary_topics: List[str] = field(default_factory=list)
-    secondary_topics: List[str] = field(default_factory=list)
-    keywords: List[str] = field(default_factory=list)
-    entities: List[str] = field(default_factory=list)
+    primary_topics: list[str] = field(default_factory=list)
+    secondary_topics: list[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
+    entities: list[str] = field(default_factory=list)
     confidence_scores: dict[str, float] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "primary_topics": self.primary_topics,
             "secondary_topics": self.secondary_topics,
@@ -117,7 +117,7 @@ class ContentAnalysisResult:
     processing_time_ms: float = 0.0
     analysis_timestamp: datetime = field(default_factory=datetime.now)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "content_id": self.content_id,
             "quality_metrics": self.quality_metrics.to_dict(),
@@ -136,7 +136,9 @@ class ContentAnalysisService:
     topic extraction, sentiment analysis, and embedding generation.
     """
 
-    def __init__(self, embedding_model_name: str = "all-MiniLM-L6-v2", enable_gpu: bool = False) -> None:
+    def __init__(
+        self, embedding_model_name: str = "all-MiniLM-L6-v2", enable_gpu: bool = False
+    ) -> None:
         """Initialize the content analysis service.
 
         Args:
@@ -315,8 +317,7 @@ class ContentAnalysisService:
             # Use Flesch Reading Ease (0-100 scale)
             flesch_score = flesch_reading_ease(text)
             # Convert to 0-1 scale (90-100 = 1.0, 0-30 = 0.0)
-            normalized_score = max(0.0, min(1.0, (flesch_score - 30) / 70))
-            return normalized_score
+            return max(0.0, min(1.0, (flesch_score - 30) / 70))
         except BaseException:
             return 0.5  # Default medium readability
 
@@ -343,13 +344,11 @@ class ContentAnalysisService:
             unique_ratio = len(set(words)) / len(words) if words else 0
 
             # Combine metrics (normalize to 0-1)
-            complexity = (
+            return (
                 min(1.0, grade_level / 20.0) * 0.5  # Grade level component
                 + min(1.0, length_variance / 2.0) * 0.3  # Sentence variance
                 + unique_ratio * 0.2  # Vocabulary diversity
             )
-
-            return complexity
 
         except BaseException:
             return 0.5  # Default medium complexity
@@ -436,8 +435,7 @@ class ContentAnalysisService:
             if re.search(r"[A-Z][^.]*:", text):
                 structure_indicators += 0.3  # Possible headings
 
-            completeness = length_score * 0.6 + min(1.0, structure_indicators) * 0.4
-            return completeness
+            return length_score * 0.6 + min(1.0, structure_indicators) * 0.4
 
         except BaseException:
             return 0.5
@@ -713,7 +711,9 @@ class ContentAnalysisService:
     ) -> list[ContentAnalysisResult]:
         """Analyze multiple content items concurrently."""
 
-        async def analyze_with_semaphore(content_item: ContentItem) -> ContentAnalysisResult:
+        async def analyze_with_semaphore(
+            content_item: ContentItem,
+        ) -> ContentAnalysisResult:
             async with semaphore:
                 return await self.analyze_content(content_item)
 

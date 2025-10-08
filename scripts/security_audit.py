@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 PAKE System - Comprehensive Security Audit and Hardening Suite
@@ -52,18 +53,18 @@ class SecurityAuditResult:
     low_issues: int
     issues: list[SecurityIssue]
     security_score: float
-    recommendations: List[str]
+    recommendations: list[str]
 
 
 class SecurityAuditor:
     """Comprehensive security audit suite"""
 
-    def __init__(self) -> None:
+def __init__(self, base_url: Any = None) -> None:
         self.base_url = base_url
         self.issues: list[SecurityIssue] = []
         self.project_root = Path(__file__).parent.parent
 
-    def add_issue(self) -> None:
+def add_issue(self, issue: Any = None, issue: Any = None, issue: Any = None) -> None:
         """Add security issue to audit results"""
         self.issues.append(issue)
         logger.warning("Security Issue [%s]: %s", issue.severity.upper(), issue.title)
@@ -530,7 +531,7 @@ class SecurityAuditor:
         score = max(0, 100 - (total_weight / max_possible_weight) * 100)
         return round(score, 1)
 
-    def generate_recommendations(self) -> List[str]:
+    def generate_recommendations(self) -> list[str]:
         """Generate security recommendations"""
         recommendations = []
 

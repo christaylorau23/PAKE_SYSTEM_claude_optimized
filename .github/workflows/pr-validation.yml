@@ -1,0 +1,105 @@
+name: PR Validation
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  quality-gates:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.set-python-version.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
+      run: poetry install --with dev --no-dev
+
+    - name: Run Ruff linting
+      run: |
+        poetry run ruff check --diff
+        poetry run ruff format --check
+
+    - name: Run Mypy type checking
+      run: |
+        poetry run mypy src/
+
+    - name: Run Bandit security scan
+      run: |
+        poetry run bandit -r src/ -f json -o bandit_report.json
+
+    - name: Run Safety dependency check
+      run: |
+        poetry run safety check
+
+    - name: Run tests with coverage
+      run: |
+        poetry run pytest --cov=src --cov-report=xml --cov-fail-under=80
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+    - name: Comment PR with results
+      uses: actions/github-script@v6
+      if: always()
+      with:
+        script: |
+          const fs = require('fs');
+          let comment = '## Quality Gate Results\\n\\n';
+
+          if ('${{ job.status }}' === 'success') {
+            comment += '✅ **All quality gates passed!**\\n\\n';
+            comment += '- ✅ Ruff linting passed\\n';
+            comment += '- ✅ Mypy type checking passed\\n';
+            comment += '- ✅ Bandit security scan passed\\n';
+            comment += '- ✅ Safety dependency check passed\\n';
+            comment += '- ✅ Test coverage ≥ 80%\\n';
+            comment += '\\n**Ready for merge!** 🚀';
+          } else {
+            comment += '❌ **Quality gates failed**\\n\\n';
+            comment += 'Please check the workflow logs for details.\\n';
+            comment += '\\n**Common fixes:**\\n';
+            comment += '- Run `ruff check --fix` to fix linting issues\\n';
+            comment += '- Run `ruff format` to fix formatting\\n';
+            comment += '- Run `mypy src/` to check type issues\\n';
+            comment += '- Run `pytest --cov=src` to check test coverage\\n';
+          }
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

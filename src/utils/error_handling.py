@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE+ Enhanced Error Handling Patterns
@@ -58,7 +59,7 @@ class ErrorContext:
     correlation_id: str | None = None
     user_id: str | None = None
     request_id: str | None = None
-    additional_data: Dict[str, Any] = field(default_factory=dict)
+    additional_data: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -120,7 +121,7 @@ class PAKEException(Exception):
         self.original_exception = original_exception
         self.user_message = user_message or "An error occurred. Please try again."
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert exception to dictionary for logging."""
         return {
             "error_id": self.context.error_id,
@@ -505,7 +506,7 @@ class HealthChecker:
         """Add a health check function."""
         self.checks.append((name, check_func))
 
-    async def run_health_checks(self) -> Dict[str, Any]:
+    async def run_health_checks(self) -> dict[str, Any]:
         """Run all health checks and return results."""
         results = {
             "timestamp": datetime.now(UTC).isoformat(),

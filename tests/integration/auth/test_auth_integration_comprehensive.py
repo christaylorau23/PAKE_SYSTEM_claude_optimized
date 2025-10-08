@@ -128,7 +128,7 @@ class TestAuthenticationIntegrationComprehensive:
         }
 
     @pytest.fixture
-    async def auth_service_integration(self) -> None:
+async def auth_service_integration(self, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Create AuthenticationService with mocked dependencies for integration testing"""
         with (
             patch("src.services.auth.src.index.RedisService") as mock_redis_class,
@@ -159,7 +159,7 @@ class TestAuthenticationIntegrationComprehensive:
     # ============================================================================
 
     @pytest.mark.integration_auth
-    async def test_complete_user_registration_flow(self) -> None:
+async def test_complete_user_registration_flow(self, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test complete user registration flow with all services"""
         # Arrange
         registration_data = {
@@ -186,7 +186,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["emailService"].send_welcome_email.assert_called_once()
 
     @pytest.mark.integration_auth
-    async def test_complete_user_login_flow(self) -> None:
+async def test_complete_user_login_flow(self, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test complete user login flow with all services"""
         # Arrange
         login_data = LoginRequestFactory()
@@ -219,7 +219,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].authenticateUser.assert_called_once()
 
     @pytest.mark.integration_auth
-    async def test_token_refresh_flow(self) -> None:
+async def test_token_refresh_flow(self, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test token refresh flow with all services"""
         # Arrange
         refresh_token = "refresh_token_123"
@@ -245,7 +245,7 @@ class TestAuthenticationIntegrationComprehensive:
         )
 
     @pytest.mark.integration_auth
-    async def test_user_logout_flow(self) -> None:
+async def test_user_logout_flow(self, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test user logout flow with all services"""
         # Arrange
         session_id = "session_123"
@@ -263,7 +263,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["tokenService"].revokeToken.assert_called_once()
 
     @pytest.mark.integration_auth
-    async def test_password_reset_flow(self) -> None:
+async def test_password_reset_flow(self, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test complete password reset flow"""
         # Arrange
         email = "reset@example.com"
@@ -302,7 +302,7 @@ class TestAuthenticationIntegrationComprehensive:
         )
 
     @pytest.mark.integration_auth
-    async def test_mfa_integration_flow(self) -> None:
+async def test_mfa_integration_flow(self, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test MFA integration flow"""
         # Arrange
         username = "mfa_user"
@@ -335,7 +335,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["mfaService"].verifyToken.assert_called_once()
 
     @pytest.mark.integration_auth
-    async def test_session_management_integration(self) -> None:
+async def test_session_management_integration(self, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test session management integration"""
         # Arrange
         username = "session_user"
@@ -378,7 +378,7 @@ class TestAuthenticationIntegrationComprehensive:
         )
 
     @pytest.mark.integration_auth
-    async def test_rbac_integration(self) -> None:
+async def test_rbac_integration(self, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test RBAC integration with authentication"""
         # Arrange
         username = "admin_user"
@@ -417,7 +417,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["rbacService"].hasPermission.assert_called_once()
 
     @pytest.mark.integration_auth
-    async def test_concurrent_authentication_requests(self) -> None:
+async def test_concurrent_authentication_requests(self, mock_auth_services: Any = None, login_data: Any = None, login_data: Any = None, mock_auth_services: Any = None) -> None:
         """Test concurrent authentication requests"""
         # Arrange
         login_requests = [
@@ -439,7 +439,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["userService"].authenticateUser.return_value = auth_response
 
         # Act
-        async def login_user(self) -> None:
+async def login_user(self, login_data: Any = None, login_data: Any = None) -> None:
             return await self.auth_service_integration.loginUser(
                 login_data["username"], login_data["password"]
             )
@@ -455,7 +455,7 @@ class TestAuthenticationIntegrationComprehensive:
         assert mock_auth_services["userService"].authenticateUser.call_count == 10
 
     @pytest.mark.integration_auth
-    async def test_authentication_error_handling(self) -> None:
+async def test_authentication_error_handling(self, mock_auth_services: Any = None) -> None:
         """Test authentication error handling and recovery"""
         # Arrange
         username = "error_user"
@@ -491,7 +491,7 @@ class TestAuthenticationIntegrationComprehensive:
         assert result["accessToken"] == "access_token_123"
 
     @pytest.mark.integration_auth
-    async def test_redis_failure_recovery(self) -> None:
+async def test_redis_failure_recovery(self, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test Redis failure recovery in authentication"""
         # Arrange
         username = "redis_user"
@@ -533,7 +533,7 @@ class TestAuthenticationIntegrationComprehensive:
         assert result.username == username
 
     @pytest.mark.integration_auth
-    async def test_email_service_failure_handling(self) -> None:
+async def test_email_service_failure_handling(self, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test email service failure handling"""
         # Arrange
         email = "email@example.com"
@@ -562,7 +562,7 @@ class TestAuthenticationIntegrationComprehensive:
         assert result is True
 
     @pytest.mark.integration_auth
-    async def test_authentication_performance_under_load(self) -> None:
+async def test_authentication_performance_under_load(self, mock_auth_services: Any = None) -> None:
         """Test authentication performance under load"""
         import time
 
@@ -606,7 +606,7 @@ class TestAuthenticationIntegrationComprehensive:
     # ============================================================================
 
     @pytest.mark.integration_security
-    async def test_password_security_integration(self) -> None:
+async def test_password_security_integration(self, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test password security integration"""
         # Arrange
         registration_data = {
@@ -635,7 +635,7 @@ class TestAuthenticationIntegrationComprehensive:
         assert registration_data["password"] not in str(result)
 
     @pytest.mark.integration_security
-    async def test_token_security_integration(self) -> None:
+async def test_token_security_integration(self, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test token security integration"""
         # Arrange
         username = "token_user"
@@ -667,7 +667,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["tokenService"].generateTokens.assert_called_once()
 
     @pytest.mark.integration_security
-    async def test_session_security_integration(self) -> None:
+async def test_session_security_integration(self, mock_auth_services: Any = None, mock_auth_services: Any = None) -> None:
         """Test session security integration"""
         # Arrange
         username = "session_user"
@@ -697,7 +697,7 @@ class TestAuthenticationIntegrationComprehensive:
         mock_auth_services["sessionService"].createSession.assert_called_once()
 
     @pytest.mark.integration_security
-    async def test_rate_limiting_integration(self) -> None:
+async def test_rate_limiting_integration(self, mock_auth_services: Any = None) -> None:
         """Test rate limiting integration with authentication"""
         # Arrange
         username = "rate_user"

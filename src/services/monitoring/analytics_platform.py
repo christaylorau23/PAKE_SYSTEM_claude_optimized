@@ -70,7 +70,7 @@ class MetricPoint:
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     labels: dict[str, str] = field(default_factory=dict)
     component: SystemComponent = SystemComponent.API_GATEWAY
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -86,7 +86,7 @@ class AlertRule:
     severity: AlertSeverity
     cooldown_minutes: int = 5
     is_active: bool = True
-    notification_channels: List[str] = field(default_factory=list)
+    notification_channels: list[str] = field(default_factory=list)
     description: str = ""
     created_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
@@ -109,7 +109,7 @@ class Alert:
     )
     resolved_timestamp: datetime | None = None
     is_resolved: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -121,10 +121,10 @@ class PerformanceReport:
     timeframe: AnalyticsTimeframe
     start_time: datetime
     end_time: datetime
-    metrics_summary: Dict[str, Any] = field(default_factory=dict)
-    performance_insights: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    trends: Dict[str, Any] = field(default_factory=dict)
+    metrics_summary: dict[str, Any] = field(default_factory=dict)
+    performance_insights: list[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
+    trends: dict[str, Any] = field(default_factory=dict)
     generated_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
@@ -143,7 +143,7 @@ class SystemHealthStatus:
     health_check_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metrics_summary: Dict[str, Any] = field(default_factory=dict)
+    metrics_summary: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -164,7 +164,7 @@ class AnalyticsPlatformConfig:
     aggregation_window_minutes: int = 1
     enable_anomaly_detection: bool = True
     anomaly_sensitivity: float = 0.8
-    notification_channels: List[str] = field(default_factory=lambda: ["email", "slack"])
+    notification_channels: list[str] = field(default_factory=lambda: ["email", "slack"])
     enable_dashboard: bool = True
     dashboard_refresh_seconds: int = 10
 
@@ -304,11 +304,11 @@ class MetricsCollector:
 
         return sorted(filtered_metrics, key=lambda m: m.timestamp)
 
-    def get_aggregated_metrics(self, window_key: str) -> Dict[str, Any]:
+    def get_aggregated_metrics(self, window_key: str) -> dict[str, Any]:
         """Get aggregated metrics for specific window."""
         return self.aggregated_metrics.get(window_key, {})
 
-    def get_collection_stats(self) -> Dict[str, Any]:
+    def get_collection_stats(self) -> dict[str, Any]:
         """Get metrics collection statistics."""
         return {
             **self.collection_stats,
@@ -571,7 +571,7 @@ class AlertManager:
 
         return sorted(alerts, key=lambda a: a.triggered_timestamp, reverse=True)
 
-    def get_alert_stats(self) -> Dict[str, Any]:
+    def get_alert_stats(self) -> dict[str, Any]:
         """Get alerting statistics."""
         return {
             **self.alert_stats,
@@ -670,8 +670,8 @@ class PerformanceAnalyzer:
     async def _generate_performance_insights(
         self,
         component: SystemComponent,
-        metrics_data: Dict[str, Any],
-    ) -> List[str]:
+        metrics_data: dict[str, Any],
+    ) -> list[str]:
         """Generate performance insights from metrics data."""
         insights = []
         baselines = self.performance_baselines.get(component, {})
@@ -711,8 +711,8 @@ class PerformanceAnalyzer:
     async def _generate_recommendations(
         self,
         component: SystemComponent,
-        metrics_data: Dict[str, Any],
-    ) -> List[str]:
+        metrics_data: dict[str, Any],
+    ) -> list[str]:
         """Generate actionable recommendations."""
         recommendations = []
 
@@ -768,9 +768,9 @@ class PerformanceAnalyzer:
     async def _analyze_trends(
         self,
         component: SystemComponent,
-        metrics_data: Dict[str, Any],
+        metrics_data: dict[str, Any],
         timeframe: AnalyticsTimeframe,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze performance trends."""
         trends = {}
 
@@ -805,8 +805,8 @@ class PerformanceAnalyzer:
     async def _detect_anomalies(
         self,
         component: SystemComponent,
-        metrics_data: Dict[str, Any],
-    ) -> List[str]:
+        metrics_data: dict[str, Any],
+    ) -> list[str]:
         """Detect performance anomalies using statistical methods."""
         anomalies = []
 
@@ -882,11 +882,11 @@ class ComprehensiveAnalyticsPlatform:
         self.system_start_time = datetime.now(UTC)
 
         # Dashboard and reporting
-        self.dashboard_data: Dict[str, Any] = {}
+        self.dashboard_data: dict[str, Any] = {}
         self.scheduled_reports: dict[str, dict] = {}
 
         # Integration points
-        self.system_components: dict[SystemComponent, Dict[str, Any]] = {}
+        self.system_components: dict[SystemComponent, dict[str, Any]] = {}
 
         logger.info("Comprehensive Analytics Platform initialized")
 
@@ -1154,7 +1154,9 @@ class ComprehensiveAnalyticsPlatform:
             await self.alert_manager.resolve_alert(alert_id)
             logger.info("Auto-resolved stale alert: %s", alert_id)
 
-    def register_system_component(self, component: SystemComponent, metadata: Dict[str, Any] | None = None) -> None:
+    def register_system_component(
+        self, component: SystemComponent, metadata: dict[str, Any] | None = None
+    ) -> None:
         """Register a system component for monitoring."""
         self.system_components[component] = {
             "registered_at": datetime.now(UTC),
@@ -1163,7 +1165,7 @@ class ComprehensiveAnalyticsPlatform:
         }
         logger.info("Registered system component: %s", component.value)
 
-    def get_dashboard_data(self) -> Dict[str, Any]:
+    def get_dashboard_data(self) -> dict[str, Any]:
         """Get current dashboard data."""
         return {
             "platform_status": {
@@ -1177,7 +1179,7 @@ class ComprehensiveAnalyticsPlatform:
             **self.dashboard_data,
         }
 
-    def get_comprehensive_metrics(self) -> Dict[str, Any]:
+    def get_comprehensive_metrics(self) -> dict[str, Any]:
         """Get comprehensive platform metrics."""
         return {
             "metrics_collection": self.metrics_collector.get_collection_stats(),

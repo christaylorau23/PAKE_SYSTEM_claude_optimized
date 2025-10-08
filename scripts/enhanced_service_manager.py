@@ -1,6 +1,6 @@
 config
-from typing import Dict
-from typing import List
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 PAKE+ Enhanced Service Manager
@@ -52,7 +52,7 @@ class ServiceConfig:
     name: str
     display_name: str
     type: ServiceType
-    dependencies: List[str] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
 
     # Commands
     start_command: str | None = None
@@ -93,7 +93,7 @@ class ServiceConfig:
 class PAKEServiceManager:
     """Enhanced service manager with dependency resolution and recovery"""
 
-    def __init__(self) -> None:
+def __init__(self, config_file: Any = None) -> None:
         self.base_dir = Path(__file__).parent.parent
         self.config_dir = self.base_dir / "configs"
         self.logs_dir = self.base_dir / "logs"
@@ -115,8 +115,8 @@ class PAKEServiceManager:
         self.service_processes: dict[str, subprocess.Popen] = {}
         self.restart_attempts: dict[str, int] = {}
         self.last_restart_time: dict[str, datetime] = {}
-        self.startup_order: List[str] = []
-        self.shutdown_order: List[str] = []
+        self.startup_order: list[str] = []
+        self.shutdown_order: list[str] = []
 
         # Control flags
         self.running = False
@@ -355,7 +355,7 @@ class PAKEServiceManager:
         self.logger.info("Startup order: %s", " -> ".join(self.startup_order))
         self.logger.info("Shutdown order: %s", " -> ".join(self.shutdown_order))
 
-    def _topological_sort(self) -> List[str]:
+    def _topological_sort(self) -> list[str]:
         """Perform topological sort to determine service startup order"""
         # Create adjacency list and in-degree count
         graph = {service: set() for service in self.services}
@@ -558,7 +558,7 @@ class PAKEServiceManager:
         await asyncio.sleep(5)
         return True
 
-    async def _wait_for_http_health(self, config: ServiceConfig) -> bool:
+async def _wait_for_http_health(self, config: ServiceConfig, logger: Any = None) -> bool:
         """Wait for HTTP health check to pass"""
         import aiohttp
 
@@ -581,7 +581,7 @@ class PAKEServiceManager:
 
         return False
 
-    async def _wait_for_tcp_health(self, config: ServiceConfig) -> bool:
+async def _wait_for_tcp_health(self, config: ServiceConfig, logger: Any = None) -> bool:
         """Wait for TCP port to be available"""
         end_time = time.time() + config.startup_timeout
 
@@ -873,11 +873,10 @@ class PAKEServiceManager:
 
         try:
             for proc in psutil.process_iter(["pid", "name", "cmdline"]):
-                if config.process_name in proc.info["name"] or any(
+                if (config.process_name in proc.info["name"] or any(
                     config.process_name in cmd for cmd in (proc.info["cmdline"] or [])
-                ):
-                    if proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE:
-                        return ServiceState.RUNNING
+                )) and proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE:
+                    return ServiceState.RUNNING
 
             return ServiceState.STOPPED
 
@@ -982,7 +981,7 @@ class PAKEServiceManager:
 
         return len(failed_services) == 0
 
-    async def get_system_status(self) -> Dict[str, Any]:
+    async def get_system_status(self) -> dict[str, Any]:
         """Get comprehensive system status"""
         status = {
             "timestamp": datetime.now(UTC).isoformat(),
@@ -1056,7 +1055,7 @@ class PAKEServiceManager:
         except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Failed to save service state: %s", e)
 
-    def load_service_state(self) -> None:
+def load_service_state(self, logger: Any = None, logger: Any = None) -> None:
         """Load service states from disk"""
         try:
             if self.state_file.exists():
@@ -1099,12 +1098,12 @@ class PAKEServiceManager:
         except (ImportError, ModuleNotFoundError) as e:
             self.logger.warning("Failed to load service state: %s", e)
 
-    def handle_shutdown_signal(self) -> None:
+def handle_shutdown_signal(self, signum: Any = None) -> None:
         """Handle shutdown signals"""
         self.logger.info("Received signal %s, shutting down...", signum)
         self.shutdown_requested = True
 
-    async def run_service_loop(self) -> None:
+async def run_service_loop(self, monitor_interval: Any = None, monitor_interval: Any = None) -> None:
         """Run main service monitoring loop"""
         self.running = True
         self.logger.info(
@@ -1143,7 +1142,7 @@ class PAKEServiceManager:
             if current_state == ServiceState.FAILED:
                 await self._handle_service_failure(service_name, config)
 
-    async def _handle_service_failure(self) -> None:
+async def _handle_service_failure(self, service_name: Any = None, config: Any = None, config: Any = None, config: Any = None, service_name: Any = None, config: Any = None, config: Any = None, service_name: Any = None, service_name: Any = None, service_name: Any = None, config: Any = None, service_name: Any = None, config: Any = None) -> None:
         """Handle service failure with restart logic"""
         attempts = self.restart_attempts.get(service_name, 0)
 
@@ -1257,7 +1256,7 @@ async def main(self) -> None:
                 } running",
             )
             print("\nService Details:")
-            for service_name, info in status["services"].items():
+            for _service_name, info in status["services"].items():
                 state_icon = {
                     "running": "🟢",
                     "stopped": "🔴",

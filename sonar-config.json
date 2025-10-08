@@ -1,0 +1,29 @@
+{
+  "sonar.projectKey": "pake-system",
+  "sonar.projectName": "PAKE System",
+  "sonar.projectVersion": "1.0.0",
+  "sonar.sources": "src/",
+  "sonar.tests": "tests/",
+  "sonar.python.version": "3.12",
+  "sonar.python.coverage.reportPaths": "coverage.xml",
+  "sonar.python.xunit.reportPath": "test-results.xml",
+  "sonar.exclusions": [
+    "**/node_modules/**",
+    "**/venv/**",
+    "**/.venv/**",
+    "**/__pycache__/**",
+    "**/migrations/**",
+    "**/static/**",
+    "**/media/**"
+  ],
+  "sonar.test.exclusions": [
+    "**/test_*.py",
+    "**/*_test.py",
+    "**/tests/**"
+  ],
+  "sonar.qualitygate.wait": "true",
+  "sonar.analysis.mode": "preview",
+  "sonar.issuesReport.console.enable": "true",
+  "sonar.issuesReport.html.enable": "true",
+  "sonar.issuesReport.json.enable": "true"
+}

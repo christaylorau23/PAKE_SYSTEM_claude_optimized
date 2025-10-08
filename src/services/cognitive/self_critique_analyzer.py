@@ -49,10 +49,10 @@ class CritiqueResult:
     timestamp: datetime
 
     # Analysis results
-    strengths: List[str]
-    weaknesses: List[str]
-    inconsistencies: List[str]
-    improvement_opportunities: List[str]
+    strengths: list[str]
+    weaknesses: list[str]
+    inconsistencies: list[str]
+    improvement_opportunities: list[str]
 
     # Scoring
     overall_quality_score: float  # 0.0 to 1.0
@@ -60,31 +60,31 @@ class CritiqueResult:
     reliability_score: float
 
     # Evidence and reasoning
-    supporting_evidence: List[str]
-    critique_reasoning: List[str]
-    validation_results: dict[ValidationMethod, Dict[str, Any]]
+    supporting_evidence: list[str]
+    critique_reasoning: list[str]
+    validation_results: dict[ValidationMethod, dict[str, Any]]
 
     # Recommendations
-    immediate_actions: List[str]
-    long_term_improvements: List[str]
+    immediate_actions: list[str]
+    long_term_improvements: list[str]
     priority_level: str
 
 
 @dataclass
 class ModelConsensus:
-    participating_models: List[str]
+    participating_models: list[str]
     agreement_level: float
-    consensus_points: List[str]
-    disagreement_points: List[str]
+    consensus_points: list[str]
+    disagreement_points: list[str]
     confidence_scores: dict[str, float]
-    final_consensus: Dict[str, Any]
+    final_consensus: dict[str, Any]
 
 
 @dataclass
 class SelfAssessment:
     assessment_id: str
     assessment_timestamp: datetime
-    cognitive_components_analyzed: List[str]
+    cognitive_components_analyzed: list[str]
 
     # Performance metrics
     overall_performance_score: float
@@ -92,13 +92,13 @@ class SelfAssessment:
     trend_analysis: dict[str, str]  # improving, stable, declining
 
     # Self-identified issues
-    performance_gaps: List[str]
-    bottlenecks: List[str]
-    failure_patterns: List[str]
+    performance_gaps: list[str]
+    bottlenecks: list[str]
+    failure_patterns: list[str]
 
     # Self-improvement suggestions
-    optimization_recommendations: List[str]
-    resource_requirements: Dict[str, Any]
+    optimization_recommendations: list[str]
+    resource_requirements: dict[str, Any]
     implementation_priority: dict[str, int]
 
 
@@ -114,7 +114,7 @@ class SelfCritiqueAnalyzer:
     - Deep reasoning analysis
     """
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
 
         # Critique configuration
@@ -138,8 +138,8 @@ class SelfCritiqueAnalyzer:
         self.consensus_cache: dict[str, ModelConsensus] = {}
 
         # Analysis patterns
-        self.failure_patterns: dict[str, list[Dict[str, Any]]] = {}
-        self.improvement_tracking: dict[str, Dict[str, Any]] = {}
+        self.failure_patterns: dict[str, list[dict[str, Any]]] = {}
+        self.improvement_tracking: dict[str, dict[str, Any]] = {}
 
         # Setup logging
         self.logger = self._setup_logging()
@@ -408,7 +408,7 @@ Provide your response in JSON format with the following structure:
         self,
         model: str,
         prompt: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Query a specific model for critique analysis."""
         # Simulate model query - in production this would call actual model APIs
         await asyncio.sleep(1)  # Simulate API call delay
@@ -474,7 +474,7 @@ Provide your response in JSON format with the following structure:
 
     async def _analyze_model_consensus(
         self,
-        model_responses: dict[str, Dict[str, Any]],
+        model_responses: dict[str, dict[str, Any]],
         confidence_scores: dict[str, float],
     ) -> ModelConsensus:
         """Analyze consensus across model responses."""
@@ -624,7 +624,7 @@ Provide your response in JSON format with the following structure:
         with open(self.critique_log_path, "a", encoding="utf-8") as f:
             f.write(log_entry)
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get current status of self-critique analyzer."""
         recent_critiques = self.critique_history[-5:] if self.critique_history else []
 

@@ -1,4 +1,5 @@
-config
+from typing import Any
+# TODO: Remove orphaned identifier - config
 #!/usr/bin/env python3
 """
 PAKE System - DAL Integration Test Configuration
@@ -143,7 +144,9 @@ async def test_user(self) -> None:
 
 
 # Pytest configuration
-def pytest_configure(self) -> None:
+def pytest_configure(
+    self, config: Any = None, config: Any = None, config: Any = None, config: Any = None
+) -> None:
     """Configure pytest for DAL integration tests."""
     config.addinivalue_line(
         "markers", "integration_database: Tests requiring database integration"
@@ -158,7 +161,7 @@ def pytest_configure(self) -> None:
     config.addinivalue_line("markers", "dal_isolation: Tests for DAL tenant isolation")
 
 
-def pytest_collection_modifyitems(self) -> None:
+def pytest_collection_modifyitems(self, items: Any = None) -> None:
     """Modify test collection to add markers automatically."""
     for item in items:
         # Add integration_database marker to all tests in this module

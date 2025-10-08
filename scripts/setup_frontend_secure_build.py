@@ -123,7 +123,7 @@ class FrontendBuildManager:
             self._create_minimal_yarn_lock(self.bridge_dir)
             raise
 
-    def _create_minimal_yarn_lock(self) -> None:
+def _create_minimal_yarn_lock(self, directory: Any = None, directory: Any = None) -> None:
         """Create a minimal yarn.lock file if installation fails."""
         logger.info("Creating minimal yarn.lock for %s", directory)
         yarn_lock = directory / "yarn.lock"
@@ -334,7 +334,7 @@ yarn audit --level moderate
         logger.info("✅ Build process report generated: %s", report_file)
 
 
-async def main(self) -> None:
+async def main(self, pydantic: Any = None) -> None:
     """Main function to execute frontend build process setup."""
     logger.info("Starting Frontend Secure Build Process Setup")
 

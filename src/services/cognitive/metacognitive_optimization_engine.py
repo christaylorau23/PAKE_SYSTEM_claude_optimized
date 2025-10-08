@@ -54,18 +54,18 @@ class OptimizationOpportunity:
     implementation_complexity: float  # 0.0 to 1.0
     estimated_improvement: float
     priority_score: float
-    suggested_actions: List[str]
-    validation_criteria: List[str]
+    suggested_actions: list[str]
+    validation_criteria: list[str]
 
 
 @dataclass
 class SelfCritiqueResult:
     analysis_timestamp: datetime
-    performance_gaps: List[str]
+    performance_gaps: list[str]
     improvement_opportunities: list[OptimizationOpportunity]
     consensus_confidence: float
     recommendation_priority: str
-    follow_up_actions: List[str]
+    follow_up_actions: list[str]
 
 
 class MetacognitiveOptimizationEngine:
@@ -76,13 +76,13 @@ class MetacognitiveOptimizationEngine:
     capabilities and operational efficiency.
     """
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
         self.optimization_phase = OptimizationPhase.MONITORING
 
         # Core optimization components
         self.metrics_history: dict[str, list[MetacognitiveMetric]] = {}
-        self.optimization_log: list[Dict[str, Any]] = []
+        self.optimization_log: list[dict[str, Any]] = []
         self.active_optimizations: list[OptimizationOpportunity] = []
 
         # Cosmic Calibration Protocol settings
@@ -300,7 +300,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         """Identify optimization opportunities based on performance analysis."""
         opportunities = []
 
-        for metric_name, metric in current_metrics.items():
+        for _metric_name, metric in current_metrics.items():
             # Check if metric is underperforming
             if metric.improvement_percentage < -self.improvement_threshold * 100:
                 opportunity = await self._generate_optimization_opportunity(metric)
@@ -371,7 +371,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         complexity = 0.5  # Default medium complexity
         priority_score = (impact_potential * 0.7) + ((1 - complexity) * 0.3)
 
-        opportunity = OptimizationOpportunity(
+        return OptimizationOpportunity(
             opportunity_id=f"{metric.metric_name}_{datetime.now(UTC).isoformat()}",
             category=template["category"],
             description=template["description"],
@@ -389,12 +389,10 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
             ],
         )
 
-        return opportunity
-
     async def _generate_optimization_plan(
         self,
         opportunities: list[OptimizationOpportunity],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate comprehensive optimization plan from identified opportunities."""
         # Select top opportunities based on priority and feasibility
         selected_opportunities = []
@@ -440,7 +438,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
 
         return optimization_plan
 
-    async def _execute_optimizations(self, optimization_plan: Dict[str, Any]) -> None:
+    async def _execute_optimizations(self, optimization_plan: dict[str, Any]) -> None:
         """Execute the optimization plan."""
         self.logger.info(
             "Executing optimization plan: %s", optimization_plan["plan_id"]
@@ -494,7 +492,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         # - Update performance thresholds
         # etc.
 
-    async def _validate_optimizations(self, optimization_plan: Dict[str, Any]) -> None:
+    async def _validate_optimizations(self, optimization_plan: dict[str, Any]) -> None:
         """Validate that optimizations achieved their intended improvements."""
         self.logger.info("Validating optimization results...")
 
@@ -577,7 +575,11 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
             except (ValueError, RuntimeError) as e:
                 self.logger.error("Error in self-critique loop: %s", e)
 
-    async def _log_calibration_cycle(self, metrics: dict[str, MetacognitiveMetric], opportunities: list[OptimizationOpportunity]) -> None:
+    async def _log_calibration_cycle(
+        self,
+        metrics: dict[str, MetacognitiveMetric],
+        opportunities: list[OptimizationOpportunity],
+    ) -> None:
         """Log calibration cycle to Metacognitive_Log.md."""
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -622,7 +624,7 @@ This log tracks the autonomous self-improvement cycles of the PAKE Autonomous Co
         with open(self.metacognitive_log_path, "a", encoding="utf-8") as f:
             f.write(log_entry)
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get current status of metacognitive optimization engine."""
         recent_metrics = {}
         for metric_name, history in self.metrics_history.items():

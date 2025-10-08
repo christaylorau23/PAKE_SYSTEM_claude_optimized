@@ -1,5 +1,5 @@
-from typing import List
-from typing import Dict
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 PAKE System - Comprehensive Test Coverage Reporting and Monitoring
@@ -90,7 +90,7 @@ class CoverageGap:
 class CoverageReporter:
     """Comprehensive test coverage reporting and monitoring"""
 
-    def __init__(self) -> None:
+def __init__(self, project_root: Any = None, project_root: Any = None, project_root: Any = None, project_root: Any = None, project_root: Any = None) -> None:
         self.project_root = project_root
         self.coverage_dir = project_root / "coverage"
         self.reports_dir = project_root / "coverage_reports"
@@ -376,7 +376,7 @@ class CoverageReporter:
         logger.info("Coverage gaps identified: %s gaps found", len(gaps))
         return gaps
 
-    async def generate_coverage_dashboard(self) -> Dict[str, Any]:
+    async def generate_coverage_dashboard(self) -> dict[str, Any]:
         """Generate comprehensive coverage dashboard"""
         logger.info("Generating coverage dashboard")
 
@@ -525,7 +525,7 @@ class CoverageReporter:
                 count += content.count("def test_")
         return count
 
-    async def _save_coverage_metrics(self) -> None:
+async def _save_coverage_metrics(self, metrics: Any = None) -> None:
         """Save coverage metrics to file"""
         metrics_file = self.trends_dir / f"{self.metrics.level.value}_coverage.json"
         with open(metrics_file, "w") as f:
@@ -578,7 +578,7 @@ class CoverageReporter:
         combined_metrics,
         trends,
         gaps,
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate overall recommendations"""
         recommendations = []
 

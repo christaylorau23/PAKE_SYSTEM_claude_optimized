@@ -18,7 +18,6 @@ async def test_firecrawl_fault_injection(self) -> None:
     """Test FirecrawlService fault injection"""
     try:
         from aioresponses import aioresponses
-
         from services.ingestion.firecrawl_service import FirecrawlService
 
         print("🧪 Testing FirecrawlService fault injection...")
@@ -60,7 +59,6 @@ async def test_arxiv_fault_injection(self) -> None:
     """Test ArxivEnhancedService fault injection"""
     try:
         from aioresponses import aioresponses
-
         from services.ingestion.arxiv_enhanced_service import (
             ArxivEnhancedService,
             ArxivSearchQuery,
@@ -114,7 +112,6 @@ async def test_pubmed_fault_injection(self) -> None:
     """Test PubMedService fault injection"""
     try:
         from aioresponses import aioresponses
-
         from services.ingestion.pubmed_service import PubMedSearchQuery, PubMedService
 
         print("🧪 Testing PubMedService fault injection...")
@@ -169,7 +166,6 @@ async def test_rate_limit_handling(self) -> None:
     """Test rate limit handling across all services"""
     try:
         from aioresponses import aioresponses
-
         from services.ingestion.firecrawl_service import FirecrawlService
 
         print("🧪 Testing rate limit handling...")

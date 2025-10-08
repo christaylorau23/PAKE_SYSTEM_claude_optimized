@@ -1,0 +1,153 @@
+# PAKE System - Complete Unified Quality Dashboard Monitoring Stack
+# Implements the full technology stack from the engineering guide
+
+version: '3.8'
+
+services:
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: pake-prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--log.level=info'
+    environment:
+      - SONAR_TOKEN=${SONAR_TOKEN}
+    networks:
+      - monitoring-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana - Dashboards and Visualization
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: pake-grafana
+    ports:
+      - '3001:3000'
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-pake_grafana_2024}
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SECURITY_DISABLE_GRAVATAR: true
+      GF_ANALYTICS_REPORTING_ENABLED: false
+      GF_ANALYTICS_CHECK_FOR_UPDATES: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    networks:
+      - monitoring-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # SonarQube Metrics Exporter
+  sonarqube-exporter:
+    build:
+      context: ../src/services/monitoring
+      dockerfile: Dockerfile.sonarqube-exporter
+    container_name: pake-sonarqube-exporter
+    ports:
+      - '9300:9300'
+    environment:
+      SONAR_URL: https://sonarcloud.io
+      SONAR_TOKEN: ${SONAR_TOKEN}
+      SONAR_PROJECT_KEY: pake-system
+      SONAR_ORGANIZATION: pake-system-org
+      EXPORTER_HOST: 0.0.0.0
+      EXPORTER_PORT: 9300
+      SONAR_COLLECTION_INTERVAL: 300
+    networks:
+      - monitoring-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9300/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # GitHub Actions Metrics Exporter
+  github-actions-exporter:
+    build:
+      context: ../src/services/monitoring
+      dockerfile: Dockerfile.github-actions-exporter
+    container_name: pake-github-actions-exporter
+    ports:
+      - '9100:9100'
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_ORG: pake-system-org
+      GITHUB_REPO: pake-system
+      GITHUB_API_URL: https://api.github.com
+      EXPORTER_HOST: 0.0.0.0
+      EXPORTER_PORT: 9100
+      GITHUB_COLLECTION_INTERVAL: 300
+    networks:
+      - monitoring-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Jira Metrics Exporter
+  jira-exporter:
+    build:
+      context: ../src/services/monitoring
+      dockerfile: Dockerfile.jira-exporter
+    container_name: pake-jira-exporter
+    ports:
+      - '9200:9200'
+    environment:
+      JIRA_URL: ${JIRA_URL:-}
+      JIRA_TOKEN: ${JIRA_TOKEN:-}
+      JIRA_USERNAME: ${JIRA_USERNAME:-}
+      EXPORTER_HOST: 0.0.0.0
+      EXPORTER_PORT: 9200
+      JIRA_COLLECTION_INTERVAL: 600
+    networks:
+      - monitoring-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  monitoring-network:
+    driver: bridge

@@ -15,9 +15,9 @@ from pathlib import Path
 import sys
 from typing import Any
 
+import psycopg2
 import pydantic
 import sqlalchemy
-import psycopg2
 
 try:
     import asyncpg
@@ -223,9 +223,9 @@ class MigrationValidator:
             await self._cleanup_validation_database()
 
         validation_duration = datetime.now(UTC) - start_time
-        result.performance_metrics["total_validation_time"] = (
-            validation_duration.total_seconds()
-        )
+        result.performance_metrics[
+            "total_validation_time"
+        ] = validation_duration.total_seconds()
 
         self.logger.info(
             "Migration validation completed in %ss",

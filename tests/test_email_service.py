@@ -62,7 +62,7 @@ class TestEmailIngestionService:
         return engine
 
     @pytest.fixture
-    def email_service(self) -> None:
+def email_service(self, email_config: Any = None, mock_cognitive_engine: Any = None) -> None:
         """Create email service instance"""
         return EmailIngestionService(
             config=email_config,
@@ -70,7 +70,7 @@ class TestEmailIngestionService:
         )
 
     @pytest.fixture
-    def exchange_service(self) -> None:
+def exchange_service(self, exchange_config: Any = None, mock_cognitive_engine: Any = None) -> None:
         """Create Exchange email service instance"""
         return EmailIngestionService(
             config=exchange_config,
@@ -452,7 +452,7 @@ class TestEmailIngestionService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_handle_connection_failures_gracefully(self) -> None:
+async def test_should_handle_connection_failures_gracefully(self, email_service: Any = None) -> None:
         """
         Test: Should handle email server connection failures with proper
         error reporting and recovery strategies.
@@ -472,7 +472,7 @@ class TestEmailIngestionService:
             assert result.execution_time > 0
 
     @pytest.mark.asyncio
-    async def test_should_handle_empty_search_results_properly(self) -> None:
+async def test_should_handle_empty_search_results_properly(self, email_service: Any = None) -> None:
         """
         Test: Should handle cases where email search returns no results
         without errors and with proper result structure.

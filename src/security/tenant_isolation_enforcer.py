@@ -13,6 +13,7 @@ import re
 import time
 from typing import Any, Dict, List
 import uuid
+
 import pydantic
 
 from src.middleware.tenant_context import (
@@ -33,7 +34,7 @@ class SecurityViolation:
     severity: str  # CRITICAL, HIGH, MEDIUM, LOW
     tenant_id: str | None
     user_id: str | None
-    details: Dict[str, Any]
+    details: dict[str, Any]
     timestamp: datetime
     ip_address: str | None
     user_agent: str | None
@@ -48,7 +49,7 @@ class SecurityPolicy:
     enabled: bool
     severity: str
     action: str  # block, log, alert
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
 
 
 class SecurityMetrics:
@@ -132,10 +133,10 @@ class TenantIsolationEnforcer:
         self.security_metrics = SecurityMetrics()
         self.violation_log: list[SecurityViolation] = []
         self.blocked_ips: set[str] = set()
-        self.suspicious_patterns: dict[str, List[str]] = {}
+        self.suspicious_patterns: dict[str, list[str]] = {}
 
         # Rate limiting
-        self.rate_limits: dict[str, Dict[str, Any]] = {}
+        self.rate_limits: dict[str, dict[str, Any]] = {}
 
         # Initialize default policies
         self._initialize_security_policies()
@@ -214,7 +215,7 @@ class TenantIsolationEnforcer:
         requested_tenant_id: str,
         operation: str,
         resource: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Validate tenant access permissions.
 
         This is the core security function that ensures tenant isolation.
@@ -302,7 +303,7 @@ class TenantIsolationEnforcer:
             )
             return await self._handle_security_violation(violation)
 
-    async def scan_response_data(self, data: Any, tenant_id: str) -> Dict[str, Any]:
+    async def scan_response_data(self, data: Any, tenant_id: str) -> dict[str, Any]:
         """Scan response data for potential leakage.
 
         Ensures response data doesn't contain information from other tenants.
@@ -376,7 +377,7 @@ class TenantIsolationEnforcer:
             logger.error("Response data scanning error: %s", e)
             return {"clean": False, "error": str(e)}
 
-    async def validate_input_parameters(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def validate_input_parameters(self, params: dict[str, Any]) -> dict[str, Any]:
         """Validate input parameters for security threats.
 
         Protects against injection attacks and malicious input.
@@ -487,7 +488,7 @@ class TenantIsolationEnforcer:
         tenant_id: str,
         user_id: str,
         success: bool,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
     ) -> None:
         """Monitor authentication patterns for anomalies."""
         try:
@@ -540,11 +541,11 @@ class TenantIsolationEnforcer:
                             "failed_attempts": len(recent_failures),
                             "time_window": "30 minutes",
                             "ip_addresses": list(
-                                set(
+                                {
                                     e.get("ip_address")
                                     for e in recent_failures
                                     if e.get("ip_address")
-                                ),
+                                },
                             ),
                         },
                     )
@@ -552,7 +553,7 @@ class TenantIsolationEnforcer:
 
             # Check for unusual locations (different IP addresses)
             ip_addresses = list(
-                set(e.get("ip_address") for e in events if e.get("ip_address")),
+                {e.get("ip_address") for e in events if e.get("ip_address")},
             )
             if len(ip_addresses) > 3:  # Multiple IPs in 24 hours might be suspicious
                 violation = await self._create_security_violation(
@@ -576,7 +577,7 @@ class TenantIsolationEnforcer:
         self,
         violation_type: str,
         severity: str,
-        details: Dict[str, Any],
+        details: dict[str, Any],
     ) -> SecurityViolation:
         """Create security violation record."""
         request_context = get_current_request_context()
@@ -598,7 +599,7 @@ class TenantIsolationEnforcer:
         self,
         violation: SecurityViolation,
         block: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Handle security violation based on policy."""
         try:
             # Determine action based on severity and policy
@@ -654,7 +655,7 @@ class TenantIsolationEnforcer:
         self,
         tenant_id: str,
         user_id: str | None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check rate limiting for tenant/user."""
         current_time = time.time()
         rate_limit_key = f"{tenant_id}:{user_id or 'anonymous'}"
@@ -763,7 +764,7 @@ class TenantIsolationEnforcer:
 
     # Public API methods
 
-    def get_security_metrics(self) -> Dict[str, Any]:
+    def get_security_metrics(self) -> dict[str, Any]:
         """Get current security metrics."""
         return {
             "security_score": self.security_metrics.get_security_score(),
@@ -780,7 +781,7 @@ class TenantIsolationEnforcer:
             ),
         }
 
-    def get_recent_violations(self, limit: int = 50) -> list[Dict[str, Any]]:
+    def get_recent_violations(self, limit: int = 50) -> list[dict[str, Any]]:
         """Get recent security violations."""
         recent_violations = sorted(
             self.violation_log[-limit:],
@@ -824,7 +825,7 @@ class TenantIsolationEnforcer:
             return True
         return False
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Security system health check."""
         try:
             return {

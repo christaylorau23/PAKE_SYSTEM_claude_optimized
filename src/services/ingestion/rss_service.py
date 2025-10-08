@@ -32,9 +32,9 @@ class FeedConfiguration:
     category: str = "general"
     update_interval: int = 3600  # seconds
     max_items_per_fetch: int = 50
-    content_filters: List[str] = field(default_factory=list)
-    keyword_filters: List[str] = field(default_factory=list)
-    exclude_keywords: List[str] = field(default_factory=list)
+    content_filters: list[str] = field(default_factory=list)
+    keyword_filters: list[str] = field(default_factory=list)
+    exclude_keywords: list[str] = field(default_factory=list)
     min_content_length: int = 100
     enable_full_content_extraction: bool = True
     custom_headers: dict[str, str] = field(default_factory=dict)
@@ -54,9 +54,9 @@ class FeedItem:
     author: str | None
     published: datetime
     updated: datetime | None
-    categories: List[str] = field(default_factory=list)
-    tags: List[str] = field(default_factory=list)
-    media_urls: List[str] = field(default_factory=list)
+    categories: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+    media_urls: list[str] = field(default_factory=list)
     enclosures: list[dict[str, str]] = field(default_factory=list)
     guid: str | None = None
     language: str = "en"
@@ -102,7 +102,7 @@ class RSSFeedService:
     def __init__(self, cognitive_engine: Any | None = None) -> None:
         """Initialize RSS feed service."""
         self.cognitive_engine = cognitive_engine
-        self._feed_cache: dict[str, Dict[str, Any]] = {}
+        self._feed_cache: dict[str, dict[str, Any]] = {}
         self._item_cache: dict[str, FeedItem] = {}
         self._session: aiohttp.ClientSession | None = None
         self._monitoring_tasks: dict[str, asyncio.Task] = {}
@@ -236,7 +236,7 @@ class RSSFeedService:
         self,
         content: str,
         config: FeedConfiguration,
-    ) -> tuple[Dict[str, Any], list[FeedItem]]:
+    ) -> tuple[dict[str, Any], list[FeedItem]]:
         """Parse RSS/Atom feed content."""
         try:
             # Parse XML
@@ -261,7 +261,7 @@ class RSSFeedService:
         self,
         root: ET.Element,
         config: FeedConfiguration,
-    ) -> tuple[Dict[str, Any], list[FeedItem]]:
+    ) -> tuple[dict[str, Any], list[FeedItem]]:
         """Parse RSS 2.0 feed."""
         channel = root.find("channel")
         if channel is None:
@@ -288,7 +288,7 @@ class RSSFeedService:
         self,
         root: ET.Element,
         config: FeedConfiguration,
-    ) -> tuple[Dict[str, Any], list[FeedItem]]:
+    ) -> tuple[dict[str, Any], list[FeedItem]]:
         """Parse Atom 1.0 feed."""
         # Handle namespaces
         ns = {"atom": "http://www.w3.org/2005/Atom"}
@@ -656,7 +656,13 @@ class RSSFeedService:
             last_modified=cache_info.get("last_modified"),
         )
 
-    def _update_feed_cache(self, url: str, etag: str | None, last_modified: str | None, items: list[FeedItem]) -> None:
+    def _update_feed_cache(
+        self,
+        url: str,
+        etag: str | None,
+        last_modified: str | None,
+        items: list[FeedItem],
+    ) -> None:
         """Update feed cache with new data."""
         self._feed_cache[url] = {
             "etag": etag,
@@ -706,7 +712,7 @@ class RSSFeedService:
         logger.info("Converted %s RSS items to content items", len(content_items))
         return content_items
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform RSS service health check."""
         session_healthy = self._session is not None and not self._session.closed
 

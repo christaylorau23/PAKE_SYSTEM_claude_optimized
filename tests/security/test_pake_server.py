@@ -378,14 +378,14 @@ class TestSecurityIntegration:
                     assert "shadow" not in file
                     assert "System32" not in file
 
-    def test_security_with_concurrent_operations(self) -> None:
+def test_security_with_concurrent_operations(self, thread_id: Any = None, thread_id: Any = None, thread_id: Any = None, thread_id: Any = None, thread_id: Any = None) -> None:
         """Test security under concurrent operations"""
         import threading
 
         results = []
         errors = []
 
-        def create_malicious_note(self) -> None:
+def create_malicious_note(self, thread_id: Any = None, thread_id: Any = None, thread_id: Any = None, thread_id: Any = None, thread_id: Any = None) -> None:
             try:
                 self.vault_manager.create_note(
                     title=f"../../../tmp/malicious_{thread_id}",

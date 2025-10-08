@@ -25,7 +25,7 @@ class CacheService:
         self.redis_url = redis_url
         self.default_ttl = default_ttl
         self._redis: Any | None = None
-        self._local_cache: Dict[str, Any] = {}
+        self._local_cache: dict[str, Any] = {}
 
     async def connect(self) -> None:
         """Connect to Redis if available."""
@@ -131,7 +131,7 @@ class CacheService:
         except Exception:
             return False
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         try:
             stats = {

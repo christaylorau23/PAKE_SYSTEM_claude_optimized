@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE System - Logging and Monitoring Examples
@@ -21,10 +22,10 @@ import sys
 import time
 import uuid
 
+import asyncpg
+import psycopg2
 import sqlalchemy
 import sqlalchemy.exc
-import psycopg2
-import asyncpg
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 

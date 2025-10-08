@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
+
 import aiohttp
+
 """Structured Logger for PAKE System
 Structlog-based JSON logger with timestamp, level, service name, and correlation IDs.
 """
@@ -232,7 +235,9 @@ class StructuredLogger:
         """Add correlation ID for request tracking."""
         return self.bind(correlation_id=correlation_id)
 
-    def with_user(self, user_id: str, username: str | None = None) -> "StructuredLogger":
+    def with_user(
+        self, user_id: str, username: str | None = None
+    ) -> "StructuredLogger":
         """Add user context for audit logging."""
         context = {"user_id": user_id}
         if username:
@@ -278,7 +283,9 @@ class StructuredLogger:
         """Log warning message (alias)."""
         self.logger.warning(message, **kwargs)
 
-    def error(self, message: str, error: Exception | None = None, **kwargs: Any) -> None:
+    def error(
+        self, message: str, error: Exception | None = None, **kwargs: Any
+    ) -> None:
         """Log error message with optional exception."""
         if error:
             kwargs["exc_info"] = error
@@ -293,7 +300,17 @@ class StructuredLogger:
         self.logger.exception(message, **kwargs)
 
     # Structured logging methods for specific use cases
-    def http(self, message: str, method: str, path: str, status_code: int, duration: float | None = None, user_id: str | None = None, error: Exception | None = None, **kwargs: Any) -> None:
+    def http(
+        self,
+        message: str,
+        method: str,
+        path: str,
+        status_code: int,
+        duration: float | None = None,
+        user_id: str | None = None,
+        error: Exception | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log HTTP request/response."""
         level = self._get_http_log_level(status_code, error)
 
@@ -312,7 +329,16 @@ class StructuredLogger:
 
         getattr(self.logger, level)(message, **http_data, **kwargs)
 
-    def database(self, message: str, operation: str, table: str | None = None, duration: float | None = None, row_count: int | None = None, error: Exception | None = None, **kwargs: Any) -> None:
+    def database(
+        self,
+        message: str,
+        operation: str,
+        table: str | None = None,
+        duration: float | None = None,
+        row_count: int | None = None,
+        error: Exception | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log database operations."""
         level = "error" if error else "debug"
 
@@ -329,7 +355,17 @@ class StructuredLogger:
 
         getattr(self.logger, level)(message, **db_data, **kwargs)
 
-    def security(self, message: str, event: str, success: bool, reason: str | None = None, user_id: str | None = None, ip: str | None = None, user_agent: str | None = None, **kwargs: Any) -> None:
+    def security(
+        self,
+        message: str,
+        event: str,
+        success: bool,
+        reason: str | None = None,
+        user_id: str | None = None,
+        ip: str | None = None,
+        user_agent: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log security events."""
         level = "info" if success else "warning"
 
@@ -345,7 +381,17 @@ class StructuredLogger:
 
         getattr(self.logger, level)(message, **security_data, **kwargs)
 
-    def business(self, message: str, event: str, entity_type: str | None = None, entity_id: str | None = None, action: str | None = None, metadata: dict[str, Any] | None = None, user_id: str | None = None, **kwargs: Any) -> None:
+    def business(
+        self,
+        message: str,
+        event: str,
+        entity_type: str | None = None,
+        entity_id: str | None = None,
+        action: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        user_id: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log business events."""
         business_data = {
             "business": {
@@ -361,7 +407,15 @@ class StructuredLogger:
 
         self.logger.info(message, **business_data, **kwargs)
 
-    def performance(self, message: str, operation: str, duration: float | None = None, memory_mb: float | None = None, cpu_percent: float | None = None, **kwargs: Any) -> None:
+    def performance(
+        self,
+        message: str,
+        operation: str,
+        duration: float | None = None,
+        memory_mb: float | None = None,
+        cpu_percent: float | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log performance metrics."""
         perf_data = {
             "performance": {

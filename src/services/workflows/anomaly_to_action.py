@@ -59,8 +59,8 @@ class WorkflowRule:
     correlation_key: str | None = None
     batch_size: int | None = None
     batch_timeout: str | None = None
-    escalation_rules: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    escalation_rules: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def execute(self, alert: Any) -> "TaskProperties":
         """Execute the rule and return task properties."""
@@ -81,7 +81,7 @@ class TaskProperties:
     response_time: str | None = None
     action: WorkflowAction | None = None
     escalated: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -89,14 +89,14 @@ class SecurityIncident:
     """Security incident tracking."""
 
     id: str
-    alert_ids: List[str]
+    alert_ids: list[str]
     incident_type: str
     severity: str
     created_at: datetime
     status: str = "open"
     assigned_task_id: str | None = None
     correlation_key: str | None = None
-    merged_incidents: List[str] = field(default_factory=list)
+    merged_incidents: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -108,13 +108,13 @@ class IncidentTask:
     priority: TaskPriority
     security_alert_id: str
     incident_type: str
-    investigation_checklist: List[str] = field(default_factory=list)
-    recommended_actions: List[str] = field(default_factory=list)
+    investigation_checklist: list[str] = field(default_factory=list)
+    recommended_actions: list[str] = field(default_factory=list)
     attached_logs: str | None = None
-    network_context: Dict[str, Any] | None = None
-    user_context: Dict[str, Any] | None = None
-    system_context: Dict[str, Any] | None = None
-    timeline: list[Dict[str, Any]] | None = None
+    network_context: dict[str, Any] | None = None
+    user_context: dict[str, Any] | None = None
+    system_context: dict[str, Any] | None = None
+    timeline: list[dict[str, Any]] | None = None
 
     @classmethod
     def from_security_alert(cls, alert: Any) -> "IncidentTask":
@@ -217,7 +217,7 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return description.strip()
 
     @staticmethod
-    def _generate_investigation_checklist(alert: Any) -> List[str]:
+    def _generate_investigation_checklist(alert: Any) -> list[str]:
         """Generate investigation checklist based on alert type."""
         base_checklist = [
             "Validate alert accuracy and eliminate false positives",
@@ -261,7 +261,7 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return base_checklist + specific_checks
 
     @staticmethod
-    def _generate_recommended_actions(alert: Any) -> List[str]:
+    def _generate_recommended_actions(alert: Any) -> list[str]:
         """Generate recommended actions based on alert."""
         base_actions = [
             "Review and analyze security alert details",
@@ -302,7 +302,7 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return f"Logs automatically collected for alert {alert.id}"
 
     @staticmethod
-    def _collect_network_context(alert: Any) -> Dict[str, Any]:
+    def _collect_network_context(alert: Any) -> dict[str, Any]:
         """Collect network-related context."""
         context = {}
 
@@ -323,7 +323,7 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return context
 
     @staticmethod
-    def _collect_user_context(alert: Any) -> Dict[str, Any]:
+    def _collect_user_context(alert: Any) -> dict[str, Any]:
         """Collect user-related context."""
         context = {}
 
@@ -335,7 +335,7 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return context
 
     @staticmethod
-    def _collect_system_context(alert: Any) -> Dict[str, Any]:
+    def _collect_system_context(alert: Any) -> dict[str, Any]:
         """Collect system-related context."""
         context = {}
 
@@ -346,7 +346,7 @@ This task was automatically created by the Proactive Anomaly-to-Action system.
         return context
 
     @staticmethod
-    def _generate_timeline(alert: Any) -> list[Dict[str, Any]]:
+    def _generate_timeline(alert: Any) -> list[dict[str, Any]]:
         """Generate incident timeline."""
         return [
             {
@@ -406,7 +406,7 @@ class AnomalyToActionEngine:
         self.workflow_rules: list[WorkflowRule] = []
         self.incident_counter = 0
         self.active_incidents: dict[str, SecurityIncident] = {}
-        self.correlation_cache: dict[str, List[str]] = defaultdict(
+        self.correlation_cache: dict[str, list[str]] = defaultdict(
             list,
         )  # correlation_key -> incident_ids
         self.alert_deduplication: dict[str, str] = {}  # alert_hash -> incident_id
@@ -782,7 +782,7 @@ class IncidentResponseWorkflow:
     """Orchestrates incident response workflows."""
 
     def __init__(self) -> None:
-        self.active_workflows: dict[str, Dict[str, Any]] = {}
+        self.active_workflows: dict[str, dict[str, Any]] = {}
 
     async def initiate_response(self, alert: Any) -> "IncidentResponseResult":
         """Initiate incident response based on alert."""
@@ -818,7 +818,7 @@ class IncidentResponseWorkflow:
 
         return min(base_level, 5)
 
-    def _create_response_plan(self, alert: Any, response_level: int) -> Dict[str, Any]:
+    def _create_response_plan(self, alert: Any, response_level: int) -> dict[str, Any]:
         """Create incident response plan."""
         return {
             "response_level": response_level,
@@ -831,8 +831,8 @@ class IncidentResponseWorkflow:
     async def _execute_immediate_actions(
         self,
         alert: Any,
-        plan: Dict[str, Any],
-    ) -> List[str]:
+        plan: dict[str, Any],
+    ) -> list[str]:
         """Execute immediate response actions."""
         actions = [
             "Security alert validated and processed",
@@ -861,7 +861,7 @@ class IncidentResponseResult:
     response_team_notified: bool
     containment_initiated: bool
     investigation_started: bool
-    immediate_actions_taken: List[str]
+    immediate_actions_taken: list[str]
     escalation_level: int
     response_team_size: int
     executive_notification: bool

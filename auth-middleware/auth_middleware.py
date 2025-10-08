@@ -1,4 +1,4 @@
-3#!/usr/bin/env python3
+3  #!/usr/bin/env python3
 """FastAPI Authentication Middleware.
 
 Integrates with the Node.js authentication service to provide
@@ -6,20 +6,21 @@ JWT token validation and RBAC for Python services.
 """
 
 import asyncio
-import json
-import logging
-import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timezone
 from functools import wraps
+import json
+import logging
+import time
 from typing import Any, Optional
 
-import httpx
-import jwt
-import redis.asyncio as aioredis
+import aiohttp
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.security.utils import get_authorization_scheme_param
+import httpx
+import jwt
+import redis.asyncio as aioredis
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 

@@ -60,7 +60,7 @@ class Task:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     type: str = ""
     priority: MessagePriority = MessagePriority.NORMAL
-    data: Dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
     assigned_worker: str | None = None
     status: TaskStatus = TaskStatus.PENDING
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -85,7 +85,7 @@ class WorkerAgent:
     total_tasks_completed: int = 0
     total_tasks_failed: int = 0
     average_task_time: float = 0.0
-    capabilities: List[str] = field(default_factory=list)
+    capabilities: list[str] = field(default_factory=list)
     max_concurrent_tasks: int = 1
 
 
@@ -99,7 +99,12 @@ class SupervisorAgent:
     - Performance optimization
     """
 
-    def __init__(self, agent_id: str | None = None, message_bus: Any = None, config: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        agent_id: str | None = None,
+        message_bus: Any = None,
+        config: dict[str, Any] | None = None,
+    ) -> None:
         """Initialize supervisor agent."""
         self.agent_id = agent_id or f"supervisor_{uuid.uuid4().hex[:8]}"
         self.message_bus = message_bus
@@ -112,7 +117,7 @@ class SupervisorAgent:
 
         # Worker management
         self.registered_workers: dict[str, WorkerAgent] = {}
-        self.worker_capabilities: dict[WorkerType, List[str]] = {
+        self.worker_capabilities: dict[WorkerType, list[str]] = {
             WorkerType.WEB_SCRAPER: ["web_scraping", "javascript_rendering"],
             WorkerType.ARXIV_SERVICE: ["academic_search", "arxiv_api"],
             WorkerType.PUBMED_SERVICE: ["biomedical_search", "pubmed_api"],
@@ -336,7 +341,7 @@ class SupervisorAgent:
 
             logger.info("Unregistered worker %s", worker_id)
 
-    async def get_metrics(self) -> Dict[str, Any]:
+    async def get_metrics(self) -> dict[str, Any]:
         """Get supervisor agent metrics."""
         metrics = self.metrics.copy()
         metrics.update(
@@ -360,7 +365,7 @@ class SupervisorAgent:
 
         return metrics
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform comprehensive health check."""
         health = {
             "status": "healthy",
@@ -787,7 +792,9 @@ class SupervisorAgent:
 
         logger.info("Task timeout monitor stopped")
 
-    async def _apply_cognitive_processing(self, content_items: list[ContentItem], plan: IngestionPlan) -> None:
+    async def _apply_cognitive_processing(
+        self, content_items: list[ContentItem], plan: IngestionPlan
+    ) -> None:
         """Apply cognitive processing through worker agents."""
         if not content_items:
             return
@@ -863,15 +870,15 @@ class SupervisorAgent:
         self,
         content_items: list[ContentItem],
         execution_time: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Calculate execution metrics for ingestion result."""
         return {
             "supervisor_execution_time": execution_time,
             "total_content_items": len(content_items),
-            "content_diversity": len(set(item.source_type for item in content_items)),
+            "content_diversity": len({item.source_type for item in content_items}),
             "average_content_length": sum(
                 len(item.content or "") for item in content_items
             )
             / max(len(content_items), 1),
-            "unique_sources": len(set(item.source_name for item in content_items)),
+            "unique_sources": len({item.source_name for item in content_items}),
         }

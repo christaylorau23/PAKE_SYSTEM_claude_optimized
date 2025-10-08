@@ -51,11 +51,11 @@ class ValidationResult:
 class Phase4Validator:
     """Phase 4 implementation validator."""
 
-    def __init__(self) -> None:
+def __init__(self, project_root: Any = None) -> None:
         self.project_root = project_root
         self.results: list[ValidationResult] = []
 
-    def add_result(self) -> None:
+def add_result(self, test_name: Any = None, status: Any = None, message: str, details: Any = None) -> None:
         """Add validation result."""
         self.results.append(ValidationResult(test_name, status, message, details))
 

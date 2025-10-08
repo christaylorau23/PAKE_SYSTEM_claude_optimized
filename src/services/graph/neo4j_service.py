@@ -130,7 +130,7 @@ class Neo4jService:
 
     # Entity Management
 
-    def create_entity(self, entity_type: str, properties: Dict[str, Any]) -> str:
+    def create_entity(self, entity_type: str, properties: dict[str, Any]) -> str:
         """Create a new entity in the graph.
 
         Args:
@@ -159,7 +159,7 @@ class Neo4jService:
         msg = "Failed to create entity"
         raise RuntimeError(msg)
 
-    def update_entity(self, entity_id: str, properties: Dict[str, Any]) -> bool:
+    def update_entity(self, entity_id: str, properties: dict[str, Any]) -> bool:
         """Update an existing entity.
 
         Args:
@@ -243,7 +243,7 @@ class Neo4jService:
     def search_entities(
         self,
         search_term: str,
-        entity_types: List[str] | None = None,
+        entity_types: list[str] | None = None,
         limit: int = 50,
     ) -> list[dict]:
         """Search entities by text content.
@@ -380,7 +380,7 @@ class Neo4jService:
 
     # Graph Analysis
 
-    def get_graph_stats(self) -> Dict[str, Any]:
+    def get_graph_stats(self) -> dict[str, Any]:
         """Get basic graph statistics.
 
         Returns:
@@ -412,7 +412,7 @@ class Neo4jService:
         center_entity_id: str,
         depth: int = 2,
         max_nodes: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get a subgraph centered on a specific entity.
 
         Args:
@@ -482,7 +482,7 @@ class Neo4jService:
 
     # Health and Maintenance
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on Neo4j connection.
 
         Returns:

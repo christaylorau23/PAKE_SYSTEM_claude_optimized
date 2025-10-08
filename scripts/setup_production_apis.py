@@ -26,7 +26,7 @@ class Colors:
     END = "\033[0m"
 
 
-def print_status(self) -> None:
+def print_status(self, status: Any = None, message: str, status: Any = None, message: str, status: Any = None, message: str, status: Any = None, message: str, status: Any = None, message: str) -> None:
     """Print colored status message"""
     if status == "SUCCESS":
         print(f"{Colors.GREEN}✅ {message}{Colors.END}")
@@ -403,7 +403,7 @@ async def main(self) -> None:
     print_status("INFO", "Full report saved to: production_readiness_report.txt")
 
 
-def print_step(self) -> None:
+def print_step(self, message: str) -> None:
     print_status("STEP", message)
 
 

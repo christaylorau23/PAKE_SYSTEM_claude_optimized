@@ -99,7 +99,7 @@ class TestEndToEndWorkflow:
         ]
 
     @pytest.mark.asyncio
-    async def test_complete_trend_analysis_pipeline(self) -> None:
+async def test_complete_trend_analysis_pipeline(self, sample_trends: Any = None, sample_trends: Any = None) -> None:
         """Test complete pipeline from trends to investment opportunities"""
 
         # Step 1: Analyze trends
@@ -144,7 +144,7 @@ class TestEndToEndWorkflow:
             assert any(symbol in ai_opp.symbols for symbol in tech_symbols)
 
     @pytest.mark.asyncio
-    async def test_performance_requirements(self) -> None:
+async def test_performance_requirements(self, sample_trends: Any = None, sample_trends: Any = None) -> None:
         """Test that system meets performance requirements"""
 
         # Test sub-second analysis requirement
@@ -185,7 +185,7 @@ class TestEndToEndWorkflow:
             assert config.max_keywords > 0
 
     @pytest.mark.asyncio
-    async def test_prediction_engine_accuracy(self) -> None:
+async def test_prediction_engine_accuracy(self, sample_trends: Any = None) -> None:
         """Test prediction engine accuracy threshold"""
 
         # Create trend history for prediction
@@ -221,7 +221,7 @@ class TestEndToEndWorkflow:
         assert self.prediction_engine.accuracy_threshold >= 0.95
 
     @pytest.mark.asyncio
-    async def test_investment_opportunity_generation(self) -> None:
+async def test_investment_opportunity_generation(self, sample_trends: Any = None) -> None:
         """Test investment opportunity generation quality"""
 
         analysis_results = await self.trend_analyzer.analyze_trends(sample_trends)
@@ -272,7 +272,7 @@ class TestEndToEndWorkflow:
                 ), "Emerging trends should have shorter horizons"
 
     @pytest.mark.asyncio
-    async def test_portfolio_optimization(self) -> None:
+async def test_portfolio_optimization(self, sample_trends: Any = None) -> None:
         """Test portfolio optimization functionality"""
 
         analysis_results = await self.trend_analyzer.analyze_trends(sample_trends)
@@ -312,7 +312,7 @@ class TestEndToEndWorkflow:
                 }% exceeds 30% limit"
 
     @pytest.mark.asyncio
-    async def test_data_model_integration(self) -> None:
+async def test_data_model_integration(self, sample_trends: Any = None) -> None:
         """Test data model serialization and validation"""
 
         for trend in sample_trends:
@@ -401,7 +401,7 @@ class TestEndToEndWorkflow:
             assert mapping.confidence_multiplier > 0
 
     @pytest.mark.asyncio
-    async def test_integration_with_existing_pake_system(self) -> None:
+async def test_integration_with_existing_pake_system(self, sample_trends: Any = None) -> None:
         """Test integration with existing PAKE system components"""
 
         # Test data compatibility with PAKE data structures

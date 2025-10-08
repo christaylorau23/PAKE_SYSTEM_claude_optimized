@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 PAKE System - Performance Test Suite
@@ -21,7 +22,7 @@ import httpx
 class PerformanceTestSuite:
     """Performance test suite for PAKE System"""
 
-    def __init__(self) -> None:
+def __init__(self, base_url: Any = None, base_url: Any = None) -> None:
         self.base_url = base_url.rstrip("/")
         self.results = {
             "timestamp": time.time(),
@@ -30,7 +31,7 @@ class PerformanceTestSuite:
             "summary": {"total": 0, "passed": 0, "failed": 0, "performance_issues": 0},
         }
 
-    async def run_test(self, test_name: str, test_func) -> Dict[str, Any]:
+    async def run_test(self, test_name: str, test_func) -> dict[str, Any]:
         """Run a single performance test"""
         print(f"⚡ Running performance test: {test_name}")
 
@@ -71,7 +72,7 @@ class PerformanceTestSuite:
         self.results["summary"]["total"] += 1
         return {"status": "completed"}
 
-    async def test_response_time(self) -> Dict[str, Any]:
+    async def test_response_time(self) -> dict[str, Any]:
         """Test response times for critical endpoints"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             endpoints = [
@@ -127,7 +128,7 @@ class PerformanceTestSuite:
                 },
             }
 
-    async def test_concurrent_requests(self) -> Dict[str, Any]:
+    async def test_concurrent_requests(self) -> dict[str, Any]:
         """Test system performance under concurrent load"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             concurrent_requests = 50
@@ -192,7 +193,7 @@ class PerformanceTestSuite:
                 },
             }
 
-    async def test_memory_usage(self) -> Dict[str, Any]:
+    async def test_memory_usage(self) -> dict[str, Any]:
         """Test memory usage patterns"""
         # This is a simplified test - in production you'd use more sophisticated monitoring
         import psutil
@@ -238,7 +239,7 @@ class PerformanceTestSuite:
                 "metrics": {},
             }
 
-    async def test_database_performance(self) -> Dict[str, Any]:
+    async def test_database_performance(self) -> dict[str, Any]:
         """Test database query performance"""
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Test database-heavy endpoints
@@ -323,7 +324,7 @@ class PerformanceTestSuite:
         print("✅ All performance tests passed!")
         return True
 
-    def save_report(self) -> None:
+def save_report(self, filename: Any = None, filename: Any = None) -> None:
         """Save test results to file"""
         with open(filename, "w") as f:
             json.dump(self.results, f, indent=2)

@@ -27,7 +27,7 @@ def fix_unindent_errors(file_path: Path, line_num: int) -> bool:
 
         # Pattern 1: try: followed by pass then code
         if prev_prev.strip().endswith("try:") and prev.strip() == "pass":
-            print(f"  Fixing stray 'pass' in try block at {file_path}:{line_num-1}")
+            print(f"  Fixing stray 'pass' in try block at {file_path}:{line_num - 1}")
             lines[line_num - 2] = ""  # Remove the pass line
             with open(file_path, "w") as f:
                 f.writelines(lines)
@@ -36,7 +36,7 @@ def fix_unindent_errors(file_path: Path, line_num: int) -> bool:
         # Pattern 2: async def followed by pass then code
         if "async def" in prev_prev and prev.strip() == "pass":
             print(
-                f"  Fixing stray 'pass' in async function at {file_path}:{line_num-1}"
+                f"  Fixing stray 'pass' in async function at {file_path}:{line_num - 1}"
             )
             lines[line_num - 2] = ""  # Remove the pass line
             with open(file_path, "w") as f:
@@ -54,7 +54,7 @@ def fix_unindent_errors(file_path: Path, line_num: int) -> bool:
             and current.strip()
             and not current.strip().startswith("#")
         ):
-            print(f"  Removing stray 'pass' at {file_path}:{line_num-1}")
+            print(f"  Removing stray 'pass' at {file_path}:{line_num - 1}")
             lines[line_num - 2] = ""
             with open(file_path, "w") as f:
                 f.writelines(lines)
@@ -245,7 +245,7 @@ def main():
             print(f"  Could not auto-fix: {error}")
             failed.append(error)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Fixed: {fixed_count}/{len(errors)} errors")
     print(f"Failed: {len(failed)} errors")
 

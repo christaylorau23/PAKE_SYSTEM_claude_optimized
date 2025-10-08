@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Social Media Analytics Dashboard
@@ -44,8 +45,8 @@ class SocialMetrics:
     clicks: int = 0
     views: int = 0  # for video content
     completion_rate: float = 0.0  # video completion rate
-    hashtags: List[str] = None
-    mentions: List[str] = None
+    hashtags: list[str] = None
+    mentions: list[str] = None
     sentiment_score: float = 0.0
     optimal_time_posted: bool = False
 
@@ -57,9 +58,9 @@ class PlatformInsights:
     platform: str
     total_posts: int
     avg_engagement_rate: float
-    best_posting_times: List[str]
-    top_content_types: List[str]
-    trending_hashtags: List[str]
+    best_posting_times: list[str]
+    top_content_types: list[str]
+    trending_hashtags: list[str]
     audience_demographics: dict
     growth_rate: float
     roi_metrics: dict
@@ -68,7 +69,7 @@ class PlatformInsights:
 class SocialAnalyticsDashboard:
     """Comprehensive social media analytics dashboard"""
 
-    def __init__(self) -> None:
+def __init__(self, db_path: Any = None) -> None:
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
         self._init_database()
@@ -347,7 +348,7 @@ class SocialAnalyticsDashboard:
             return 0.0
         return (total_engagement / impressions) * 100
 
-    async def _store_metrics(self) -> None:
+async def _store_metrics(self, metrics: Any = None, metrics: Any = None) -> None:
         """Store metrics in database"""
         if not metrics:
             return
@@ -539,7 +540,7 @@ class SocialAnalyticsDashboard:
             return "decreasing"
         return "stable"
 
-    def _generate_recommendations(self, df: pd.DataFrame) -> List[str]:
+    def _generate_recommendations(self, df: pd.DataFrame) -> list[str]:
         """Generate actionable recommendations"""
         recommendations = []
 
@@ -721,7 +722,7 @@ class SocialAnalyticsDashboard:
 
         return fig
 
-    def export_report(self, format_type: str = "json", days: int = 30) -> str:
+def export_report(self, format_type: str, days: int, obj: Any = None, obj: Any = None) -> str:
         """Export analytics report in various formats"""
         report = self.generate_comprehensive_report(days)
 
@@ -738,7 +739,7 @@ class SocialAnalyticsDashboard:
             filepath = export_dir / filename
 
             # Convert datetime objects to strings for JSON serialization
-            def serialize_datetime(self) -> None:
+def serialize_datetime(self, obj: Any = None, obj: Any = None) -> None:
                 if isinstance(obj, datetime):
                     return self.obj.isoformat()
                 msg = f"Object {obj} is not JSON serializable"

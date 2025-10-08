@@ -267,7 +267,7 @@ class TestFaultInjectionArxiv:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_arxiv_service_unavailable_503(self) -> None:
+async def test_arxiv_service_unavailable_503(self, sample_query: Any = None) -> None:
         """Test ArxivEnhancedService handles HTTP 503 Service Unavailable gracefully"""
         with aioresponses() as m:
             # Mock 503 Service Unavailable response
@@ -288,7 +288,7 @@ class TestFaultInjectionArxiv:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_arxiv_rate_limit_429(self) -> None:
+async def test_arxiv_rate_limit_429(self, sample_query: Any = None) -> None:
         """Test ArxivEnhancedService handles HTTP 429 Rate Limit gracefully"""
         with aioresponses() as m:
             # Mock 429 Rate Limit response
@@ -311,7 +311,7 @@ class TestFaultInjectionArxiv:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_arxiv_network_timeout(self) -> None:
+async def test_arxiv_network_timeout(self, sample_query: Any = None) -> None:
         """Test ArxivEnhancedService handles network timeouts gracefully"""
         with aioresponses() as m:
             # Mock timeout by raising asyncio.TimeoutError
@@ -330,7 +330,7 @@ class TestFaultInjectionArxiv:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_arxiv_malformed_xml_response(self) -> None:
+async def test_arxiv_malformed_xml_response(self, sample_query: Any = None) -> None:
         """Test ArxivEnhancedService handles malformed XML responses gracefully"""
         with aioresponses() as m:
             # Mock malformed XML response
@@ -350,7 +350,7 @@ class TestFaultInjectionArxiv:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_arxiv_empty_response(self) -> None:
+async def test_arxiv_empty_response(self, sample_query: Any = None) -> None:
         """Test ArxivEnhancedService handles empty responses gracefully"""
         with aioresponses() as m:
             # Mock empty response
@@ -366,7 +366,7 @@ class TestFaultInjectionArxiv:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_arxiv_connection_error(self) -> None:
+async def test_arxiv_connection_error(self, sample_query: Any = None) -> None:
         """Test ArxivEnhancedService handles connection errors gracefully"""
         with aioresponses() as m:
             # Mock connection error
@@ -405,7 +405,7 @@ class TestFaultInjectionPubMed:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_pubmed_service_unavailable_503(self) -> None:
+async def test_pubmed_service_unavailable_503(self, sample_query: Any = None) -> None:
         """Test PubMedService handles HTTP 503 Service Unavailable gracefully"""
         with aioresponses() as m:
             # Mock 503 Service Unavailable response for ESearch
@@ -425,7 +425,7 @@ class TestFaultInjectionPubMed:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_pubmed_rate_limit_429(self) -> None:
+async def test_pubmed_rate_limit_429(self, sample_query: Any = None) -> None:
         """Test PubMedService handles HTTP 429 Rate Limit gracefully"""
         with aioresponses() as m:
             # Mock 429 Rate Limit response
@@ -448,7 +448,7 @@ class TestFaultInjectionPubMed:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_pubmed_network_timeout(self) -> None:
+async def test_pubmed_network_timeout(self, sample_query: Any = None) -> None:
         """Test PubMedService handles network timeouts gracefully"""
         with aioresponses() as m:
             # Mock timeout by raising asyncio.TimeoutError
@@ -467,7 +467,7 @@ class TestFaultInjectionPubMed:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_pubmed_malformed_xml_response(self) -> None:
+async def test_pubmed_malformed_xml_response(self, sample_query: Any = None) -> None:
         """Test PubMedService handles malformed XML responses gracefully"""
         with aioresponses() as m:
             # Mock successful ESearch
@@ -499,7 +499,7 @@ class TestFaultInjectionPubMed:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_pubmed_empty_response(self) -> None:
+async def test_pubmed_empty_response(self, sample_query: Any = None) -> None:
         """Test PubMedService handles empty responses gracefully"""
         with aioresponses() as m:
             # Mock empty ESearch response
@@ -519,7 +519,7 @@ class TestFaultInjectionPubMed:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_pubmed_connection_error(self) -> None:
+async def test_pubmed_connection_error(self, sample_query: Any = None) -> None:
         """Test PubMedService handles connection errors gracefully"""
         with aioresponses() as m:
             # Mock connection error
@@ -540,7 +540,7 @@ class TestFaultInjectionPubMed:
     @pytest.mark.integration
     @pytest.mark.requires_network
     @pytest.mark.asyncio
-    async def test_pubmed_partial_failure_esearch_success_efetch_fail(self) -> None:
+async def test_pubmed_partial_failure_esearch_success_efetch_fail(self, sample_query: Any = None) -> None:
         """Test PubMedService handles partial failures (ESearch success, EFetch failure)"""
         with aioresponses() as m:
             # Mock successful ESearch

@@ -87,7 +87,7 @@ class TestPhase2AIntegration:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_orchestrate_multi_source_research_ingestion(self) -> None:
+async def test_should_orchestrate_multi_source_research_ingestion(self, mock_cognitive_engine: Any = None, mock_cognitive_engine: Any = None) -> None:
         """
         Integration test: Should orchestrate content ingestion from multiple sources
         for a comprehensive research topic.
@@ -220,9 +220,7 @@ class TestPhase2AIntegration:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_apply_unified_cognitive_assessment_across_sources(
-        self,
-    ) -> None:
+async def test_should_apply_unified_cognitive_assessment_across_sources(self, mock_cognitive_engine: Any = None, mock_cognitive_engine: Any = None) -> None:
         """
         Integration test: Should apply consistent cognitive assessment
         across all content sources.

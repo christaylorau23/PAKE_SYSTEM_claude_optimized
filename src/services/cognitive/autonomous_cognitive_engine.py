@@ -19,22 +19,27 @@ from typing import Any, Dict, List
 # from .semantic_clustering_engine import SemanticClusteringEngine
 # from .knowledge_synthesis_core import KnowledgeSynthesisCore
 
+
 # Mock classes for demo purposes
 class MetacognitiveOptimizer:
     def __init__(self, config: dict) -> None:
         self.config = config
 
+
 class PromptEvolutionSystem:
     def __init__(self, config: dict) -> None:
         self.config = config
+
 
 class MultiAgentOrchestrator:
     def __init__(self, config: dict) -> None:
         self.config = config
 
+
 class SemanticClusteringEngine:
     def __init__(self, config: dict) -> None:
         self.config = config
+
 
 class KnowledgeSynthesisCore:
     def __init__(self, config: dict) -> None:
@@ -68,9 +73,9 @@ class AutonomousInsight:
     category: str
     content: str
     confidence: float
-    sources: List[str]
-    reasoning_chain: List[str]
-    impact_assessment: Dict[str, Any]
+    sources: list[str]
+    reasoning_chain: list[str]
+    impact_assessment: dict[str, Any]
 
 
 class AutonomousCognitiveEngine:
@@ -116,7 +121,7 @@ class AutonomousCognitiveEngine:
         self.logger = self._setup_logging()
         self.logger.info("PAKE Autonomous Cognitive Engine initializing...")
 
-    def _load_config(self, config_path: Path | None) -> Dict[str, Any]:
+    def _load_config(self, config_path: Path | None) -> dict[str, Any]:
         """Load configuration from file or use defaults."""
         default_config = {
             "metacognitive": {
@@ -211,7 +216,7 @@ class AutonomousCognitiveEngine:
             self.logger.error("Failed to initialize cognitive engine: %s", e)
             return False
 
-    async def process_autonomous_analysis(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_autonomous_analysis(self, data: dict[str, Any]) -> dict[str, Any]:
         """Core autonomous analysis pipeline
         Implements the DeepSeek multi-agent cognitive framework.
         """
@@ -279,8 +284,8 @@ class AutonomousCognitiveEngine:
 
     async def _generate_autonomous_insights(
         self,
-        synthesized_knowledge: Dict[str, Any],
-        analysis_results: Dict[str, Any],
+        synthesized_knowledge: dict[str, Any],
+        analysis_results: dict[str, Any],
     ) -> list[AutonomousInsight]:
         """Generate autonomous insights from analysis results."""
         insights = []
@@ -458,7 +463,7 @@ class AutonomousCognitiveEngine:
         finally:
             self.state = CognitiveState.ACTIVE
 
-    def get_cognitive_status(self) -> Dict[str, Any]:
+    def get_cognitive_status(self) -> dict[str, Any]:
         """Get current cognitive engine status and performance."""
         latest_metrics = (
             self.performance_history[-1] if self.performance_history else None

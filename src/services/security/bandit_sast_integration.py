@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE System - Bandit SAST Integration
@@ -82,7 +83,6 @@ class BanditSASTIntegration:
                 with open(policy_file) as f:
                     return json.load(f)
             except (OSError, json.JSONDecodeError) as e:
-
                 logger.debug(f"Exception in bandit_sast_integration.py: {e}")
 
                 # Continue gracefully

@@ -36,15 +36,15 @@ class SearchHistoryEntry:
     id: str
     user_id: str | None
     query: str
-    sources: List[str]
+    sources: list[str]
     results_count: int
     execution_time_ms: float
     cache_hit: bool
     quality_score: float | None
-    query_metadata: Dict[str, Any] | None
+    query_metadata: dict[str, Any] | None
     created_at: datetime
     is_favorite: bool = False
-    tags: List[str] | None = None
+    tags: list[str] | None = None
 
 
 @dataclass
@@ -66,7 +66,7 @@ class UserSearchPreferences:
     """User search preferences and settings."""
 
     user_id: str
-    default_sources: List[str]
+    default_sources: list[str]
     auto_save_searches: bool
     search_history_retention_days: int
     preferred_result_format: str
@@ -87,7 +87,9 @@ class SearchHistoryService:
     - Export/import functionality
     """
 
-    def __init__(self, database_service: PostgreSQLService, cache_service: RedisCacheService) -> None:
+    def __init__(
+        self, database_service: PostgreSQLService, cache_service: RedisCacheService
+    ) -> None:
         self.database_service = database_service
         self.cache_service = cache_service
         self.logger = logger
@@ -105,12 +107,12 @@ class SearchHistoryService:
         self,
         user_id: str | None,
         query: str,
-        sources: List[str],
+        sources: list[str],
         results_count: int,
         execution_time_ms: float,
         cache_hit: bool = False,
         quality_score: float | None = None,
-        query_metadata: Dict[str, Any] | None = None,
+        query_metadata: dict[str, Any] | None = None,
     ) -> str:
         """Record a new search in history."""
         try:
@@ -151,7 +153,7 @@ class SearchHistoryService:
         filter_type: SearchFilter | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
-        sources: List[str] | None = None,
+        sources: list[str] | None = None,
     ) -> list[SearchHistoryEntry]:
         """Get user's search history with advanced filtering."""
         try:
@@ -163,7 +165,7 @@ class SearchHistoryService:
                     return [SearchHistoryEntry(**entry) for entry in cached_result]
 
             # Build query filters
-            filters: Dict[str, Any] = {"user_id": user_id}
+            filters: dict[str, Any] = {"user_id": user_id}
 
             if start_date is not None:
                 filters["start_date"] = start_date.isoformat()
@@ -294,7 +296,7 @@ class SearchHistoryService:
         self,
         user_id: str,
         search_id: str,
-        tags: List[str],
+        tags: list[str],
     ) -> bool:
         """Add tags to a search entry."""
         try:
@@ -503,7 +505,7 @@ class SearchHistoryService:
     async def update_user_preferences(
         self,
         user_id: str,
-        preferences: Dict[str, Any],
+        preferences: dict[str, Any],
     ) -> bool:
         """Update user's search preferences."""
         try:
@@ -532,7 +534,7 @@ class SearchHistoryService:
 
     # Export/Import Functionality
 
-    async def export_user_data(self, user_id: str) -> Dict[str, Any]:
+    async def export_user_data(self, user_id: str) -> dict[str, Any]:
         """Export all user search data."""
         try:
             # Get all search history
@@ -580,7 +582,7 @@ class SearchHistoryService:
         except BaseException:
             return False
 
-    async def _get_search_tags(self, search_id: str) -> List[str]:
+    async def _get_search_tags(self, search_id: str) -> list[str]:
         """Get tags for a search."""
         try:
             return await self.database_service.get_search_tags(search_id)

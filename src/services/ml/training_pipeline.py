@@ -91,15 +91,15 @@ class TrainingJob:
     training_data_path: str
     validation_data_path: str | None = None
     test_data_path: str | None = None
-    hyperparameters: Dict[str, Any] = field(default_factory=dict)
-    training_config: Dict[str, Any] = field(default_factory=dict)
+    hyperparameters: dict[str, Any] = field(default_factory=dict)
+    training_config: dict[str, Any] = field(default_factory=dict)
     trigger: TrainingTrigger = TrainingTrigger.MANUAL
     priority: int = 0
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     created_by: str = "system"
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "job_id": self.job_id,
@@ -135,7 +135,7 @@ class TrainingResult:
     error_message: str | None = None
     mlflow_run_id: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "job_id": self.job_id,
@@ -161,11 +161,11 @@ class ExperimentConfig:
 
     experiment_name: str
     description: str = ""
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     artifact_location: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "experiment_name": self.experiment_name,
@@ -398,7 +398,7 @@ class SklearnTrainer(ModelTrainer):
                     precision_score,
                     recall_score,
                 )
-                
+
                 y_pred = model.predict(X_val)
                 metrics["accuracy"] = accuracy_score(y_val, y_pred)
                 metrics["precision"] = precision_score(
@@ -962,7 +962,7 @@ class TrainingOrchestrator:
             reverse=True,
         )
 
-    def get_training_statistics(self) -> Dict[str, Any]:
+    def get_training_statistics(self) -> dict[str, Any]:
         """Get training statistics."""
         stats = self.stats.copy()
         stats["total_jobs"] = len(self.training_jobs)

@@ -36,8 +36,8 @@ class IngestionPlanBuilder(IngestionPlanBuilderInterface):
     def build_plan(
         self,
         topic: str,
-        source_configs: list[Dict[str, Any]],
-        user_preferences: Dict[str, Any] | None = None,
+        source_configs: list[dict[str, Any]],
+        user_preferences: dict[str, Any] | None = None,
     ) -> IngestionPlan:
         """Build a comprehensive ingestion plan from source configurations."""
         # Validate inputs
@@ -78,7 +78,7 @@ class IngestionPlanBuilder(IngestionPlanBuilderInterface):
 
         return plan
 
-    def _build_source(self, config: Dict[str, Any]) -> IngestionSource:
+    def _build_source(self, config: dict[str, Any]) -> IngestionSource:
         """Build a single ingestion source from configuration."""
         # Extract required fields
         source_type = config.get("source_type", "web")

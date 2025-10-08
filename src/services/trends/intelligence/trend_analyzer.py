@@ -28,7 +28,7 @@ class TrendAnalysisResult:
     peak_prediction_days: int | None
     investment_score: float  # 0.0 to 1.0
     risk_assessment: dict[str, float]
-    supporting_evidence: List[str]
+    supporting_evidence: list[str]
 
 
 class TrendAnalyzer:
@@ -396,7 +396,7 @@ class TrendAnalyzer:
         predicted_stage: TrendLifecycle,
         volume_growth_rate: float,
         momentum_trajectory: list[float],
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate supporting evidence for analysis."""
         evidence = []
 
@@ -456,7 +456,7 @@ class TrendAnalyzer:
 
         self.logger.info("Cleared %s cached analysis results", cleared_count)
 
-    def get_analysis_statistics(self) -> Dict[str, Any]:
+    def get_analysis_statistics(self) -> dict[str, Any]:
         """Get statistics about analysis performance."""
         total_trends = sum(len(history) for history in self.trend_history.values())
 

@@ -25,12 +25,12 @@ class NetworkSecurityConfig:
     """Secure network configuration."""
 
     environment: Environment
-    allowed_hosts: List[str]
+    allowed_hosts: list[str]
     bind_address: str
     port: int
     enable_ssl: bool = True
     enable_cors: bool = True
-    cors_origins: List[str] | None = None
+    cors_origins: list[str] | None = None
     enable_rate_limiting: bool = True
     max_connections: int = 1000
     timeout_seconds: int = 30
@@ -99,7 +99,7 @@ class SecureNetworkConfig:
             timeout_seconds=60,
         )
 
-    def _get_production_hosts(self) -> List[str]:
+    def _get_production_hosts(self) -> list[str]:
         """Get production allowed hosts."""
         hosts_str = os.getenv("PAKE_ALLOWED_HOSTS", "")
         if hosts_str:
@@ -108,7 +108,7 @@ class SecureNetworkConfig:
         # Default production hosts - should be configured via environment
         return ["api.pake.example.com", "pake.example.com", "*.pake.example.com"]
 
-    def _get_staging_hosts(self) -> List[str]:
+    def _get_staging_hosts(self) -> list[str]:
         """Get staging allowed hosts."""
         hosts_str = os.getenv("PAKE_STAGING_HOSTS", "")
         if hosts_str:
@@ -135,7 +135,7 @@ class SecureNetworkConfig:
 
         return "127.0.0.1"
 
-    def _get_production_cors_origins(self) -> List[str]:
+    def _get_production_cors_origins(self) -> list[str]:
         """Get production CORS origins."""
         cors_str = os.getenv("PAKE_CORS_ORIGINS", "")
         if cors_str:
@@ -143,7 +143,7 @@ class SecureNetworkConfig:
 
         return ["https://pake.example.com", "https://app.pake.example.com"]
 
-    def _get_staging_cors_origins(self) -> List[str]:
+    def _get_staging_cors_origins(self) -> list[str]:
         """Get staging CORS origins."""
         cors_str = os.getenv("PAKE_STAGING_CORS_ORIGINS", "")
         if cors_str:
@@ -154,7 +154,7 @@ class SecureNetworkConfig:
             "https://staging-app.pake.example.com",
         ]
 
-    def get_uvicorn_config(self) -> Dict[str, Any]:
+    def get_uvicorn_config(self) -> dict[str, Any]:
         """Get secure uvicorn configuration."""
         config = {
             "host": self.config.bind_address,
@@ -179,7 +179,7 @@ class SecureNetworkConfig:
 
         return config
 
-    def get_fastapi_config(self) -> Dict[str, Any]:
+    def get_fastapi_config(self) -> dict[str, Any]:
         """Get secure FastAPI configuration."""
         return {
             "title": "PAKE System API",
@@ -193,7 +193,7 @@ class SecureNetworkConfig:
             ),
         }
 
-    def get_cors_config(self) -> Dict[str, Any]:
+    def get_cors_config(self) -> dict[str, Any]:
         """Get secure CORS configuration."""
         if not self.config.enable_cors:
             return {}
@@ -206,7 +206,7 @@ class SecureNetworkConfig:
             "max_age": 3600,
         }
 
-    def validate_configuration(self) -> List[str]:
+    def validate_configuration(self) -> list[str]:
         """Validate network configuration and return warnings."""
         warnings = []
 
@@ -277,7 +277,7 @@ def migrate_bind_address(old_address: str) -> str:
     return old_address
 
 
-def get_secure_server_config() -> Dict[str, Any]:
+def get_secure_server_config() -> dict[str, Any]:
     """Get complete secure server configuration."""
     config = get_network_config()
 

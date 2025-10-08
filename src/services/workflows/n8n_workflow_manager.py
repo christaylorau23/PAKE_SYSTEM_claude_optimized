@@ -33,11 +33,11 @@ class WorkflowRequest:
     """Represents a workflow execution request."""
 
     workflow_type: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     priority: str = "normal"
     timeout: int = 300  # 5 minutes default
     callback_url: str | None = None
-    metadata: Dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
 
 
 @dataclass
@@ -47,7 +47,7 @@ class WorkflowResult:
     request_id: str
     workflow_type: str
     status: WorkflowStatus
-    result: Dict[str, Any] | None = None
+    result: dict[str, Any] | None = None
     error: str | None = None
     execution_time: float | None = None
     created_at: datetime = None
@@ -59,7 +59,11 @@ class N8nWorkflowManager:
     Provides high-level interface for triggering automation workflows.
     """
 
-    def __init__(self, n8n_base_url: str | None = None, auth_credentials: tuple[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        n8n_base_url: str | None = None,
+        auth_credentials: tuple[str, str] | None = None,
+    ) -> None:
         """Initialize the workflow manager.
 
         Args:
@@ -101,7 +105,7 @@ class N8nWorkflowManager:
         content_type: str = "blog_post",
         target_audience: str = "general",
         tone: str = "professional",
-        keywords: List[str] = None,
+        keywords: list[str] = None,
         callback_url: str = None,
     ) -> WorkflowResult:
         """Trigger content generation workflow.
@@ -138,7 +142,7 @@ class N8nWorkflowManager:
         self,
         content_id: str,
         content: str,
-        platforms: List[str] = None,
+        platforms: list[str] = None,
         content_type: str = "social_media",
         auto_publish: bool = True,
         scheduled_time: str = None,
@@ -176,7 +180,7 @@ class N8nWorkflowManager:
         self,
         processing_type: str,
         input_data: str,
-        options: Dict[str, Any] = None,
+        options: dict[str, Any] = None,
         priority: str = "normal",
         callback_url: str = None,
     ) -> WorkflowResult:
@@ -214,7 +218,7 @@ class N8nWorkflowManager:
         self,
         document_type: str,
         source: str,
-        metadata: Dict[str, Any] = None,
+        metadata: dict[str, Any] = None,
         auto_index: bool = True,
         confidence_threshold: float = 0.7,
     ) -> WorkflowResult:

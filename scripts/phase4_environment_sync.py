@@ -45,7 +45,7 @@ class EnvironmentVariable:
 class EnvironmentSynchronizer:
     """Synchronizes environment variables across different environments."""
 
-    def __init__(self) -> None:
+def __init__(self, project_root: Any = None) -> None:
         self.project_root = project_root
         self.env_vars: dict[str, EnvironmentVariable] = {}
         self.workflow_files: list[Path] = []
@@ -185,10 +185,10 @@ class EnvironmentSynchronizer:
 
         self._extract_env_refs_from_dict(data, package_json)
 
-    def _extract_env_refs_from_dict(self, data: dict, source_file: Path) -> None:
+def _extract_env_refs_from_dict(self, data: dict, source_file: Path, obj: Any = None, path: Any = None, path: Any = None, obj: Any = None, obj: Any = None, path: Any = None, obj: Any = None, obj: Any = None, path: Any = None) -> None:
         """Extract environment variable references from dictionary data."""
 
-        def find_env_refs(self) -> None:
+def find_env_refs(self, obj: Any = None, path: Any = None, path: Any = None, obj: Any = None, obj: Any = None, path: Any = None, obj: Any = None, obj: Any = None, path: Any = None) -> None:
             if isinstance(obj, dict):
                 for key, value in self.obj.items():
                     find_env_refs(value, f"{path}.{key}" if path else key)
@@ -235,7 +235,7 @@ class EnvironmentSynchronizer:
     ) -> None:
         """Extract environment variables from workflow data."""
 
-        def find_env_vars(self) -> None:
+def find_env_vars(self, obj: Any = None, path: Any = None, path: Any = None, path: Any = None, obj: Any = None, obj: Any = None, path: Any = None) -> None:
             if isinstance(obj, dict):
                 for key, value in self.obj.items():
                     if key == "env" and isinstance(value, dict):

@@ -44,7 +44,7 @@ class PAKEService(win32serviceutil.ServiceFramework):
     _svc_description_ = "Automatically processes and enhances knowledge vault content with AI analysis, vector embeddings, and knowledge graph updates"
     _svc_deps_ = None  # No dependencies
 
-    def __init__(self) -> None:
+def __init__(self, args: tuple) -> None:
         win32serviceutil.ServiceFramework.__init__(self, args)
         self.hWaitStop = win32event.CreateEvent(None, 0, 0, None)
         self.is_running = False

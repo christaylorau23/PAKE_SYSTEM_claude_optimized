@@ -87,7 +87,7 @@ class TestEventDrivenArchitecture:
         await cache.cleanup()
 
     @pytest.fixture
-    async def supervisor_agent(self) -> None:
+async def supervisor_agent(self, message_bus: Any = None) -> None:
         """Create test supervisor agent"""
         config = IngestionConfig(
             max_concurrent_sources=3,
@@ -101,7 +101,7 @@ class TestEventDrivenArchitecture:
         await supervisor.stop()
 
     @pytest.fixture
-    async def worker_agents(self) -> None:
+async def worker_agents(self, message_bus: Any = None, message_bus: Any = None, message_bus: Any = None, message_bus: Any = None, message_bus: Any = None) -> None:
         """Create all worker agents"""
         workers = {
             "web_scraper": await create_web_scraper_worker(message_bus),
@@ -122,12 +122,12 @@ class TestEventDrivenArchitecture:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_message_bus_basic_operations(self) -> None:
+async def test_message_bus_basic_operations(self, message: str) -> None:
         """Test basic message bus operations"""
         # Test message publishing and subscribing
         received_messages = []
 
-        async def message_handler(self) -> None:
+async def message_handler(self, message: str) -> None:
             received_messages.append(message)
 
         # Subscribe to test stream
@@ -158,7 +158,7 @@ class TestEventDrivenArchitecture:
         await self.message_bus.unsubscribe(subscription_id)
 
     @pytest.mark.asyncio
-    async def test_supervisor_worker_coordination(self) -> None:
+async def test_supervisor_worker_coordination(self, worker_agents: Any = None) -> None:
         """Test supervisor-worker coordination through message bus"""
         # Register workers with supervisor
         for _worker_type, worker in self.worker_agents.items():
@@ -213,7 +213,7 @@ class TestEventDrivenArchitecture:
         mock_process.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_multi_worker_parallel_execution(self) -> None:
+async def test_multi_worker_parallel_execution(self, worker_agents: Any = None, worker_agents: Any = None) -> None:
         """Test parallel execution across multiple workers"""
         # Register workers
         for worker in self.worker_agents.values():
@@ -286,7 +286,7 @@ class TestEventDrivenArchitecture:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_web_scraper_worker_functionality(self) -> None:
+async def test_web_scraper_worker_functionality(self, worker_agents: Any = None) -> None:
         """Test Web Scraper Worker maintains Phase 2A functionality"""
         web_scraper = worker_agents["web_scraper"]
 
@@ -334,7 +334,7 @@ class TestEventDrivenArchitecture:
         assert result["result"][0]["content"] == "Test scraped content"
 
     @pytest.mark.asyncio
-    async def test_arxiv_worker_functionality(self) -> None:
+async def test_arxiv_worker_functionality(self, worker_agents: Any = None) -> None:
         """Test ArXiv Worker maintains Phase 2A functionality"""
         arxiv_worker = worker_agents["arxiv"]
 
@@ -377,7 +377,7 @@ class TestEventDrivenArchitecture:
         assert result["metrics"]["papers_retrieved"] > 0
 
     @pytest.mark.asyncio
-    async def test_cognitive_worker_functionality(self) -> None:
+async def test_cognitive_worker_functionality(self, worker_agents: Any = None) -> None:
         """Test Cognitive Worker quality assessment"""
         cognitive_worker = worker_agents["cognitive"]
 
@@ -439,7 +439,7 @@ class TestEventDrivenArchitecture:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_task_coordination_protocol(self) -> None:
+async def test_task_coordination_protocol(self, message_bus: Any = None) -> None:
         """Test task coordination protocol"""
         config = create_standard_config()
         protocol = ProtocolFactory.create_task_coordination_protocol(config)
@@ -461,7 +461,7 @@ class TestEventDrivenArchitecture:
         assert task_status["worker_id"] == "test_worker"
 
     @pytest.mark.asyncio
-    async def test_health_monitoring_protocol(self) -> None:
+async def test_health_monitoring_protocol(self, message_bus: Any = None, message_bus: Any = None) -> None:
         """Test health monitoring protocol"""
         config = create_standard_config()
         protocol = ProtocolFactory.create_health_monitoring_protocol(config)
@@ -487,7 +487,7 @@ class TestEventDrivenArchitecture:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_phase2a_orchestrator_compatibility(self) -> None:
+async def test_phase2a_orchestrator_compatibility(self, worker_agents: Any = None, worker_agents: Any = None, worker_agents: Any = None, worker_agents: Any = None, worker_agents: Any = None) -> None:
         """Verify Phase 2B maintains Phase 2A orchestrator compatibility"""
         # Register all workers
         for worker in self.worker_agents.values():
@@ -658,7 +658,7 @@ class TestEventDrivenArchitecture:
         assert hasattr(result, "cache_hits")
 
     @pytest.mark.asyncio
-    async def test_maintains_84_tests_success_rate(self) -> None:
+async def test_maintains_84_tests_success_rate(self, supervisor_agent: Any = None, supervisor_agent: Any = None, supervisor_agent: Any = None, supervisor_agent: Any = None, supervisor_agent: Any = None, worker_agents: Any = None) -> None:
         """Critical test: Verify 84/84 test success rate is maintained"""
         # This test simulates running all original Phase 2A test scenarios
         # through the new event-driven architecture
@@ -735,7 +735,7 @@ class TestEventDrivenArchitecture:
         assert len(failed_tests) == 0, f"Failed tests found: {failed_tests}"
 
     # Helper methods for different test scenarios
-    async def _test_web_scenario(self) -> None:
+async def _test_web_scenario(self, scenario_index: Any = None, scenario_index: Any = None, supervisor_agent: Any = None) -> None:
         """Test web scraping scenario"""
         plan = IngestionPlan(
             topic=f"web_test_{scenario_index}",
@@ -761,7 +761,7 @@ class TestEventDrivenArchitecture:
             result = await self.supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
-    async def _test_arxiv_scenario(self) -> None:
+async def _test_arxiv_scenario(self, scenario_index: Any = None, scenario_index: Any = None, supervisor_agent: Any = None) -> None:
         """Test ArXiv scenario"""
         plan = IngestionPlan(
             topic=f"arxiv_test_{scenario_index}",
@@ -790,7 +790,7 @@ class TestEventDrivenArchitecture:
             result = await self.supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
-    async def _test_pubmed_scenario(self) -> None:
+async def _test_pubmed_scenario(self, scenario_index: Any = None, scenario_index: Any = None, supervisor_agent: Any = None) -> None:
         """Test PubMed scenario"""
         plan = IngestionPlan(
             topic=f"pubmed_test_{scenario_index}",
@@ -819,7 +819,7 @@ class TestEventDrivenArchitecture:
             result = await self.supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
-    async def _test_orchestrator_scenario(self) -> None:
+async def _test_orchestrator_scenario(self, scenario_index: Any = None, supervisor_agent: Any = None) -> None:
         """Test orchestrator scenario"""
         # Multi-source orchestrator test
         plan = IngestionPlan(
@@ -854,7 +854,7 @@ class TestEventDrivenArchitecture:
             result = await self.supervisor_agent.execute_ingestion_plan(plan)
             assert result.success is True
 
-    async def _test_integration_scenario(self) -> None:
+async def _test_integration_scenario(self, scenario_index: Any = None, worker_agents: Any = None, worker_agents: Any = None, worker_agents: Any = None) -> None:
         """Test integration scenario"""
         # Full integration test with cognitive processing
         plan = IngestionPlan(

@@ -55,7 +55,7 @@ class MLPipelineDemo:
     Shows integration of all ML services in a production-like scenario.
     """
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         # Initialize services
         self.config = config or {}
         self.model_serving = None
@@ -201,7 +201,9 @@ class MLPipelineDemo:
             logger.error("Feature engineering demonstration failed: %s", e)
             raise
 
-    async def demonstrate_model_training(self, processed_data: pd.DataFrame) -> str | None:
+    async def demonstrate_model_training(
+        self, processed_data: pd.DataFrame
+    ) -> str | None:
         """Demonstrate model training capabilities."""
         try:
             logger.info("Demonstrating model training...")
@@ -401,7 +403,7 @@ class MLPipelineDemo:
             await self.ml_monitor.start_monitoring(model_id)
 
             # Simulate some metrics collection
-            for i in range(10):
+            for _i in range(10):
                 await self.ml_monitor._collect_model_metrics(model_id)
                 await asyncio.sleep(1)
 
@@ -421,7 +423,7 @@ class MLPipelineDemo:
             logger.info("Started A/B test")
 
             # Simulate A/B test metrics
-            for i in range(50):
+            for _i in range(50):
                 await self.ml_monitor.record_ab_test_metric(
                     f"demo_ab_{int(time.time())}",
                     model_id,

@@ -1,0 +1,84 @@
+name: Pre-Production Validation
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+
+jobs:
+  pre-production-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.set-python-version.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
+      run: poetry install --with dev --no-dev
+
+    - name: Run end-to-end tests
+      run: |
+        poetry run pytest -m e2e --maxfail=1
+
+    - name: Run load tests
+      run: |
+        poetry run pytest -m load --maxfail=1
+
+    - name: Security scan
+      run: |
+        poetry run bandit -r src/ -f json
+        poetry run safety check
+
+    - name: Manual approval
+      uses: trstringer/manual-approval@v1
+      with:
+        secret: ${{ github.TOKEN }}
+        approvers: chris
+        minimum-approvals: 1
+        issue-title: "Approve deployment to ${{ github.event.inputs.environment }}"
+        issue-body: "Please review and approve deployment to ${{ github.event.inputs.environment }}"
+        exclude-workflow-initiator: false
+
+    - name: Deploy to production
+      if: steps.manual-approval.outputs.approved == 'true'
+      run: |
+        echo "Deploying to production..."
+        # Add actual production deployment steps here
+
+    - name: Notify deployment success
+      if: steps.manual-approval.outputs.approved == 'true'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: "Successfully deployed to ${{ github.event.inputs.environment }}"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

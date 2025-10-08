@@ -92,7 +92,6 @@ def create_aws_secrets(region: str = "us-east-1") -> None:
                     )
                     continue
                 except client.exceptions.ResourceNotFoundException as e:
-
                     logger.debug(f"Exception in setup_aws_secrets.py: {e}")
 
                     # Continue gracefully  # Secret doesn't exist, proceed to create

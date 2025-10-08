@@ -62,7 +62,7 @@ class ProcessingResult:
     knowledge_graph_updated: bool
     ai_summary: str
     processing_time: float
-    error: Optional[str] = None
+    error: str | None = None
 
 
 @dataclass
@@ -82,14 +82,14 @@ class EnhancedConfidenceEngine:
     """Enhanced confidence scoring with error recovery"""
 
     def __init__(self) -> None:
-        self.fallback_scores: Dict[str, float] = {
+        self.fallback_scores: dict[str, float] = {
             "minimal": 0.3,
             "basic": 0.5,
             "good": 0.7,
             "excellent": 0.9,
         }
 
-    def calculate_confidence(self, content: str, metadata: Dict[str, Any]) -> float:
+    def calculate_confidence(self, content: str, metadata: dict[str, Any]) -> float:
         """Calculate confidence score with error handling"""
         try:
             score = 0.0
@@ -171,7 +171,7 @@ class RobustVectorEmbedding:
     def __init__(self, dimensions: int = 384) -> None:
         self.dimensions = dimensions
 
-    def create_embedding(self, content: str) -> List[float]:
+    def create_embedding(self, content: str) -> list[float]:
         """Create vector embedding with error handling"""
         try:
             # Simple hash-based embedding (production would use proper embeddings)
@@ -179,7 +179,7 @@ class RobustVectorEmbedding:
 
             # Create vocabulary hash
             vocab_hash = {}
-            for i, word in enumerate(
+            for _i, word in enumerate(
                 set(words[:1000]),
             ):  # Limit to prevent memory issues
                 vocab_hash[word] = hash(word) % self.dimensions
@@ -219,7 +219,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
         self.vault_path = Path(vault_path)
         self.api_bridge_url = api_bridge_url
         self.processing_queue = asyncio.Queue()
-        self.processed_files: Dict[str, Any] = {}
+        self.processed_files: dict[str, Any] = {}
         self.service_start_time = datetime.now(UTC)
 
         # Enhanced components
@@ -555,7 +555,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
         except Exception:
             return "Content summary unavailable."
 
-    def update_knowledge_graph(self) -> None:
+def update_knowledge_graph(self, pake_id: Any = None, content: Any = None, content: Any = None) -> None:
         """Update knowledge graph with error handling"""
         try:
             self.knowledge_graph[pake_id] = {
@@ -577,7 +577,7 @@ class ServiceEnhancedVaultWatcher(FileSystemEventHandler):
         except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Knowledge graph update error: %s", e)
 
-    def save_vector_embedding(self) -> None:
+def save_vector_embedding(self, pake_id: Any = None, pake_id: Any = None, embedding: Any = None, embedding: Any = None, pake_id: Any = None) -> None:
         """Save vector embedding with error handling"""
         try:
             vector_file = Path(f"D:/Projects/PAKE_SYSTEM/data/vectors/{pake_id}.json")

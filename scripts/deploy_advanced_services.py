@@ -22,7 +22,7 @@ class ServiceDeployer:
         self.deployed_services = []
         self.service_status = {}
 
-    def log_status(self) -> None:
+def log_status(self, status: Any = None, service: Any = None, message: str, service: Any = None, service: Any = None, service: Any = None, status: Any = None, message: str) -> None:
         """Log service status"""
         timestamp = datetime.now(UTC).strftime("%H:%M:%S")
         status_icon = {

@@ -495,7 +495,9 @@ class AIMemoryQueryInterface:
             }
 
 
-def create_memory_api(memory_interface: AIMemoryQueryInterface) -> FastAPI:
+def create_memory_api(
+    memory_interface: AIMemoryQueryInterface, batch: Any = None
+) -> FastAPI:
     """Create FastAPI application with memory endpoints."""
     app = FastAPI(
         title="AI Long-Term Memory API",
@@ -576,7 +578,7 @@ def create_memory_api(memory_interface: AIMemoryQueryInterface) -> FastAPI:
         return JSONResponse(content=result)
 
     @app.post("/batch")
-    async def batch_store_memories(self) -> None:
+    async def batch_store_memories(self, batch: Any = None) -> None:
         """Store multiple memories in batch."""
         # Convert Pydantic models to dicts for batch processing
         memory_dicts = []

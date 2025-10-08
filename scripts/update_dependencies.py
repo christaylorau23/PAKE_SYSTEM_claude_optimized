@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class DependencyUpdater:
-    def __init__(self) -> None:
+def __init__(self, project_root: Any = None) -> None:
         self.project_root = project_root
         self.security_updates = []
         self.deprecated_updates = []

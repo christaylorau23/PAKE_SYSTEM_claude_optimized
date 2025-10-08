@@ -58,7 +58,7 @@ class MemoryLeakPattern:
 class MemoryProfiler:
     """Comprehensive memory profiler using tracemalloc."""
 
-    def __init__(self) -> None:
+def __init__(self, log_file: Any = None) -> None:
         self.log_file = Path(log_file)
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -82,7 +82,7 @@ class MemoryProfiler:
             tracemalloc.start()
             print("Tracemalloc started - memory tracking enabled")
 
-    def start_monitoring(self) -> None:
+def start_monitoring(self, interval_seconds: Any = None, interval_seconds: Any = None) -> None:
         """Start continuous memory monitoring."""
         if self.monitoring_active:
             print("Memory monitoring already active")
@@ -210,7 +210,7 @@ class MemoryProfiler:
 
         return end_memory - start_memory
 
-    def _create_memory_leak_pattern(self) -> None:
+def _create_memory_leak_pattern(self, snapshots: Any = None, growth_mb: Any = None, snapshots: Any = None, growth_mb: Any = None, growth_mb: Any = None, growth_mb: Any = None) -> None:
         """Create memory leak pattern record."""
         pattern_id = f"memory_leak_{int(time.time())}"
 
@@ -519,7 +519,7 @@ class MemrayProfiler:
         memray.stop_tracing()
         print("Memray profiling stopped")
 
-    def generate_flame_graph(self) -> None:
+def generate_flame_graph(self, output_file: Any = None, profile_file: Any = None) -> None:
         """Generate flame graph from Memray profile."""
         if not self.memray_available:
             msg = "Memray not available"

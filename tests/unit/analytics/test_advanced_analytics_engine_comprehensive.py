@@ -38,7 +38,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         }
 
     @pytest.fixture
-    def analytics_engine(self) -> None:
+def analytics_engine(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Create AdvancedAnalyticsEngine instance with mocked dependencies"""
         with (
             patch(
@@ -74,7 +74,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_functional
-    async def test_generate_comprehensive_report_success(self) -> None:
+async def test_generate_comprehensive_report_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful comprehensive report generation"""
         # Arrange
         time_range = "24h"
@@ -148,7 +148,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         mock_dependencies["insight_service"].generate_insights.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_analyze_system_health_success(self) -> None:
+async def test_analyze_system_health_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful system health analysis"""
         # Arrange
         mock_dependencies["trend_service"].get_system_metrics.return_value = {
@@ -184,7 +184,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert len(health_report["issues"]) == 1
 
     @pytest.mark.unit_functional
-    async def test_detect_anomalies_success(self) -> None:
+async def test_detect_anomalies_success(self, mock_dependencies: Any = None) -> None:
         """Test successful anomaly detection"""
         # Arrange
         mock_dependencies["trend_service"].detect_anomalies.return_value = {
@@ -212,7 +212,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert anomaly_report["anomaly_score"] == 0.92
 
     @pytest.mark.unit_functional
-    async def test_generate_predictive_insights_success(self) -> None:
+async def test_generate_predictive_insights_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful predictive insights generation"""
         # Arrange
         mock_dependencies["predictive_service"].generate_predictions.return_value = {
@@ -278,7 +278,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_edge_case
-    async def test_generate_report_with_minimal_data(self) -> None:
+async def test_generate_report_with_minimal_data(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test report generation with minimal data"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -312,7 +312,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert len(report["insights"]["insights"]) == 0
 
     @pytest.mark.unit_edge_case
-    async def test_generate_report_without_predictions(self) -> None:
+async def test_generate_report_without_predictions(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test report generation without predictions"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -360,7 +360,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert insights is None  # Should return None for expired cache
 
     @pytest.mark.unit_edge_case
-    async def test_concurrent_report_generation(self) -> None:
+async def test_concurrent_report_generation(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test concurrent report generation"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -400,7 +400,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_error_handling
-    async def test_trend_service_failure(self) -> None:
+async def test_trend_service_failure(self, mock_dependencies: Any = None) -> None:
         """Test handling of trend service failures"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.side_effect = Exception(
@@ -412,7 +412,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
             await self.analytics_engine.generate_comprehensive_report()
 
     @pytest.mark.unit_error_handling
-    async def test_correlation_engine_failure(self) -> None:
+async def test_correlation_engine_failure(self, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test handling of correlation engine failures"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -429,7 +429,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
             await self.analytics_engine.generate_comprehensive_report()
 
     @pytest.mark.unit_error_handling
-    async def test_predictive_service_failure(self) -> None:
+async def test_predictive_service_failure(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test handling of predictive service failures"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -453,7 +453,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
             )
 
     @pytest.mark.unit_error_handling
-    async def test_insight_service_failure(self) -> None:
+async def test_insight_service_failure(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test handling of insight service failures"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {
@@ -475,7 +475,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
             await self.analytics_engine.generate_comprehensive_report()
 
     @pytest.mark.unit_error_handling
-    async def test_ml_services_unavailable(self) -> None:
+async def test_ml_services_unavailable(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test handling when ML services are unavailable"""
         # Arrange - Simulate ML services being None
         self.analytics_engine.ml_aggregation = None
@@ -525,7 +525,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_performance
-    async def test_report_generation_performance(self) -> None:
+async def test_report_generation_performance(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test report generation performance"""
         import time
 
@@ -584,7 +584,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
         assert insights is not None
 
     @pytest.mark.unit_performance
-    async def test_memory_usage_with_large_datasets(self) -> None:
+async def test_memory_usage_with_large_datasets(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test memory usage with large datasets"""
         # Arrange - Create large dataset
         large_trends = [{"topic": f"Topic{i}", "growth_rate": 0.1} for i in range(1000)]
@@ -620,7 +620,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_security
-    async def test_input_sanitization(self) -> None:
+async def test_input_sanitization(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test input sanitization for security"""
         # Arrange
         malicious_time_range = "24h'; DROP TABLE analytics; --"
@@ -662,7 +662,7 @@ class TestAdvancedAnalyticsEngineComprehensive:
             await self.analytics_engine.get_cached_insights(malicious_cache_key)
 
     @pytest.mark.unit_security
-    async def test_data_privacy_protection(self) -> None:
+async def test_data_privacy_protection(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test data privacy protection"""
         # Arrange
         mock_dependencies["trend_service"].analyze_trends.return_value = {

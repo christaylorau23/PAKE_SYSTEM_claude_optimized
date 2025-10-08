@@ -16,7 +16,7 @@ from watchdog.observers import Observer
 class WorkingAutomationHandler(FileSystemEventHandler):
     """Working file handler for automation testing"""
 
-    def __init__(self) -> None:
+def __init__(self, vault_path: Any = None, vault_path: Any = None) -> None:
         self.vault_path = Path(vault_path)
         self.processed = set()
         print(f"Automation handler initialized for: {vault_path}")
@@ -39,7 +39,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
             print(f"DETECTED MODIFIED FILE: {file_path.name}")
             self.process_file(file_path)
 
-    def process_file(self) -> None:
+def process_file(self, file_path: Any = None, file_path: Any = None, file_path: Any = None) -> None:
         """Process and analyze file"""
         try:
             print(f"PROCESSING: {self.file_path.name}")
@@ -117,7 +117,7 @@ class WorkingAutomationHandler(FileSystemEventHandler):
         except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"ERROR processing {self.file_path.name}: {e}")
 
-    def save_result(self) -> None:
+def save_result(self, result: str) -> None:
         """Save processing result to file"""
         try:
             results_dir = Path("D:/Projects/PAKE_SYSTEM/data")

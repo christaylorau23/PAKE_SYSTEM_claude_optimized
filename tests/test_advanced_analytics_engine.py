@@ -85,7 +85,7 @@ class TestAdvancedAnalyticsEngine:
         }
 
     # Test 1: Engine Initialization
-    def test_analytics_engine_initialization(self) -> None:
+def test_analytics_engine_initialization(self, analytics_engine: Any = None) -> None:
         """Test that the analytics engine initializes correctly."""
         assert analytics_engine is not None
         assert self.analytics_engine.trend_service is not None
@@ -104,7 +104,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 3: Comprehensive Report Generation
     @pytest.mark.asyncio
-    async def test_generate_comprehensive_report_success(self) -> None:
+async def test_generate_comprehensive_report_success(self, analytics_engine: Any = None, analytics_engine: Any = None, analytics_engine: Any = None, analytics_engine: Any = None, analytics_engine: Any = None, analytics_engine: Any = None, analytics_engine: Any = None, analytics_engine: Any = None, mock_time_range: Any = None, mock_time_range: Any = None) -> None:
         """Test successful comprehensive report generation."""
         with (
             patch.object(analytics_engine, "_analyze_system_health") as mock_health,
@@ -174,7 +174,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 4: System Health Analysis
     @pytest.mark.asyncio
-    async def test_analyze_system_health_success(self) -> None:
+async def test_analyze_system_health_success(self, mock_time_range: Any = None) -> None:
         """Test successful system health analysis."""
         health_score = await self.analytics_engine._analyze_system_health(mock_time_range)
 
@@ -197,7 +197,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 5: Performance Trends Analysis
     @pytest.mark.asyncio
-    async def test_analyze_performance_trends_success(self) -> None:
+async def test_analyze_performance_trends_success(self, mock_time_range: Any = None) -> None:
         """Test successful performance trends analysis."""
         with patch.object(
             self.analytics_engine.trend_service,
@@ -223,7 +223,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 6: Usage Patterns Analysis
     @pytest.mark.asyncio
-    async def test_analyze_usage_patterns_success(self) -> None:
+async def test_analyze_usage_patterns_success(self, mock_time_range: Any = None) -> None:
         """Test successful usage patterns analysis."""
         patterns = await self.analytics_engine._analyze_usage_patterns(mock_time_range)
 
@@ -244,7 +244,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 7: Anomaly Detection
     @pytest.mark.asyncio
-    async def test_detect_anomalies_success(self) -> None:
+async def test_detect_anomalies_success(self, mock_time_range: Any = None) -> None:
         """Test successful anomaly detection."""
         anomalies = await self.analytics_engine._detect_anomalies(mock_time_range)
 
@@ -277,7 +277,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 8: Correlation Analysis
     @pytest.mark.asyncio
-    async def test_generate_correlations_success(self) -> None:
+async def test_generate_correlations_success(self, mock_time_range: Any = None) -> None:
         """Test successful correlation analysis."""
         with patch.object(
             self.analytics_engine.correlation_engine,
@@ -302,7 +302,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 9: Predictive Analytics
     @pytest.mark.asyncio
-    async def test_generate_predictions_success(self) -> None:
+async def test_generate_predictions_success(self, mock_time_range: Any = None) -> None:
         """Test successful predictive analytics generation."""
         with patch.object(
             self.analytics_engine.predictive_service,
@@ -331,7 +331,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 10: Insight Synthesis
     @pytest.mark.asyncio
-    async def test_synthesize_insights_success(self) -> None:
+async def test_synthesize_insights_success(self, sample_health_data: Any = None, sample_health_data: Any = None, sample_health_data: Any = None, sample_health_data: Any = None, sample_health_data: Any = None, sample_anomaly_data: Any = None) -> None:
         """Test successful insight synthesis."""
         health_analysis = SystemHealthScore(
             overall_score=sample_health_data["overall_score"],
@@ -558,7 +558,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 15: Error Handling
     @pytest.mark.asyncio
-    async def test_generate_comprehensive_report_error_handling(self) -> None:
+async def test_generate_comprehensive_report_error_handling(self, analytics_engine: Any = None, mock_time_range: Any = None) -> None:
         """Test error handling in comprehensive report generation."""
         with patch.object(analytics_engine, "_analyze_system_health") as mock_health:
             mock_health.side_effect = Exception("Test error")
@@ -609,7 +609,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 18: Performance Metrics
     @pytest.mark.asyncio
-    async def test_performance_metrics(self) -> None:
+async def test_performance_metrics(self, mock_time_range: Any = None) -> None:
         """Test performance metrics in analytics generation."""
         import time
 
@@ -629,7 +629,7 @@ class TestAdvancedAnalyticsEngine:
 
     # Test 19: Concurrent Execution
     @pytest.mark.asyncio
-    async def test_concurrent_report_generation(self) -> None:
+async def test_concurrent_report_generation(self, mock_time_range: Any = None) -> None:
         """Test concurrent report generation."""
         # Generate multiple reports concurrently
         tasks = [

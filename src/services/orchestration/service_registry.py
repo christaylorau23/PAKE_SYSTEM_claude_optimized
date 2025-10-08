@@ -24,27 +24,28 @@ class ServiceConfig(BaseModel):
     health_check_url: str
     health_check_interval_seconds: int = 30
     health_timeout_seconds: int = 5
-    resource_requirements: Dict[str, Any] | None = None
-    endpoints: list[Dict[str, Any]] | None = None
-    dependencies: list[Dict[str, Any]] | None = None
+    resource_requirements: dict[str, Any] | None = None
+    endpoints: list[dict[str, Any]] | None = None
+    dependencies: list[dict[str, Any]] | None = None
     labels: dict[str, str] | None = None
 
 
 class ServiceUpdate(BaseModel):
     service_version: str | None = None
     labels: dict[str, str] | None = None
-    resource_requirements: Dict[str, Any] | None = None
+    resource_requirements: dict[str, Any] | None = None
 
 
 class HealthConfig(BaseModel):
     """Health check configuration."""
+
     health_check_interval_seconds: int | None = None
     health_timeout_seconds: int | None = None
 
 
 # In-memory storage for TDD (will be replaced with database)
-registered_services: dict[str, Dict[str, Any]] = {}
-service_health_status: dict[str, Dict[str, Any]] = {}
+registered_services: dict[str, dict[str, Any]] = {}
+service_health_status: dict[str, dict[str, Any]] = {}
 
 
 app = FastAPI(

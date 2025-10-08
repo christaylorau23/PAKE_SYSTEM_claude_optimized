@@ -158,7 +158,7 @@ class TestServiceIntegration:
         assert json.loads(fresh_data["profile_data"])["preferences"]["theme"] == "light"
 
     @pytest.mark.asyncio
-    async def test_ingestion_database_integration(self) -> None:
+async def test_ingestion_database_integration(self, test_database: Any = None) -> None:
         """
         Test: Ingestion services should store results in database correctly
 
@@ -233,7 +233,7 @@ class TestServiceIntegration:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_cache_performance_integration(self) -> None:
+async def test_cache_performance_integration(self, test_services: Any = None) -> None:
         """
         Test: Cache should improve performance for repeated operations
 
@@ -343,7 +343,7 @@ class TestServiceIntegration:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_message_bus_integration(self) -> None:
+async def test_message_bus_integration(self, message: str, test_message_bus: Any = None) -> None:
         """
         Test: Message bus should enable reliable service communication
 
@@ -356,7 +356,7 @@ class TestServiceIntegration:
         # Set up message handlers
         received_messages = []
 
-        async def message_handler(self) -> None:
+async def message_handler(self, message: str) -> None:
             received_messages.append(message)
             return {"status": "processed", "message_id": self.message.message_id}
 
@@ -503,7 +503,7 @@ class TestServiceIntegration:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_authentication_database_integration(self) -> None:
+async def test_authentication_database_integration(self, test_services: Any = None) -> None:
         """
         Test: Authentication service should integrate with database for user management
 
@@ -571,7 +571,7 @@ class TestServiceIntegration:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_complete_ingestion_workflow_integration(self) -> None:
+async def test_complete_ingestion_workflow_integration(self, test_database: Any = None, test_cache: Any = None, test_message_bus: Any = None, message: str, test_services: Any = None, test_services: Any = None) -> None:
         """
         Test: Complete ingestion workflow should work end-to-end
 
@@ -600,7 +600,7 @@ class TestServiceIntegration:
         # Set up message handlers for workflow coordination
         workflow_messages = []
 
-        async def workflow_handler(self) -> None:
+async def workflow_handler(self, message: str) -> None:
             workflow_messages.append(message)
             return {"status": "workflow_step_completed"}
 
@@ -734,7 +734,7 @@ class TestErrorPropagationIntegration:
             assert "Database connection failed" in result.error_message
 
     @pytest.mark.asyncio
-    async def test_cache_error_propagation(self) -> None:
+async def test_cache_error_propagation(self, test_database: Any = None) -> None:
         """
         Test: Cache errors should not break core functionality
 

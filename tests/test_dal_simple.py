@@ -18,7 +18,7 @@ from data.repositories.NoteRepository import NoteRepository
 sys.path.insert(0, str(Path(__file__).parent))
 
 
-@self.pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_dal_and_repository(self) -> None:
     """Test the Python DAL and NoteRepository implementation"""
     print("Testing PAKE Data Access Layer Implementation...\n")

@@ -28,7 +28,12 @@ class WebScraperWorker(BaseWorkerAgent):
     for JavaScript-heavy content extraction.
     """
 
-    def __init__(self, worker_id: str | None = None, message_bus: MessageBus | None = None, firecrawl_api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        worker_id: str | None = None,
+        message_bus: MessageBus | None = None,
+        firecrawl_api_key: str | None = None,
+    ) -> None:
         """Initialize web scraper worker."""
         # Define worker capabilities
         capabilities = [
@@ -78,7 +83,7 @@ class WebScraperWorker(BaseWorkerAgent):
 
         logger.info("WebScraperWorker %s initialized", self.worker_id)
 
-    async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_task(self, task_data: dict[str, Any]) -> dict[str, Any]:
         """Process web scraping task.
 
         Handles 'web_ingestion' tasks from the supervisor with source configurations.
@@ -168,7 +173,7 @@ class WebScraperWorker(BaseWorkerAgent):
 
     def _create_scraping_options(
         self,
-        scraping_opts: Dict[str, Any],
+        scraping_opts: dict[str, Any],
     ) -> ScrapingOptions:
         """Create ScrapingOptions from configuration."""
         return ScrapingOptions(
@@ -187,7 +192,12 @@ class WebScraperWorker(BaseWorkerAgent):
             ),
         )
 
-    def _enhance_content_metadata(self, content_item: Any, plan_context: Dict[str, Any], source_data: Dict[str, Any]) -> None:
+    def _enhance_content_metadata(
+        self,
+        content_item: Any,
+        plan_context: dict[str, Any],
+        source_data: dict[str, Any],
+    ) -> None:
         """Enhance content item with additional metadata."""
         if not content_item.metadata:
             content_item.metadata = {}
@@ -259,7 +269,7 @@ class WebScraperWorker(BaseWorkerAgent):
         # No specific cleanup needed for stateless worker
         logger.info("WebScraperWorker %s cleanup completed", self.worker_id)
 
-    async def get_health_status(self) -> Dict[str, Any]:
+    async def get_health_status(self) -> dict[str, Any]:
         """Get web scraper specific health status."""
         base_health = await super().get_health_status()
 
@@ -337,12 +347,12 @@ class WebScrapingTaskTypes:
 
 
 def create_web_scraping_task_data(
-    urls: List[str],
+    urls: list[str],
     task_type: str = WebScrapingTaskTypes.BASIC_SCRAPING,
     wait_time: int = 3000,
     extract_metadata: bool = True,
     **kwargs,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create task data for web scraping operations.
 
     Args:

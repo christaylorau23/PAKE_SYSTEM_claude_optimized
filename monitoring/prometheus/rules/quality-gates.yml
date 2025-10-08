@@ -1,0 +1,143 @@
+# PAKE System - Quality Gate Alert Rules
+# These rules implement the quality gate thresholds from the engineering guide
+
+groups:
+  - name: quality-gates
+    rules:
+      # Code Quality Alerts
+      - alert: NewCodeSmellsExceeded
+        expr: sonarqube_new_code_smells > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: code-quality
+        annotations:
+          summary: "New code smells exceeded threshold"
+          description: "New code smells count is {{ $value }}, exceeding the threshold of 5"
+          runbook_url: "https://docs.pake-system.com/quality-gates#code-smells"
+
+      - alert: CodeDuplicationExceeded
+        expr: sonarqube_duplication_percentage > 3
+        for: 5m
+        labels:
+          severity: warning
+          category: code-quality
+        annotations:
+          summary: "Code duplication exceeded threshold"
+          description: "Code duplication is {{ $value }}%, exceeding the threshold of 3%"
+          runbook_url: "https://docs.pake-system.com/quality-gates#duplication"
+
+      - alert: CognitiveComplexityIncreased
+        expr: increase(sonarqube_cognitive_complexity[1h]) > 0
+        for: 10m
+        labels:
+          severity: warning
+          category: code-quality
+        annotations:
+          summary: "Cognitive complexity increased"
+          description: "Cognitive complexity has increased by {{ $value }} in the last hour"
+          runbook_url: "https://docs.pake-system.com/quality-gates#complexity"
+
+      # Security Alerts
+      - alert: CriticalVulnerabilityDetected
+        expr: sonarqube_critical_vulnerabilities > 0
+        for: 0m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Critical security vulnerability detected"
+          description: "{{ $value }} critical security vulnerabilities detected"
+          runbook_url: "https://docs.pake-system.com/security#critical-vulnerabilities"
+
+      - alert: SecurityHotspotsRequireReview
+        expr: sonarqube_security_hotspots > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Security hotspots require review"
+          description: "{{ $value }} security hotspots require manual review"
+          runbook_url: "https://docs.pake-system.com/security#hotspots"
+
+      # Test Coverage Alerts
+      - alert: NewCodeCoverageBelowThreshold
+        expr: sonarqube_coverage_new_code < 80
+        for: 5m
+        labels:
+          severity: warning
+          category: test-coverage
+        annotations:
+          summary: "New code coverage below threshold"
+          description: "New code coverage is {{ $value }}%, below the threshold of 80%"
+          runbook_url: "https://docs.pake-system.com/quality-gates#coverage"
+
+      - alert: OverallCoverageDecreasing
+        expr: decrease(sonarqube_coverage_overall[24h]) > 5
+        for: 1h
+        labels:
+          severity: warning
+          category: test-coverage
+        annotations:
+          summary: "Overall test coverage decreasing"
+          description: "Overall test coverage has decreased by {{ $value }}% in the last 24 hours"
+          runbook_url: "https://docs.pake-system.com/quality-gates#coverage-trends"
+
+      # Technical Debt Alerts
+      - alert: F821ErrorsHigh
+        expr: pake_f821_errors_total > 500
+        for: 10m
+        labels:
+          severity: warning
+          category: technical-debt
+        annotations:
+          summary: "F821 errors count is high"
+          description: "F821 undefined name errors count is {{ $value }}, exceeding the 30-day target of 500"
+          runbook_url: "https://docs.pake-system.com/technical-debt#f821-errors"
+
+      - alert: SecurityViolationsHigh
+        expr: pake_security_violations_total > 10
+        for: 10m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Security violations count is high"
+          description: "S311/S603/S607 violations count is {{ $value }}, exceeding the 30-day target of 10"
+          runbook_url: "https://docs.pake-system.com/security#violations"
+
+      # CI/CD Performance Alerts
+      - alert: PRBuildTimeHigh
+        expr: github_actions_build_duration_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+          category: ci-cd
+        annotations:
+          summary: "PR build time is high"
+          description: "Average PR build time is {{ $value }} seconds, exceeding the threshold of 10 minutes"
+          runbook_url: "https://docs.pake-system.com/ci-cd#build-performance"
+
+      - alert: CICDSuccessRateLow
+        expr: rate(github_actions_builds_total{status="success"}[5m]) / rate(github_actions_builds_total[5m]) < 0.98
+        for: 10m
+        labels:
+          severity: warning
+          category: ci-cd
+        annotations:
+          summary: "CI/CD success rate is low"
+          description: "CI/CD success rate is {{ $value | humanizePercentage }}, below the threshold of 98%"
+          runbook_url: "https://docs.pake-system.com/ci-cd#success-rate"
+
+      # Development Velocity Alerts
+      - alert: BugToFeatureRatioHigh
+        expr: rate(jira_bugs_total[7d]) / rate(jira_features_total[7d]) > 0.5
+        for: 1h
+        labels:
+          severity: warning
+          category: development-velocity
+        annotations:
+          summary: "Bug to feature ratio is high"
+          description: "Bug to feature ratio is {{ $value }}, indicating potential quality issues"
+          runbook_url: "https://docs.pake-system.com/development-velocity#bug-ratio"

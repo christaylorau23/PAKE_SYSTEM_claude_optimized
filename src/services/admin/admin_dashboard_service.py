@@ -10,9 +10,9 @@ from enum import Enum
 import logging
 from typing import Any, Dict
 
-import sqlalchemy
-import psycopg2
 import asyncpg
+import psycopg2
+import sqlalchemy
 
 from ..authentication.jwt_auth_service import JWTAuthenticationService
 from ..caching.redis_cache_service import RedisCacheService
@@ -62,7 +62,7 @@ class UserSummary:
     total_execution_time: float
     avg_quality_score: float | None
     is_online: bool
-    preferences: Dict[str, Any]
+    preferences: dict[str, Any]
 
 
 @dataclass
@@ -111,7 +111,7 @@ class SecurityEvent:
     user_id: str | None
     ip_address: str
     user_agent: str
-    details: Dict[str, Any]
+    details: dict[str, Any]
     timestamp: datetime
     resolved: bool = False
 
@@ -128,7 +128,14 @@ class AdminDashboardService:
     - Maintenance operations
     """
 
-    def __init__(self, database_service: PostgreSQLService, auth_service: JWTAuthenticationService, search_history_service: SearchHistoryService, websocket_manager: WebSocketManager, cache_service: RedisCacheService) -> None:
+    def __init__(
+        self,
+        database_service: PostgreSQLService,
+        auth_service: JWTAuthenticationService,
+        search_history_service: SearchHistoryService,
+        websocket_manager: WebSocketManager,
+        cache_service: RedisCacheService,
+    ) -> None:
         self.database_service = database_service
         self.auth_service = auth_service
         self.search_history_service = search_history_service
@@ -151,7 +158,7 @@ class AdminDashboardService:
         search_query: str | None = None,
         filter_active: bool | None = None,
         filter_admin: bool | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get all users with filtering and pagination."""
         try:
             # Build filters
@@ -212,7 +219,7 @@ class AdminDashboardService:
             logger.error("Failed to get users: %s", e)
             raise
 
-    async def get_user_details(self, user_id: str) -> Dict[str, Any]:
+    async def get_user_details(self, user_id: str) -> dict[str, Any]:
         """Get detailed user information."""
         try:
             # Get user data
@@ -576,7 +583,7 @@ class AdminDashboardService:
 
     # System Configuration
 
-    async def get_system_config(self) -> Dict[str, Any]:
+    async def get_system_config(self) -> dict[str, Any]:
         """Get current system configuration."""
         try:
             config = await self.database_service.get_system_config()
@@ -605,7 +612,7 @@ class AdminDashboardService:
     async def update_system_config(
         self,
         admin_user_id: str,
-        config_updates: Dict[str, Any],
+        config_updates: dict[str, Any],
     ) -> bool:
         """Update system configuration."""
         try:
@@ -653,7 +660,7 @@ class AdminDashboardService:
         admin_user_id: str,
         operation: str,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform system maintenance operations."""
         try:
             # Verify admin permissions
@@ -741,7 +748,7 @@ class AdminDashboardService:
 
     # Helper Methods
 
-    async def _get_user_search_stats(self, user_id: str) -> Dict[str, Any]:
+    async def _get_user_search_stats(self, user_id: str) -> dict[str, Any]:
         """Get user search statistics."""
         try:
             stats = await self.database_service.get_user_search_summary(user_id)
@@ -787,7 +794,7 @@ class AdminDashboardService:
         except BaseException:
             return "error"
 
-    async def _get_performance_metrics(self) -> Dict[str, Any]:
+    async def _get_performance_metrics(self) -> dict[str, Any]:
         """Get system performance metrics."""
         try:
             import psutil
@@ -827,7 +834,7 @@ class AdminDashboardService:
             logger.error("Failed to get performance metrics: %s", e)
             return {}
 
-    async def _get_user_statistics(self, start_date: datetime) -> Dict[str, Any]:
+    async def _get_user_statistics(self, start_date: datetime) -> dict[str, Any]:
         """Get user statistics."""
         try:
             return await self.database_service.get_user_statistics(start_date)
@@ -835,7 +842,7 @@ class AdminDashboardService:
             logger.error("Failed to get user statistics: %s", e)
             return {}
 
-    async def _get_search_statistics(self, start_date: datetime) -> Dict[str, Any]:
+    async def _get_search_statistics(self, start_date: datetime) -> dict[str, Any]:
         """Get search statistics."""
         try:
             return await self.database_service.get_search_statistics(start_date)
@@ -843,7 +850,7 @@ class AdminDashboardService:
             logger.error("Failed to get search statistics: %s", e)
             return {}
 
-    async def _get_performance_statistics(self, start_date: datetime) -> Dict[str, Any]:
+    async def _get_performance_statistics(self, start_date: datetime) -> dict[str, Any]:
         """Get performance statistics."""
         try:
             return await self.database_service.get_performance_statistics(start_date)
@@ -851,7 +858,7 @@ class AdminDashboardService:
             logger.error("Failed to get performance statistics: %s", e)
             return {}
 
-    async def _get_error_statistics(self, start_date: datetime) -> Dict[str, Any]:
+    async def _get_error_statistics(self, start_date: datetime) -> dict[str, Any]:
         """Get error statistics."""
         try:
             return await self.database_service.get_error_statistics(start_date)
@@ -865,7 +872,7 @@ class AdminDashboardService:
         target_user_id: str | None,
         action: str,
         reason: str | None,
-        details: Dict[str, Any],
+        details: dict[str, Any],
     ) -> None:
         """Log admin action for audit trail."""
         try:

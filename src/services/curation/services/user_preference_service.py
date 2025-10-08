@@ -57,11 +57,11 @@ class PersonalizationInsight:
     """Insights about user personalization patterns."""
 
     user_id: str
-    primary_interests: List[str]
-    emerging_interests: List[str]
-    declining_interests: List[str]
+    primary_interests: list[str]
+    emerging_interests: list[str]
+    declining_interests: list[str]
     preference_diversity: float  # How diverse user's interests are
-    engagement_patterns: Dict[str, Any]
+    engagement_patterns: dict[str, Any]
     learning_velocity: float  # How quickly preferences change
     discovery_propensity: float  # Likelihood to explore new content
 
@@ -73,7 +73,12 @@ class UserPreferenceService:
     and provides sophisticated personalization capabilities.
     """
 
-    def __init__(self, learning_rate: float = 0.1, interest_decay_rate: float = 0.05, min_interactions_for_learning: int = 10) -> None:
+    def __init__(
+        self,
+        learning_rate: float = 0.1,
+        interest_decay_rate: float = 0.05,
+        min_interactions_for_learning: int = 10,
+    ) -> None:
         """Initialize user preference service.
 
         Args:
@@ -948,14 +953,12 @@ class UserPreferenceService:
 
         # Normalize by maximum possible entropy
         max_entropy = math.log2(len(probabilities))
-        diversity = entropy / max_entropy if max_entropy > 0 else 0.0
-
-        return diversity
+        return entropy / max_entropy if max_entropy > 0 else 0.0
 
     async def _analyze_engagement_patterns(
         self,
         interactions: list[tuple[UserInteraction, ContentItem]],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze user engagement patterns."""
         if not interactions:
             return {}
@@ -1109,12 +1112,10 @@ class UserPreferenceService:
             similarity_score = overlap / len(category_keywords.union(user_keywords))
 
         # Exploration score balances popularity and novelty
-        exploration_score = (
+        return (
             popularity_score * (1 - exploration_factor)
             + (1 - similarity_score) * exploration_factor
         )
-
-        return exploration_score
 
     async def _calculate_interaction_consistency(
         self,
@@ -1139,9 +1140,7 @@ class UserPreferenceService:
         max_entropy = math.log2(len(type_distribution))
 
         # Convert to consistency score (inverse of normalized entropy)
-        consistency = 1.0 - (entropy / max_entropy) if max_entropy > 0 else 1.0
-
-        return consistency
+        return 1.0 - (entropy / max_entropy) if max_entropy > 0 else 1.0
 
     async def _calculate_preference_stability(
         self,

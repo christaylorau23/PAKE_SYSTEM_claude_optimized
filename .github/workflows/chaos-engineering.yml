@@ -1,0 +1,49 @@
+name: Chaos Engineering Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM UTC
+  workflow_dispatch:
+
+jobs:
+  chaos-tests:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -r chaos_engineering/requirements.txt
+
+      - name: Configure environment
+        run: |
+          export CHAOS_STAGING_URL="${{ secrets.STAGING_URL }}"
+          export CHAOS_DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}"
+          export CHAOS_KUBECONFIG="${{ secrets.STAGING_KUBECONFIG }}"
+          export CHAOS_PROMETHEUS_URL="${{ secrets.STAGING_PROMETHEUS_URL }}"
+
+      - name: Run database failover test
+        run: |
+          chaos run chaos_engineering/experiments/database_failover_test.json
+
+      - name: Run API instance failure test
+        run: |
+          chaos run chaos_engineering/experiments/api_instance_failure_test.json
+
+      - name: Generate report
+        run: |
+          chaos report chaos_engineering/experiments/database_failover_test.json --export-format=json > results.json
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-engineering-results
+          path: results.json

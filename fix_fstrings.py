@@ -6,9 +6,10 @@ and fixes them by joining the lines properly.
 
 from pathlib import Path
 import re
+from typing import Any
 
 
-def fix_fstrings_in_file(self) -> None:
+def fix_fstrings_in_file(file_path: Any = None) -> None:
     """Fix f-string issues in a single file."""
     try:
         with open(file_path, encoding="utf-8") as f:

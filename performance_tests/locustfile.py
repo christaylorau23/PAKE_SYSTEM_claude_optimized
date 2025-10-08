@@ -1,4 +1,4 @@
-from fastapi import Response
+
 """PAKE System Performance Testing with Locust.
 ==========================================
 
@@ -24,14 +24,18 @@ Personas:
 
 import secrets
 import time
+from typing import TYPE_CHECKING
 
 from locust import HttpUser, between, task
+
+if TYPE_CHECKING:
+    from fastapi import Response
 
 
 class BaseUserBehavior:
     """Base behavior shared across all user types."""
 
-    def __init__(self) -> None:
+def __init__(self, parent: Any = None, parent: Any = None) -> None:
         self.parent = parent
         self.client = parent.client
         self.auth_token: str | None = None
@@ -177,7 +181,7 @@ class ApiUserBehavior(BaseUserBehavior):
 class ResearcherUserBehavior(BaseUserBehavior):
     """Behavior for heavy research users - PAKE System focused on auth/admin operations."""
 
-    def __init__(self) -> None:
+def __init__(self, parent: Any = None) -> None:
         super().__init__(parent)
         self.test_operations = [
             "user_profile",
@@ -441,11 +445,11 @@ class CustomMetrics:
             "concurrent_users": 0,
         }
 
-    def record_response_time(self) -> None:
+def record_response_time(self, response_time: Any = None) -> None:
         """Record response time."""
         self.metrics["response_times"].append(response_time)
 
-    def record_error(self) -> None:
+def record_error(self, status_code: Any = None, status_code: Any = None, status_code: Any = None) -> None:
         """Record error."""
         if status_code not in self.metrics["error_rates"]:
             self.metrics["error_rates"][status_code] = 0
@@ -476,7 +480,7 @@ class CustomMetrics:
 custom_metrics = CustomMetrics()
 
 
-def on_request_success(self) -> None:
+def on_request_success(self, response_time: Any = None) -> None:
     """Called on successful request."""
     custom_metrics.record_response_time(response_time)
 

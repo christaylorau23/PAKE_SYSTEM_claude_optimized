@@ -55,7 +55,7 @@ class CacheKey:
     namespace: str
     key: str
     version: str = "1.0"
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
     def to_string(self) -> str:
         """Convert to string representation."""
@@ -178,7 +178,7 @@ class MemoryCacheTier(CacheTierInterface):
     def __init__(self, config: CacheConfig | None = None) -> None:
         self.config = config or CacheConfig()
         self._cache: dict[str, CacheEntry] = {}
-        self._access_order: List[str] = []  # For LRU
+        self._access_order: list[str] = []  # For LRU
         self._lock = asyncio.Lock()
         self._current_size = 0
 
@@ -358,7 +358,7 @@ class DiskCacheTier(CacheTierInterface):
         self.config = config or CacheConfig()
         self.cache_dir = Path(self.config.disk_path)
         self.cache_dir.mkdir(exist_ok=True, parents=True)
-        self._metadata: dict[str, Dict[str, Any]] = {}
+        self._metadata: dict[str, dict[str, Any]] = {}
         self._lock = asyncio.Lock()
 
     async def get(self, key: CacheKey) -> CacheEntry | None:
@@ -674,7 +674,7 @@ class MultiTierCacheManager:
 
         return all(results)
 
-    async def invalidate_by_tags(self, tags: List[str]) -> int:
+    async def invalidate_by_tags(self, tags: list[str]) -> int:
         """Invalidate cache entries by tags."""
         # Mock implementation - in production would iterate through entries
         invalidated_count = 0
@@ -694,7 +694,7 @@ class MultiTierCacheManager:
 
         return self.stats
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform cache health check."""
         stats = await self.get_stats()
 

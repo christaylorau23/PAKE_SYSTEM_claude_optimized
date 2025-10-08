@@ -69,8 +69,8 @@ class CalibrationEvent:
     severity: str  # info, warning, critical
     component: str
     description: str
-    impact_assessment: Dict[str, Any]
-    recommended_actions: List[str]
+    impact_assessment: dict[str, Any]
+    recommended_actions: list[str]
     auto_resolved: bool
 
 
@@ -89,7 +89,7 @@ class CosmicCalibrationCoordinator:
     - Maintain system stability during improvements
     """
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
         self.calibration_phase = CalibrationPhase.INITIALIZATION
 
@@ -102,8 +102,12 @@ class CosmicCalibrationCoordinator:
             "health_check_frequency",
             300,
         )  # 5 minutes
-        self.optimization_cooldown = self.config.get("optimization_cooldown", 3600)  # 1 hour
-        self.evolution_frequency = self.config.get("evolution_frequency", 86400)  # 24 hours
+        self.optimization_cooldown = self.config.get(
+            "optimization_cooldown", 3600
+        )  # 1 hour
+        self.evolution_frequency = self.config.get(
+            "evolution_frequency", 86400
+        )  # 24 hours
 
         # System health thresholds
         self.health_thresholds = {
@@ -122,7 +126,7 @@ class CosmicCalibrationCoordinator:
         # Coordination state
         self.system_metrics_history: list[CalibrationMetrics] = []
         self.calibration_events: list[CalibrationEvent] = []
-        self.active_optimizations: dict[str, Dict[str, Any]] = {}
+        self.active_optimizations: dict[str, dict[str, Any]] = {}
         self.last_optimization_time: datetime | None = None
 
         # Master optimization strategy
@@ -158,7 +162,7 @@ class CosmicCalibrationCoordinator:
 
         return logger
 
-    def _initialize_optimization_strategy(self) -> Dict[str, Any]:
+    def _initialize_optimization_strategy(self) -> dict[str, Any]:
         """Initialize the master optimization strategy."""
         return {
             "priority_weights": {
@@ -407,7 +411,7 @@ components to achieve continuous improvement while maintaining system stability.
 
     def _calculate_cognitive_performance_score(
         self,
-        performance_metrics: Dict[str, Any],
+        performance_metrics: dict[str, Any],
     ) -> float:
         """Calculate overall cognitive performance score."""
         if not performance_metrics:
@@ -430,7 +434,7 @@ components to achieve continuous improvement while maintaining system stability.
 
         return np.mean(scores) if scores else 0.5
 
-    def _calculate_metacognitive_score(self, status: Dict[str, Any]) -> float:
+    def _calculate_metacognitive_score(self, status: dict[str, Any]) -> float:
         """Calculate metacognitive optimization effectiveness score."""
         if not status:
             return 0.5
@@ -456,7 +460,7 @@ components to achieve continuous improvement while maintaining system stability.
 
         return np.mean(factors) if factors else 0.5
 
-    def _calculate_evolution_score(self, status: Dict[str, Any]) -> float:
+    def _calculate_evolution_score(self, status: dict[str, Any]) -> float:
         """Calculate prompt evolution effectiveness score."""
         if not status:
             return 0.5
@@ -478,7 +482,7 @@ components to achieve continuous improvement while maintaining system stability.
 
         return np.mean(factors) if factors else 0.5
 
-    def _calculate_critique_score(self, status: Dict[str, Any]) -> float:
+    def _calculate_critique_score(self, status: dict[str, Any]) -> float:
         """Calculate self-critique effectiveness score."""
         if not status:
             return 0.5
@@ -498,7 +502,7 @@ components to achieve continuous improvement while maintaining system stability.
         self,
         metrics: CalibrationMetrics,
         health: SystemHealth,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Make high-level coordination decisions based on system state."""
         decisions = {
             "should_optimize": False,
@@ -576,7 +580,9 @@ components to achieve continuous improvement while maintaining system stability.
 
         return decisions
 
-    async def _execute_coordinated_optimization(self, decisions: Dict[str, Any]) -> None:
+    async def _execute_coordinated_optimization(
+        self, decisions: dict[str, Any]
+    ) -> None:
         """Execute coordinated optimization based on decisions."""
         self.logger.info(
             "Executing coordinated optimization: %s priority",
@@ -615,7 +621,9 @@ components to achieve continuous improvement while maintaining system stability.
         # Validate optimization results
         await self._validate_optimization_results(decisions)
 
-    async def _log_coordination_cycle(self, metrics: CalibrationMetrics, decisions: Dict[str, Any]) -> None:
+    async def _log_coordination_cycle(
+        self, metrics: CalibrationMetrics, decisions: dict[str, Any]
+    ) -> None:
         """Log coordination cycle to the master calibration log."""
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -651,7 +659,7 @@ components to achieve continuous improvement while maintaining system stability.
         with open(self.calibration_log_path, "a", encoding="utf-8") as f:
             f.write(log_entry)
 
-    async def get_system_status(self) -> Dict[str, Any]:
+    async def get_system_status(self) -> dict[str, Any]:
         """Get comprehensive system status."""
         latest_metrics = (
             self.system_metrics_history[-1] if self.system_metrics_history else None
@@ -694,7 +702,7 @@ components to achieve continuous improvement while maintaining system stability.
             ),
         }
 
-    async def trigger_emergency_calibration(self, reason: str) -> Dict[str, Any]:
+    async def trigger_emergency_calibration(self, reason: str) -> dict[str, Any]:
         """Trigger emergency calibration cycle."""
         self.logger.warning("Emergency calibration triggered: %s", reason)
 

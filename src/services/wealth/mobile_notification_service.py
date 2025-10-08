@@ -34,12 +34,12 @@ from typing import Any, Dict, List
 
 import aiohttp
 import aiosqlite
-import sqlalchemy
-import psycopg2
 import asyncpg
 from cryptography.hazmat.primitives import serialization
 import jwt
+import psycopg2
 import redis.asyncio as redis
+import sqlalchemy
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -98,8 +98,8 @@ class MobileDevice:
     app_version: str
     device_model: str
     timezone: str
-    location: Dict[str, Any] | None = None
-    preferences: Dict[str, Any] = None
+    location: dict[str, Any] | None = None
+    preferences: dict[str, Any] = None
     last_seen: datetime = None
     active: bool = True
 
@@ -109,7 +109,7 @@ class MobileDevice:
         if self.preferences is None:
             self.preferences = {}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "device_id": self.device_id,
             "platform": self.platform.value,
@@ -135,7 +135,7 @@ class NotificationMessage:
     body: str
     notification_type: NotificationType
     priority: NotificationPriority
-    data: Dict[str, Any] = None
+    data: dict[str, Any] = None
     sound: str | None = None
     badge_count: int | None = None
     category: str | None = None
@@ -155,7 +155,7 @@ class NotificationMessage:
         if self.expires_at is None:
             self.expires_at = self.created_at + timedelta(hours=24)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "notification_id": self.notification_id,
             "recipient_id": self.recipient_id,
@@ -188,10 +188,10 @@ class DeliveryResult:
     status: DeliveryStatus
     delivery_time: datetime
     error_message: str | None = None
-    provider_response: Dict[str, Any] | None = None
+    provider_response: dict[str, Any] | None = None
     retry_after: datetime | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "notification_id": self.notification_id,
             "device_id": self.device_id,
@@ -972,7 +972,7 @@ class MobileNotificationService:
         # For demo purposes, return None
         return None
 
-    async def _get_recipient_webhooks(self, recipient_id: str) -> List[str]:
+    async def _get_recipient_webhooks(self, recipient_id: str) -> list[str]:
         """Get webhook URLs for recipient (placeholder)."""
         # In a real implementation, this would query webhook registrations
         # For demo purposes, return configured webhooks
@@ -1067,7 +1067,9 @@ class MobileNotificationService:
             return DeliveryStatus.SENT  # Partial success still counts as sent
         return DeliveryStatus.FAILED
 
-    async def _update_notification_status(self, notification_id: str, status: DeliveryStatus) -> None:
+    async def _update_notification_status(
+        self, notification_id: str, status: DeliveryStatus
+    ) -> None:
         """Update notification status in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -1087,7 +1089,7 @@ class MobileNotificationService:
     async def get_notification_status(
         self,
         notification_id: str,
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Get detailed status of a notification."""
         try:
             async with aiosqlite.connect(self.db_path) as db:

@@ -112,7 +112,7 @@ class JWTAuthenticationService:
 
     def validate_REDACTED_SECRET_complexity(
         self, REDACTED_SECRET: str
-    ) -> tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """Validate REDACTED_SECRET complexity."""
         errors = []
 
@@ -139,7 +139,7 @@ class JWTAuthenticationService:
         self,
         user_id: str,
         username: str,
-        additional_claims: Dict[str, Any] | None = None,
+        additional_claims: dict[str, Any] | None = None,
     ) -> str:
         """Create JWT access token."""
         now = datetime.now(UTC)
@@ -185,7 +185,7 @@ class JWTAuthenticationService:
         self,
         token: str,
         token_type: str = "access",
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Verify and decode JWT token."""
         try:
             payload = jwt.decode(
@@ -258,7 +258,7 @@ class JWTAuthenticationService:
     async def register_user(
         self,
         registration: UserRegistration,
-    ) -> tuple[bool, str | Dict[str, Any]]:
+    ) -> tuple[bool, str | dict[str, Any]]:
         """Register new user."""
         try:
             # Validate REDACTED_SECRET
@@ -313,7 +313,7 @@ class JWTAuthenticationService:
     async def authenticate_user(
         self,
         login: UserLogin,
-    ) -> tuple[bool, str | Dict[str, Any]]:
+    ) -> tuple[bool, str | dict[str, Any]]:
         """Authenticate user and return user data."""
         try:
             identifier = login.username_or_email
@@ -368,7 +368,7 @@ class JWTAuthenticationService:
     async def login_user(
         self,
         login: UserLogin,
-    ) -> tuple[bool, TokenPair | Dict[str, Any]]:
+    ) -> tuple[bool, TokenPair | dict[str, Any]]:
         """Login user and return JWT tokens."""
         success, result = await self.authenticate_user(login)
 
@@ -400,7 +400,7 @@ class JWTAuthenticationService:
     async def refresh_tokens(
         self,
         refresh_token: str,
-    ) -> tuple[bool, TokenPair | Dict[str, Any]]:
+    ) -> tuple[bool, TokenPair | dict[str, Any]]:
         """Refresh access token using refresh token."""
         try:
             # Verify refresh token
@@ -439,7 +439,7 @@ class JWTAuthenticationService:
             logger.error("Token refresh failed: %s", e)
             return False, {"errors": ["Token refresh failed"]}
 
-    async def get_current_user(self, access_token: str) -> Dict[str, Any] | None:
+    async def get_current_user(self, access_token: str) -> dict[str, Any] | None:
         """Get current user from access token."""
         try:
             payload = self.verify_token(access_token, "access")
@@ -466,7 +466,7 @@ class JWTAuthenticationService:
         user_id: str,
         old_REDACTED_SECRET: str,
         new_REDACTED_SECRET: str,
-    ) -> tuple[bool, Dict[str, Any]]:
+    ) -> tuple[bool, dict[str, Any]]:
         """Change user REDACTED_SECRET."""
         try:
             # Get user
@@ -505,7 +505,7 @@ class JWTAuthenticationService:
             logger.error("Password change failed: %s", e)
             return False, {"errors": ["Password change failed"]}
 
-    def get_auth_statistics(self) -> Dict[str, Any]:
+    def get_auth_statistics(self) -> dict[str, Any]:
         """Get authentication statistics."""
         total_locked_accounts = len(
             [

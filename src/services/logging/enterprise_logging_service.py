@@ -10,7 +10,7 @@ Comprehensive logging service implementing enterprise best practices for:
 """
 
 import asyncio
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -21,7 +21,7 @@ from pathlib import Path
 import re
 import sys
 import time
-from typing import Any, Callable
+from typing import Any
 import uuid
 
 from pydantic import BaseModel, Field, validator
@@ -48,7 +48,7 @@ class LogLevel(Enum):
     ERROR = (40, "ERROR")
     CRITICAL = (50, "CRITICAL")
 
-    def __init__(self, level: Any = None, name: str = '') -> None:
+    def __init__(self, level: Any = None, name: str = "") -> None:
         self.level = level
         self.name = name
 
@@ -288,7 +288,7 @@ class LogEntry(BaseModel):
     )
 
     @validator("extra_data")
-    def validate_extra_data(cls, v: Any) -> Any:
+    def validate_extra_data(self, v: Any) -> Any:
         """Ensure extra_data doesn't contain sensitive information."""
         if isinstance(v, dict):
             return SensitiveDataMasker.mask_dict(v)
@@ -432,7 +432,9 @@ class EnterpriseLoggingService:
     # Context Management
     # ========================================================================
 
-    def with_context(self, context: dict[str, Any] | None = None, **kwargs) -> LogContext:
+    def with_context(
+        self, context: dict[str, Any] | None = None, **kwargs
+    ) -> LogContext:
         """Create a context manager for adding contextual information."""
         return LogContext(context or {}, **kwargs)
 
@@ -528,22 +530,43 @@ class EnterpriseLoggingService:
         elif entry.level == LogLevel.CRITICAL.name:
             logger.critical(entry.message, extra=log_dict)
 
-    def debug(self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs: Any) -> None:
+    def debug(
+        self,
+        message: str,
+        category: LogCategory = LogCategory.APPLICATION,
+        **kwargs: Any,
+    ) -> None:
         """Log debug message."""
         entry = self._create_log_entry(LogLevel.DEBUG, message, category, **kwargs)
         self._log_entry(entry)
 
-    def info(self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs: Any) -> None:
+    def info(
+        self,
+        message: str,
+        category: LogCategory = LogCategory.APPLICATION,
+        **kwargs: Any,
+    ) -> None:
         """Log info message."""
         entry = self._create_log_entry(LogLevel.INFO, message, category, **kwargs)
         self._log_entry(entry)
 
-    def warning(self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs: Any) -> None:
+    def warning(
+        self,
+        message: str,
+        category: LogCategory = LogCategory.APPLICATION,
+        **kwargs: Any,
+    ) -> None:
         """Log warning message."""
         entry = self._create_log_entry(LogLevel.WARNING, message, category, **kwargs)
         self._log_entry(entry)
 
-    def error(self, message: str, category: LogCategory = LogCategory.APPLICATION, error: Exception | None = None, **kwargs: Any) -> None:
+    def error(
+        self,
+        message: str,
+        category: LogCategory = LogCategory.APPLICATION,
+        error: Exception | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log error message with optional exception."""
         if error:
             kwargs.update(
@@ -559,7 +582,12 @@ class EnterpriseLoggingService:
         entry = self._create_log_entry(LogLevel.ERROR, message, category, **kwargs)
         self._log_entry(entry)
 
-    def critical(self, message: str, category: LogCategory = LogCategory.APPLICATION, **kwargs: Any) -> None:
+    def critical(
+        self,
+        message: str,
+        category: LogCategory = LogCategory.APPLICATION,
+        **kwargs: Any,
+    ) -> None:
         """Log critical message."""
         entry = self._create_log_entry(LogLevel.CRITICAL, message, category, **kwargs)
         self._log_entry(entry)
@@ -568,7 +596,17 @@ class EnterpriseLoggingService:
     # Specialized Logging Methods
     # ========================================================================
 
-    def security(self, message: str, event: str, success: bool, reason: str | None = None, ip: str | None = None, user_agent: str | None = None, user_id: str | None = None, **kwargs: Any) -> None:
+    def security(
+        self,
+        message: str,
+        event: str,
+        success: bool,
+        reason: str | None = None,
+        ip: str | None = None,
+        user_agent: str | None = None,
+        user_id: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log security events."""
         security_data = {
             "event": event,
@@ -587,7 +625,16 @@ class EnterpriseLoggingService:
         )
         self._log_entry(entry)
 
-    def audit(self, message: str, event_type: str, action: str, result: str, resource: str | None = None, user_id: str | None = None, **kwargs: Any) -> None:
+    def audit(
+        self,
+        message: str,
+        event_type: str,
+        action: str,
+        result: str,
+        resource: str | None = None,
+        user_id: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log audit events for compliance."""
         audit_data = {
             "event_type": event_type,
@@ -607,7 +654,15 @@ class EnterpriseLoggingService:
         # Store in audit logs for compliance
         self.audit_logs.append(entry)
 
-    def performance(self, message: str, operation: str, duration_ms: float | None = None, memory_mb: float | None = None, cpu_percent: float | None = None, **kwargs: Any) -> None:
+    def performance(
+        self,
+        message: str,
+        operation: str,
+        duration_ms: float | None = None,
+        memory_mb: float | None = None,
+        cpu_percent: float | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log performance metrics."""
         perf_data = {
             "operation": operation,
@@ -622,7 +677,17 @@ class EnterpriseLoggingService:
         )
         self._log_entry(entry)
 
-    def api(self, message: str, method: str | None = None, path: str | None = None, status_code: int | None = None, duration_ms: float | None = None, user_id: str | None = None, error: Exception | None = None, **kwargs: Any) -> None:
+    def api(
+        self,
+        message: str,
+        method: str | None = None,
+        path: str | None = None,
+        status_code: int | None = None,
+        duration_ms: float | None = None,
+        user_id: str | None = None,
+        error: Exception | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log API requests/responses."""
         api_data = {
             "method": method,
@@ -649,7 +714,16 @@ class EnterpriseLoggingService:
         entry = self._create_log_entry(level, message, LogCategory.API, **api_data)
         self._log_entry(entry)
 
-    def database(self, message: str, operation: str, table: str | None = None, duration_ms: float | None = None, row_count: int | None = None, error: Exception | None = None, **kwargs: Any) -> None:
+    def database(
+        self,
+        message: str,
+        operation: str,
+        table: str | None = None,
+        duration_ms: float | None = None,
+        row_count: int | None = None,
+        error: Exception | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log database operations."""
         db_data = {
             "operation": operation,
@@ -667,7 +741,17 @@ class EnterpriseLoggingService:
         entry = self._create_log_entry(level, message, LogCategory.DATABASE, **db_data)
         self._log_entry(entry)
 
-    def business(self, message: str, event: str, entity_type: str | None = None, entity_id: str | None = None, action: str | None = None, metadata: dict[str, Any] | None = None, user_id: str | None = None, **kwargs: Any) -> None:
+    def business(
+        self,
+        message: str,
+        event: str,
+        entity_type: str | None = None,
+        entity_id: str | None = None,
+        action: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        user_id: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log business events."""
         business_data = {
             "event": event,
@@ -844,7 +928,9 @@ class EnterpriseLoggingService:
 _global_logger: EnterpriseLoggingService | None = None
 
 
-def get_enterprise_logger(config: LoggingConfig | None = None) -> EnterpriseLoggingService:
+def get_enterprise_logger(
+    config: LoggingConfig | None = None,
+) -> EnterpriseLoggingService:
     """Get or create global enterprise logger instance."""
     global _global_logger
     if _global_logger is None:

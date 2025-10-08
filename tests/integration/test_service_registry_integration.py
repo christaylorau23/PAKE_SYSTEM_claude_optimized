@@ -1,4 +1,5 @@
 from typing import Dict
+
 """
 Integration Test: Service Registry Registration Flow
 Task T013 - Phase 18 Production System Integration
@@ -36,7 +37,7 @@ class TestServiceRegistryIntegration:
             yield client
 
     @pytest.fixture
-    def test_service_config(self) -> Dict[str, Any]:
+    def test_service_config(self) -> dict[str, Any]:
         """Test service configuration for registration"""
         return {
             "service_name": f"test-service-{uuid.uuid4().hex[:8]}",
@@ -66,7 +67,7 @@ class TestServiceRegistryIntegration:
         }
 
     @pytest.mark.asyncio
-    async def test_complete_service_registration_flow(self) -> None:
+async def test_complete_service_registration_flow(self, http_client: Any = None, service_registry_url: Any = None, test_service_config: Any = None, http_client: Any = None, service_registry_url: Any = None, test_service_config: Any = None, test_service_config: Any = None, test_service_config: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None) -> None:
         """
         Test complete service registration workflow
 
@@ -187,7 +188,7 @@ class TestServiceRegistryIntegration:
             assert cleanup_response.status_code in [200, 204, 404]
 
     @pytest.mark.asyncio
-    async def test_service_dependency_management(self) -> None:
+async def test_service_dependency_management(self, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None) -> None:
         """
         Test service dependency registration and validation
 
@@ -296,7 +297,7 @@ class TestServiceRegistryIntegration:
                 )
 
     @pytest.mark.asyncio
-    async def test_service_discovery_filtering(self) -> None:
+async def test_service_discovery_filtering(self, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None) -> None:
         """
         Test service discovery with filtering capabilities
 
@@ -398,7 +399,7 @@ class TestServiceRegistryIntegration:
                 )
 
     @pytest.mark.asyncio
-    async def test_service_health_monitoring_lifecycle(self) -> None:
+async def test_service_health_monitoring_lifecycle(self, test_service_config: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None, http_client: Any = None, service_registry_url: Any = None) -> None:
         """
         Test complete health monitoring lifecycle
 

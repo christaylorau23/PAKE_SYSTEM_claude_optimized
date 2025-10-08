@@ -41,7 +41,7 @@ class IngestionSource:
 
     source_type: str
     priority: int
-    query_parameters: Dict[str, Any]
+    query_parameters: dict[str, Any]
     estimated_results: int
     timeout: int
     source_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -61,7 +61,7 @@ class IngestionPlan:
     estimated_duration: int
     plan_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    context: Dict[str, Any] = field(default_factory=dict)
+    context: dict[str, Any] = field(default_factory=dict)
     enable_cross_source_workflows: bool = False
     enable_deduplication: bool = True
 
@@ -74,11 +74,11 @@ class ContentItem:
     content: str
     url: str
     source_type: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     source_name: str = ""
     published: datetime | None = None
     author: str = ""
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -94,10 +94,10 @@ class IngestionResult:
     sources_failed: int = 0
     execution_time: float = 0.0
     execution_time_ms: float = 0.0
-    error_details: list[Dict[str, Any]] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
+    error_details: list[dict[str, Any]] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     error: str | None = None
-    metrics: Dict[str, Any] = field(default_factory=dict)
+    metrics: dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     # Additional fields for compatibility
@@ -114,8 +114,8 @@ class IngestionPlanBuilderInterface(ABC):
     def build_plan(
         self,
         topic: str,
-        source_configs: list[Dict[str, Any]],
-        user_preferences: Dict[str, Any] | None = None,
+        source_configs: list[dict[str, Any]],
+        user_preferences: dict[str, Any] | None = None,
     ) -> IngestionPlan:
         """Build a comprehensive ingestion plan from source configurations."""
 
@@ -132,7 +132,7 @@ class SourceExecutorInterface(ABC):
         self,
         source: IngestionSource,
         plan: IngestionPlan,
-    ) -> tuple[list[ContentItem], Dict[str, Any]]:
+    ) -> tuple[list[ContentItem], dict[str, Any]]:
         """Execute ingestion for a single source."""
 
     @abstractmethod
@@ -147,7 +147,7 @@ class IngestionOrchestratorInterface(ABC):
     async def create_ingestion_plan(
         self,
         topic: str,
-        context: Dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,
     ) -> IngestionPlan:
         """Create comprehensive ingestion plan based on research topic and context."""
 
@@ -160,7 +160,7 @@ class IngestionOrchestratorInterface(ABC):
         """Execute comprehensive ingestion plan with full orchestration."""
 
     @abstractmethod
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform comprehensive orchestrator health check."""
 
 
@@ -220,5 +220,5 @@ class MetricsCollectorInterface(ABC):
         """Increment a counter metric."""
 
     @abstractmethod
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get current metrics."""

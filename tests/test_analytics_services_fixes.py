@@ -30,7 +30,7 @@ class TestTrendAnalysisService:
         return TrendAnalysisService()
 
     @pytest.mark.asyncio
-    async def test_analyze_trend_with_time_range(self) -> None:
+async def test_analyze_trend_with_time_range(self, trend_service: Any = None) -> None:
         """Test analyze_trend method with time_range parameter."""
         # This test will fail initially, demonstrating the missing method
         # The implementation should be added to fix this
@@ -72,7 +72,7 @@ class TestTrendAnalysisService:
             assert 0 <= result["confidence"] <= 1
 
     @pytest.mark.asyncio
-    async def test_analyze_trend_different_metrics(self) -> None:
+async def test_analyze_trend_different_metrics(self, trend_service: Any = None) -> None:
         """Test analyze_trend with different metrics."""
         metrics = ["response_time", "throughput", "error_rate", "cache_hit_rate"]
         time_range = "6h"
@@ -93,7 +93,7 @@ class TestTrendAnalysisService:
                 assert "trend_direction" in result
 
     @pytest.mark.asyncio
-    async def test_analyze_trend_error_handling(self) -> None:
+async def test_analyze_trend_error_handling(self, trend_service: Any = None) -> None:
         """Test error handling in analyze_trend method."""
         with patch.object(trend_service, "analyze_trend") as mock_analyze:
             mock_analyze.side_effect = Exception("Database connection failed")
@@ -113,7 +113,7 @@ class TestCorrelationEngine:
         return CorrelationEngine()
 
     @pytest.mark.asyncio
-    async def test_analyze_correlations_method(self) -> None:
+async def test_analyze_correlations_method(self, correlation_engine: Any = None) -> None:
         """Test analyze_correlations method."""
         metrics = ["response_time", "throughput", "error_rate", "cache_hit_rate"]
         time_range = "24h"
@@ -172,7 +172,7 @@ class TestCorrelationEngine:
                 assert correlation["relationship_type"] in valid_types
 
     @pytest.mark.asyncio
-    async def test_analyze_correlations_different_time_ranges(self) -> None:
+async def test_analyze_correlations_different_time_ranges(self, correlation_engine: Any = None) -> None:
         """Test analyze_correlations with different time ranges."""
         metrics = ["response_time", "throughput"]
         time_ranges = ["1h", "6h", "24h", "7d"]
@@ -198,7 +198,7 @@ class TestCorrelationEngine:
                 assert "summary" in result
 
     @pytest.mark.asyncio
-    async def test_analyze_correlations_error_handling(self) -> None:
+async def test_analyze_correlations_error_handling(self, correlation_engine: Any = None) -> None:
         """Test error handling in analyze_correlations method."""
         with patch.object(correlation_engine, "analyze_correlations") as mock_analyze:
             mock_analyze.side_effect = Exception("Data processing failed")
@@ -218,7 +218,7 @@ class TestPredictiveAnalyticsService:
         return PredictiveAnalyticsService()
 
     @pytest.mark.asyncio
-    async def test_generate_forecast_method(self) -> None:
+async def test_generate_forecast_method(self, predictive_service: Any = None) -> None:
         """Test generate_forecast method."""
         metrics = ["response_time", "throughput", "error_rate"]
         forecast_horizon = "7d"
@@ -316,7 +316,7 @@ class TestPredictiveAnalyticsService:
                 assert 0 <= model_accuracy[metric] <= 1
 
     @pytest.mark.asyncio
-    async def test_generate_forecast_different_horizons(self) -> None:
+async def test_generate_forecast_different_horizons(self, predictive_service: Any = None) -> None:
         """Test generate_forecast with different forecast horizons."""
         metrics = ["response_time"]
         horizons = ["1d", "3d", "7d", "30d"]
@@ -354,7 +354,7 @@ class TestPredictiveAnalyticsService:
                 assert result["forecast_metadata"]["forecast_horizon"] == horizon
 
     @pytest.mark.asyncio
-    async def test_generate_forecast_error_handling(self) -> None:
+async def test_generate_forecast_error_handling(self, predictive_service: Any = None) -> None:
         """Test error handling in generate_forecast method."""
         with patch.object(predictive_service, "generate_forecast") as mock_forecast:
             mock_forecast.side_effect = Exception("Model training failed")
@@ -365,7 +365,7 @@ class TestPredictiveAnalyticsService:
                 )
 
     @pytest.mark.asyncio
-    async def test_generate_forecast_insufficient_data(self) -> None:
+async def test_generate_forecast_insufficient_data(self, predictive_service: Any = None) -> None:
         """Test generate_forecast with insufficient historical data."""
         with patch.object(predictive_service, "generate_forecast") as mock_forecast:
             mock_forecast.return_value = {

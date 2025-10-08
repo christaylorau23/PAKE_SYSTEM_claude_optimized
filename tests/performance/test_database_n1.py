@@ -38,7 +38,7 @@ class QueryCounter:
         print(f"Executed {counter.count} queries")
     """
 
-    def __init__(self) -> None:
+def __init__(self, session: Any = None) -> None:
         self.session = session
         self.count = 0
         self.queries = []
@@ -52,7 +52,7 @@ class QueryCounter:
         """Unregister query counter when exiting context"""
         event.remove(self.session.bind, "after_cursor_execute", self._count_query)
 
-    def _count_query(self) -> None:
+def _count_query(self, statement: Any = None) -> None:
         """Callback to count each query"""
         self.count += 1
         self.queries.append(statement)

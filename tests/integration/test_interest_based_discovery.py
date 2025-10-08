@@ -1,5 +1,5 @@
-from typing import List
-from typing import Dict
+from typing import Dict, List
+
 """
 Integration Test: Interest-Based Content Discovery
 
@@ -33,12 +33,12 @@ class MockCurationSystem:
     async def create_user_profile(
         self,
         user_id: str,
-        interests: List[str],
-    ) -> Dict[str, Any]:
+        interests: list[str],
+    ) -> dict[str, Any]:
         msg = "UserPreferenceService not implemented"
         raise NotImplementedError(msg)
 
-    async def ingest_content(self, content_data: Dict[str, Any]) -> str:
+    async def ingest_content(self, content_data: dict[str, Any]) -> str:
         msg = "ContentAnalysisService not implemented"
         raise NotImplementedError(msg)
 
@@ -46,30 +46,30 @@ class MockCurationSystem:
         self,
         user_id: str,
         limit: int = 10,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         msg = "RecommendationService not implemented"
         raise NotImplementedError(msg)
 
 
-@pytest.fixture
+@pytest.fixture()
 def curation_system(self) -> None:
     """Provide mock curation system"""
     return MockCurationSystem()
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_user_id(self) -> None:
     """Provide test user ID"""
     return f"test_user_{uuid.uuid4().hex[:8]}"
 
 
-@pytest.fixture
+@pytest.fixture()
 def user_interests(self) -> None:
     """User interests for testing"""
     return ["machine learning", "healthcare"]
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_ml_healthcare_content(self) -> None:
     """Sample content that matches user interests"""
     return [
@@ -110,7 +110,7 @@ def sample_ml_healthcare_content(self) -> None:
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def unrelated_content(self) -> None:
     """Sample content that doesn't match user interests"""
     return [
@@ -387,7 +387,7 @@ class TestInterestBasedDiscovery:
 # Performance test fixtures
 
 
-@pytest.fixture
+@pytest.fixture()
 def large_content_dataset(self) -> None:
     """Large dataset for performance testing"""
     content_items = []
@@ -410,7 +410,7 @@ def large_content_dataset(self) -> None:
     return content_items
 
 
-@pytest.mark.performance
+@pytest.mark.performance()
 class TestInterestBasedDiscoveryPerformance:
     """Performance tests for interest-based discovery"""
 

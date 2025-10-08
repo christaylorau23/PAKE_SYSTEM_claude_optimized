@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE+ Circuit Breaker Implementation
@@ -86,7 +87,9 @@ class CallResult:
 class CircuitBreakerError(PAKEException):
     """Circuit breaker specific errors."""
 
-    def __init__(self, message: str, state: CircuitState | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self, message: str, state: CircuitState | None = None, **kwargs: Any
+    ) -> None:
         super().__init__(message, category=ErrorCategory.SYSTEM, **kwargs)
         self.circuit_state = state
 
@@ -415,7 +418,7 @@ class CircuitBreaker:
 
             raise
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get circuit breaker statistics."""
         return {
             "name": self.name,
@@ -472,11 +475,11 @@ class CircuitBreakerRegistry:
             raise ValueError(msg)
         return self._breakers[name]
 
-    def list_breakers(self) -> List[str]:
+    def list_breakers(self) -> list[str]:
         """List all circuit breaker names."""
         return list(self._breakers.keys())
 
-    def get_all_statistics(self) -> dict[str, Dict[str, Any]]:
+    def get_all_statistics(self) -> dict[str, dict[str, Any]]:
         """Get statistics for all circuit breakers."""
         return {
             name: breaker.get_statistics() for name, breaker in self._breakers.items()
@@ -494,7 +497,11 @@ circuit_registry = CircuitBreakerRegistry()
 
 
 # Decorators for easy circuit breaker integration
-def with_circuit_breaker(name: str, config: CircuitBreakerConfig | None = None, registry: CircuitBreakerRegistry | None = None) -> Callable:
+def with_circuit_breaker(
+    name: str,
+    config: CircuitBreakerConfig | None = None,
+    registry: CircuitBreakerRegistry | None = None,
+) -> Callable:
     """Decorator to add circuit breaker protection to functions."""
 
     def decorator(func: Callable) -> Callable:
@@ -580,7 +587,7 @@ def create_external_api_breaker() -> CircuitBreakerConfig:
 
 
 # Health check integration
-async def circuit_breaker_health_check() -> Dict[str, Any]:
+async def circuit_breaker_health_check() -> dict[str, Any]:
     """Health check for all circuit breakers."""
     stats = circuit_registry.get_all_statistics()
 

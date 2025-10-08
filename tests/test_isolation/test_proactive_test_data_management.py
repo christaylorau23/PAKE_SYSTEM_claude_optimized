@@ -35,7 +35,7 @@ class TestTestIsolation:
 
     @pytest.mark.test_isolation
     @pytest.mark.unit
-    async def test_complete_test_isolation(self) -> None:
+async def test_complete_test_isolation(self, isolated_test_environment: Any = None, isolated_test_environment: Any = None) -> None:
         """
         Validate that each test gets a completely isolated environment.
 
@@ -78,7 +78,7 @@ class TestTestIsolation:
 
     @pytest.mark.test_isolation
     @pytest.mark.unit
-    async def test_independent_data_creation(self) -> None:
+async def test_independent_data_creation(self, isolated_test_environment: Any = None) -> None:
         """
         Test that each test can create its own data independently.
 
@@ -104,7 +104,7 @@ class TestTestIsolation:
 
     @pytest.mark.test_isolation
     @pytest.mark.unit
-    async def test_no_test_pollution(self) -> None:
+async def test_no_test_pollution(self, isolated_test_environment: Any = None) -> None:
         """
         Test that this test doesn't pollute the environment for other tests.
 
@@ -137,7 +137,7 @@ class TestMigrationValidation:
 
     @pytest.mark.migration_validation
     @pytest.mark.integration
-    async def test_migrations_apply_from_empty_state(self) -> None:
+async def test_migrations_apply_from_empty_state(self, isolated_test_environment: Any = None) -> None:
         """
         Test that all migrations can be applied to a completely empty database.
 
@@ -175,7 +175,7 @@ class TestMigrationValidation:
 
     @pytest.mark.migration_validation
     @pytest.mark.integration
-    async def test_schema_structure_validation(self) -> None:
+async def test_schema_structure_validation(self, isolated_test_environment: Any = None) -> None:
         """
         Test that the schema structure is correct after migrations.
 
@@ -229,7 +229,7 @@ class TestMigrationValidation:
 
     @pytest.mark.migration_validation
     @pytest.mark.integration
-    async def test_constraints_and_indexes(self) -> None:
+async def test_constraints_and_indexes(self, isolated_test_environment: Any = None) -> None:
         """
         Test that constraints and indexes are created correctly.
 
@@ -294,7 +294,7 @@ class TestFixtureBasedSeeding:
 
     @pytest.mark.fixture_seeding
     @pytest.mark.integration
-    async def test_basic_test_scenario_generation(self) -> None:
+async def test_basic_test_scenario_generation(self, isolated_test_environment: Any = None) -> None:
         """
         Test that basic test scenarios can be generated using fixtures.
 
@@ -316,7 +316,7 @@ class TestFixtureBasedSeeding:
 
     @pytest.mark.fixture_seeding
     @pytest.mark.integration
-    async def test_comprehensive_test_scenario_generation(self) -> None:
+async def test_comprehensive_test_scenario_generation(self, isolated_test_environment: Any = None) -> None:
         """
         Test that comprehensive test scenarios can be generated using fixtures.
 
@@ -372,7 +372,7 @@ class TestFixtureBasedSeeding:
 
     @pytest.mark.fixture_seeding
     @pytest.mark.unit
-    async def test_fixture_dependency_resolution(self) -> None:
+async def test_fixture_dependency_resolution(self, fixture_registry: Any = None) -> None:
         """
         Test that fixture dependencies are resolved correctly.
 
@@ -441,7 +441,7 @@ class TestProactiveTestDataManagementIntegration:
 
     @pytest.mark.integration
     @pytest.mark.proactive_test_data_management
-    async def test_complete_proactive_strategy(self) -> None:
+async def test_complete_proactive_strategy(self, isolated_test_environment: Any = None, isolated_test_environment: Any = None, isolated_test_environment: Any = None) -> None:
         """
         Test that demonstrates the complete proactive test data management strategy.
 
@@ -489,7 +489,7 @@ class TestProactiveTestDataManagementIntegration:
 
     @pytest.mark.integration
     @pytest.mark.proactive_test_data_management
-    async def test_performance_with_isolation(self) -> None:
+async def test_performance_with_isolation(self, isolated_test_environment: Any = None) -> None:
         """
         Test that validates performance is maintained with complete isolation.
 

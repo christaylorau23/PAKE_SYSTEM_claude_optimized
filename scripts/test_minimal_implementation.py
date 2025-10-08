@@ -22,12 +22,12 @@ class SimpleTestRunner:
         self.tests_failed = 0
         self.services_started = []
 
-    def log(self) -> None:
+def log(self, level: LogLevel, message: str) -> None:
         """Simple logging"""
         timestamp = time.strftime("%H:%M:%S")
         print(f"[{timestamp}] {level}: {message}")
 
-    def assert_equal(self) -> None:
+def assert_equal(self, actual: Any = None, expected: Any = None, message: str, message: str, expected: Any = None, actual: Any = None) -> None:
         """Simple assertion"""
         if actual == expected:
             self.tests_passed += 1
@@ -36,7 +36,7 @@ class SimpleTestRunner:
             self.tests_failed += 1
             self.log(f"✗ {message}: expected {expected}, got {actual}", "ERROR")
 
-    def assert_in(self) -> None:
+def assert_in(self, item: Any = None, container: Any = None, message: str, message: str, item: Any = None) -> None:
         """Assert item is in container"""
         if item in container:
             self.tests_passed += 1
@@ -45,7 +45,7 @@ class SimpleTestRunner:
             self.tests_failed += 1
             self.log(f"✗ {message}: {item} not found", "ERROR")
 
-    def assert_status_code(self) -> None:
+def assert_status_code(self, url: Any = None, expected_status: Any = None, message: str, expected_status: Any = None, message: str, message: str) -> None:
         """Check HTTP status code"""
         try:
             response = urlopen(url, timeout=5)
@@ -61,7 +61,7 @@ class SimpleTestRunner:
             self.log(f"✗ {message}: Connection failed - {e}", "ERROR")
             return None
 
-    def start_service(self) -> None:
+def start_service(self, service_name: Any = None, port: Any = None, script_path: Any = None, port: Any = None, service_name: Any = None, service_name: Any = None, service_name: Any = None, service_name: Any = None) -> None:
         """Start a service in background"""
         try:
             self.log(f"Starting {service_name} on port {port}...")

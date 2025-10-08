@@ -60,7 +60,7 @@ class ExpansionTerm:
     source: str = ""
     weight: float = 1.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "term": self.term,
@@ -77,12 +77,12 @@ class QueryAnalysis:
 
     original_query: str
     query_type: QueryType
-    key_entities: List[str]
+    key_entities: list[str]
     intent_confidence: float
     complexity_score: float  # 0.0 to 1.0
-    domain_hints: List[str] = field(default_factory=list)
+    domain_hints: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "original_query": self.original_query,
@@ -110,10 +110,10 @@ class ExpandedQuery:
     confidence_score: float
 
     # Performance hints
-    suggested_filters: Dict[str, Any] = field(default_factory=dict)
-    boost_terms: List[str] = field(default_factory=list)
+    suggested_filters: dict[str, Any] = field(default_factory=dict)
+    boost_terms: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "original_query": self.original_query,
@@ -161,7 +161,7 @@ class ExpansionConfig:
     enable_personalization: bool = False
 
     # Language settings
-    supported_languages: List[str] = field(default_factory=lambda: ["en"])
+    supported_languages: list[str] = field(default_factory=lambda: ["en"])
     default_language: str = "en"
 
 
@@ -172,7 +172,7 @@ class QueryAnalyzer(ABC):
     async def analyze_query(
         self,
         query: str,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
     ) -> QueryAnalysis:
         """Analyze query intent and structure."""
 
@@ -180,7 +180,7 @@ class QueryAnalyzer(ABC):
 class SimpleQueryAnalyzer(QueryAnalyzer):
     """Simple rule-based query analyzer."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
 
         # Query type patterns
@@ -269,7 +269,7 @@ class SimpleQueryAnalyzer(QueryAnalyzer):
     async def analyze_query(
         self,
         query: str,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
     ) -> QueryAnalysis:
         """Analyze query to determine intent and characteristics."""
         query_lower = query.lower()
@@ -320,7 +320,7 @@ class SimpleQueryAnalyzer(QueryAnalyzer):
             domain_hints=domain_hints,
         )
 
-    def _extract_entities(self, query: str) -> List[str]:
+    def _extract_entities(self, query: str) -> list[str]:
         """Extract key entities from query."""
         # Simple entity extraction - capitalize words and technical terms
         entities = []
@@ -356,7 +356,7 @@ class SimpleQueryAnalyzer(QueryAnalyzer):
 
         return entities[:10]  # Limit to top 10
 
-    def _detect_domains(self, query: str) -> List[str]:
+    def _detect_domains(self, query: str) -> list[str]:
         """Detect domain hints from query content."""
         detected_domains = []
 
@@ -380,7 +380,7 @@ class ExpansionTermGenerator(ABC):
         self,
         query: str,
         analysis: QueryAnalysis,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
     ) -> list[ExpansionTerm]:
         """Generate expansion terms for query."""
 
@@ -388,7 +388,7 @@ class ExpansionTermGenerator(ABC):
 class SynonymExpander(ExpansionTermGenerator):
     """Synonym-based query expansion."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
 
         # Pre-built synonym dictionary (in production, this would be more comprehensive)
@@ -429,7 +429,7 @@ class SynonymExpander(ExpansionTermGenerator):
         self,
         query: str,
         analysis: QueryAnalysis,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
     ) -> list[ExpansionTerm]:
         """Generate synonym-based expansion terms."""
         expansions = []
@@ -473,7 +473,7 @@ class SynonymExpander(ExpansionTermGenerator):
 class SemanticExpander(ExpansionTermGenerator):
     """Semantic similarity-based query expansion."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
 
         # Semantic relationships (simplified - in production would use word embeddings)
@@ -532,7 +532,7 @@ class SemanticExpander(ExpansionTermGenerator):
         self,
         query: str,
         analysis: QueryAnalysis,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
     ) -> list[ExpansionTerm]:
         """Generate semantically related expansion terms."""
         expansions = []
@@ -582,7 +582,7 @@ class SemanticExpander(ExpansionTermGenerator):
         expansions.sort(key=lambda x: x.confidence, reverse=True)
         return expansions[: self.config.max_expanded_terms // 2]
 
-    def _get_domain_terms(self, domain: str) -> List[str]:
+    def _get_domain_terms(self, domain: str) -> list[str]:
         """Get relevant terms for a specific domain."""
         domain_specific_terms = {
             "technology": [
@@ -607,7 +607,7 @@ class SemanticExpander(ExpansionTermGenerator):
 class ContextualExpander(ExpansionTermGenerator):
     """Context-aware query expansion."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
 
         # Contextual patterns for different query types
@@ -640,7 +640,7 @@ class ContextualExpander(ExpansionTermGenerator):
         self,
         query: str,
         analysis: QueryAnalysis,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
     ) -> list[ExpansionTerm]:
         """Generate context-aware expansion terms."""
         expansions = []
@@ -695,7 +695,7 @@ class QueryExpansionEngine:
     Provides synonym detection, semantic expansion, and contextual enhancement.
     """
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or ExpansionConfig()
 
         # Initialize components
@@ -728,7 +728,7 @@ class QueryExpansionEngine:
         query: str,
         expansion_strategy: ExpansionStrategy = None,
         expansion_scope: ExpansionScope = None,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
     ) -> str:
         """Generate cache key for query expansion."""
         cache_data = {"query": query.lower().strip()}
@@ -758,7 +758,7 @@ class QueryExpansionEngine:
         query: str,
         expansion_strategy: ExpansionStrategy = None,
         expansion_scope: ExpansionScope = None,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
     ) -> ExpandedQuery:
         """Expand query with intelligent term suggestions and optimization."""
         start_time = time.time()
@@ -920,17 +920,18 @@ class QueryExpansionEngine:
             return original_query
 
         expansion_terms = [exp.term for exp in expansions]
-        
+
         if strategy == ExpansionStrategy.SYNONYM_BASED:
             return self._build_synonym_query(original_query, expansions)
-        elif strategy == ExpansionStrategy.SEMANTIC_SIMILARITY:
+        if strategy == ExpansionStrategy.SEMANTIC_SIMILARITY:
             return self._build_semantic_query(original_query, expansions)
-        elif strategy == ExpansionStrategy.CONTEXTUAL_EXPANSION:
+        if strategy == ExpansionStrategy.CONTEXTUAL_EXPANSION:
             return self._build_contextual_query(original_query, expansions)
-        else:
-            return self._build_hybrid_query(original_query, expansions, expansion_terms)
+        return self._build_hybrid_query(original_query, expansions, expansion_terms)
 
-    def _build_synonym_query(self, original_query: str, expansions: list[ExpansionTerm]) -> str:
+    def _build_synonym_query(
+        self, original_query: str, expansions: list[ExpansionTerm]
+    ) -> str:
         """Build query with synonym-based expansion."""
         synonym_terms = [
             exp.term
@@ -941,7 +942,9 @@ class QueryExpansionEngine:
             return f"{original_query} {' '.join(synonym_terms)}"
         return original_query
 
-    def _build_semantic_query(self, original_query: str, expansions: list[ExpansionTerm]) -> str:
+    def _build_semantic_query(
+        self, original_query: str, expansions: list[ExpansionTerm]
+    ) -> str:
         """Build query with semantic similarity expansion."""
         semantic_terms = [
             exp.term for exp in expansions if exp.expansion_type == "semantic"
@@ -950,7 +953,9 @@ class QueryExpansionEngine:
             return f"{original_query} {' '.join(semantic_terms[:3])}"
         return original_query
 
-    def _build_contextual_query(self, original_query: str, expansions: list[ExpansionTerm]) -> str:
+    def _build_contextual_query(
+        self, original_query: str, expansions: list[ExpansionTerm]
+    ) -> str:
         """Build query with contextual expansion."""
         contextual_terms = [
             exp.term for exp in expansions if "contextual" in exp.expansion_type
@@ -959,7 +964,12 @@ class QueryExpansionEngine:
             return f"{original_query} {' '.join(contextual_terms[:2])}"
         return original_query
 
-    def _build_hybrid_query(self, original_query: str, expansions: list[ExpansionTerm], expansion_terms: list[str]) -> str:
+    def _build_hybrid_query(
+        self,
+        original_query: str,
+        expansions: list[ExpansionTerm],
+        expansion_terms: list[str],
+    ) -> str:
         """Build query with hybrid expansion approach."""
         high_confidence_terms = [exp.term for exp in expansions if exp.confidence > 0.7]
         if high_confidence_terms:
@@ -990,7 +1000,7 @@ class QueryExpansionEngine:
         self,
         expansions: list[ExpansionTerm],
         analysis: QueryAnalysis,
-    ) -> tuple[Dict[str, Any], List[str]]:
+    ) -> tuple[dict[str, Any], list[str]]:
         """Generate performance optimization hints."""
         suggested_filters = {}
         boost_terms = []
@@ -1050,7 +1060,7 @@ class QueryExpansionEngine:
             confidence_score=0.0,
         )
 
-    def get_expansion_statistics(self) -> Dict[str, Any]:
+    def get_expansion_statistics(self) -> dict[str, Any]:
         """Get query expansion engine statistics."""
         stats = self.stats.copy()
 

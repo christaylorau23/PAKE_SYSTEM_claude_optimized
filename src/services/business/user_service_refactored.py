@@ -29,7 +29,9 @@ class UserService:
     Dependencies: Injected through constructor (Dependency Injection)
     """
 
-    def __init__(self, user_repository: Any, auth_service: Any, notification_service: Any) -> None:
+    def __init__(
+        self, user_repository: Any, auth_service: Any, notification_service: Any
+    ) -> None:
         """Initialize UserService with injected dependencies."""
         self.user_repository = user_repository
         self.auth_service = auth_service
@@ -37,8 +39,8 @@ class UserService:
         logger.info("UserService initialized with dependency injection")
 
     async def create_user(
-        self, email: str, password: str, user_data: Dict[str, Any]
-    ) -> ServiceResult[Dict[str, Any]]:
+        self, email: str, password: str, user_data: dict[str, Any]
+    ) -> ServiceResult[dict[str, Any]]:
         """Create new user with authentication and notification.
 
         This method orchestrates the user creation process by delegating
@@ -119,7 +121,7 @@ class UserService:
                 status=ServiceStatus.FAILED, error=f"User creation failed: {str(e)}"
             )
 
-    async def get_user_profile(self, user_id: str) -> ServiceResult[Dict[str, Any]]:
+    async def get_user_profile(self, user_id: str) -> ServiceResult[dict[str, Any]]:
         """Get user profile information.
 
         Single responsibility: Retrieving user profile data
@@ -161,8 +163,8 @@ class UserService:
             )
 
     async def update_user_profile(
-        self, user_id: str, updates: Dict[str, Any]
-    ) -> ServiceResult[Dict[str, Any]]:
+        self, user_id: str, updates: dict[str, Any]
+    ) -> ServiceResult[dict[str, Any]]:
         """Update user profile information.
 
         Single responsibility: Updating user profile data
@@ -213,7 +215,7 @@ class UserService:
 
     async def get_users_by_tenant(
         self, tenant_id: str
-    ) -> ServiceResult[list[Dict[str, Any]]]:
+    ) -> ServiceResult[list[dict[str, Any]]]:
         """Get all users for a specific tenant.
 
         Single responsibility: Retrieving tenant users
@@ -252,7 +254,7 @@ class UserService:
             )
 
     def _validate_user_data(
-        self, email: str, password: str, user_data: Dict[str, Any]
+        self, email: str, password: str, user_data: dict[str, Any]
     ) -> "ValidationResult":
         """Validate user input data.
 

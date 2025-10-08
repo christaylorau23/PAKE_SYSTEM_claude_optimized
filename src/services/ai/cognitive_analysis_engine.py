@@ -71,9 +71,9 @@ class TopicExtraction:
     topic: str
     confidence: TopicConfidence
     relevance_score: float  # 0.0 to 1.0
-    keywords: List[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "topic": self.topic,
@@ -91,7 +91,7 @@ class SentimentAnalysis:
     confidence: float  # 0.0 to 1.0
     emotion_scores: dict[str, float] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "polarity": self.polarity.value,
@@ -111,7 +111,7 @@ class QualityMetrics:
     information_density: float
     source_credibility: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "overall_score": self.overall_score,
@@ -139,11 +139,11 @@ class CognitiveAnalysisResult:
     confidence_score: float  # Overall analysis confidence
 
     # Advanced features
-    key_entities: List[str] = field(default_factory=list)
+    key_entities: list[str] = field(default_factory=list)
     content_summary: str = ""
-    semantic_tags: List[str] = field(default_factory=list)
+    semantic_tags: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "content_id": self.content_id,
@@ -186,7 +186,7 @@ class CognitiveConfig:
     cache_ttl_seconds: int = 3600
 
     # Language processing
-    supported_languages: List[str] = field(
+    supported_languages: list[str] = field(
         default_factory=lambda: ["en", "es", "fr", "de"],
     )
     default_language: str = "en"
@@ -204,8 +204,8 @@ class ContentAnalyzer(ABC):
     async def analyze_content(
         self,
         content: str,
-        metadata: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        metadata: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Analyze content and return analysis results."""
 
 
@@ -286,8 +286,8 @@ class SentimentAnalyzer(ContentAnalyzer):
     async def analyze_content(
         self,
         content: str,
-        metadata: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        metadata: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Perform sentiment analysis on content."""
         if not content or len(content.strip()) < 10:
             return {
@@ -435,8 +435,8 @@ class TopicExtractor(ContentAnalyzer):
     async def analyze_content(
         self,
         content: str,
-        metadata: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        metadata: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Extract topics from content."""
         if not content or len(content.strip()) < 50:
             return {"topics": []}
@@ -560,8 +560,8 @@ class QualityAssessor(ContentAnalyzer):
     async def analyze_content(
         self,
         content: str,
-        metadata: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        metadata: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Assess content quality."""
         if not content or len(content.strip()) < self.config.min_content_length:
             return {
@@ -719,8 +719,8 @@ class ContentCategorizer(ContentAnalyzer):
     async def analyze_content(
         self,
         content: str,
-        metadata: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        metadata: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Categorize content."""
         if not content:
             return {"category": ContentCategory.UNKNOWN.value}
@@ -785,7 +785,7 @@ class CognitiveAnalysisEngine:
 
         logger.info("Initialized Cognitive Analysis Engine")
 
-    def _generate_cache_key(self, content: str, metadata: Dict[str, Any] = None) -> str:
+    def _generate_cache_key(self, content: str, metadata: dict[str, Any] = None) -> str:
         """Generate cache key for content analysis."""
         content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
@@ -810,7 +810,7 @@ class CognitiveAnalysisEngine:
         self,
         content_id: str,
         content: str,
-        metadata: Dict[str, Any] = None,
+        metadata: dict[str, Any] = None,
     ) -> CognitiveAnalysisResult:
         """Perform comprehensive cognitive analysis of content."""
         start_time = time.time()
@@ -936,8 +936,8 @@ class CognitiveAnalysisEngine:
         self,
         content_id: str,
         content: str,
-        metadata: Dict[str, Any],
-        analysis_results: Dict[str, Any],
+        metadata: dict[str, Any],
+        analysis_results: dict[str, Any],
         start_time: float,
     ) -> CognitiveAnalysisResult:
         """Create comprehensive cognitive analysis result."""
@@ -1040,7 +1040,7 @@ class CognitiveAnalysisEngine:
         summary = f"{first_sentence}. {best_sentence}".strip()
         return summary[: self.config.summary_max_length]
 
-    def _extract_entities(self, content: str) -> List[str]:
+    def _extract_entities(self, content: str) -> list[str]:
         """Extract key entities (simplified approach)."""
         # Look for capitalized words that might be entities
         entities = set()
@@ -1058,7 +1058,7 @@ class CognitiveAnalysisEngine:
         self,
         topics: list[TopicExtraction],
         category: ContentCategory,
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate semantic tags based on analysis results."""
         tags = []
 
@@ -1106,7 +1106,7 @@ class CognitiveAnalysisEngine:
             confidence_score=0.0,
         )
 
-    def _get_default_result(self, analysis_type: str) -> Dict[str, Any]:
+    def _get_default_result(self, analysis_type: str) -> dict[str, Any]:
         """Get default result for failed analysis."""
         defaults = {
             "category": {"category": "unknown"},
@@ -1129,7 +1129,7 @@ class CognitiveAnalysisEngine:
 
     async def batch_analyze_content(
         self,
-        content_items: list[tuple[str, str, Dict[str, Any]]],
+        content_items: list[tuple[str, str, dict[str, Any]]],
     ) -> list[CognitiveAnalysisResult]:
         """Analyze multiple content items in batch.
         Format: [(content_id, content, metadata), ...].
@@ -1144,7 +1144,9 @@ class CognitiveAnalysisEngine:
             # Limit concurrent analysis
             semaphore = asyncio.Semaphore(self.config.max_concurrent_analysis)
 
-            async def analyze_with_semaphore(content_id: str, content: str, metadata: dict[str, Any]) -> Any:
+            async def analyze_with_semaphore(
+                content_id: str, content: str, metadata: dict[str, Any]
+            ) -> Any:
                 async with semaphore:
                     return await self.analyze_content(content_id, content, metadata)
 
@@ -1166,7 +1168,7 @@ class CognitiveAnalysisEngine:
 
         return results
 
-    def get_analysis_statistics(self) -> Dict[str, Any]:
+    def get_analysis_statistics(self) -> dict[str, Any]:
         """Get cognitive analysis statistics."""
         stats = self.stats.copy()
 

@@ -34,7 +34,7 @@ class TestIngestionServiceComprehensive:
         }
 
     @pytest.fixture
-    def ingestion_service(self) -> None:
+def ingestion_service(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Create IngestionService instance with mocked dependencies"""
         with (
             patch(
@@ -73,7 +73,7 @@ class TestIngestionServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_functional
-    async def test_ingest_from_web_success(self) -> None:
+async def test_ingest_from_web_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful web content ingestion"""
         # Arrange
         query = SearchQueryFactory(sources=["web"])
@@ -97,7 +97,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_ingest_from_arxiv_success(self) -> None:
+async def test_ingest_from_arxiv_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful ArXiv content ingestion"""
         # Arrange
         query = SearchQueryFactory(sources=["arxiv"])
@@ -123,7 +123,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_ingest_from_pubmed_success(self) -> None:
+async def test_ingest_from_pubmed_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful PubMed content ingestion"""
         # Arrange
         query = SearchQueryFactory(sources=["pubmed"])
@@ -149,7 +149,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["deduplicationService"].deduplicate.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_ingest_from_multiple_sources_success(self) -> None:
+async def test_ingest_from_multiple_sources_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful ingestion from multiple sources"""
         # Arrange
         query = SearchQueryFactory(sources=["web", "arxiv", "pubmed"])
@@ -181,7 +181,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["pubmedScraper"].scrape.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_content_processing_success(self) -> None:
+async def test_content_processing_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful content processing"""
         # Arrange
         query = SearchQueryFactory()
@@ -208,7 +208,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["contentProcessor"].process.assert_called_once()
 
     @pytest.mark.unit_functional
-    async def test_deduplication_success(self) -> None:
+async def test_deduplication_success(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test successful content deduplication"""
         # Arrange
         query = SearchQueryFactory()
@@ -236,7 +236,7 @@ class TestIngestionServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_edge_case
-    async def test_ingest_with_empty_query(self) -> None:
+async def test_ingest_with_empty_query(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test ingestion with empty query"""
         # Arrange
         query = SearchQueryFactory(query="")
@@ -252,7 +252,7 @@ class TestIngestionServiceComprehensive:
         assert len(result) == 0
 
     @pytest.mark.unit_edge_case
-    async def test_ingest_with_special_characters_query(self) -> None:
+async def test_ingest_with_special_characters_query(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test ingestion with special characters in query"""
         # Arrange
         query = SearchQueryFactory(
@@ -272,7 +272,7 @@ class TestIngestionServiceComprehensive:
         assert len(result) == 2
 
     @pytest.mark.unit_edge_case
-    async def test_ingest_with_very_long_query(self) -> None:
+async def test_ingest_with_very_long_query(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test ingestion with very long query"""
         # Arrange
         long_query = " ".join(["word"] * 1000)  # Very long query
@@ -304,7 +304,7 @@ class TestIngestionServiceComprehensive:
         assert len(result) == 0
 
     @pytest.mark.unit_edge_case
-    async def test_ingest_with_max_results_limit(self) -> None:
+async def test_ingest_with_max_results_limit(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test ingestion with maximum results limit"""
         # Arrange
         query = SearchQueryFactory(max_results=5)
@@ -324,7 +324,7 @@ class TestIngestionServiceComprehensive:
         assert len(result) <= 5  # Should respect max_results limit
 
     @pytest.mark.unit_edge_case
-    async def test_ingest_with_concurrent_requests(self) -> None:
+async def test_ingest_with_concurrent_requests(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, query: Any = None) -> None:
         """Test handling of concurrent ingestion requests"""
         # Arrange
         queries = [SearchQueryFactory(query=f"query_{i}") for i in range(5)]
@@ -334,7 +334,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["contentProcessor"].process.return_value = results
         mock_dependencies["deduplicationService"].deduplicate.return_value = results
 
-        async def ingest_query(self) -> None:
+async def ingest_query(self, query: Any = None) -> None:
             return await self.ingestion_service.ingest_content(query)
 
         # Act
@@ -350,7 +350,7 @@ class TestIngestionServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_error_handling
-    async def test_web_scraper_failure(self) -> None:
+async def test_web_scraper_failure(self, mock_dependencies: Any = None) -> None:
         """Test handling of web scraper failures"""
         # Arrange
         query = SearchQueryFactory(sources=["web"])
@@ -363,7 +363,7 @@ class TestIngestionServiceComprehensive:
             await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
-    async def test_arxiv_scraper_failure(self) -> None:
+async def test_arxiv_scraper_failure(self, mock_dependencies: Any = None) -> None:
         """Test handling of ArXiv scraper failures"""
         # Arrange
         query = SearchQueryFactory(sources=["arxiv"])
@@ -376,7 +376,7 @@ class TestIngestionServiceComprehensive:
             await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
-    async def test_pubmed_scraper_failure(self) -> None:
+async def test_pubmed_scraper_failure(self, mock_dependencies: Any = None) -> None:
         """Test handling of PubMed scraper failures"""
         # Arrange
         query = SearchQueryFactory(sources=["pubmed"])
@@ -389,7 +389,7 @@ class TestIngestionServiceComprehensive:
             await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
-    async def test_content_processor_failure(self) -> None:
+async def test_content_processor_failure(self, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test handling of content processor failures"""
         # Arrange
         query = SearchQueryFactory()
@@ -405,7 +405,7 @@ class TestIngestionServiceComprehensive:
             await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
-    async def test_deduplication_service_failure(self) -> None:
+async def test_deduplication_service_failure(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test handling of deduplication service failures"""
         # Arrange
         query = SearchQueryFactory()
@@ -422,7 +422,7 @@ class TestIngestionServiceComprehensive:
             await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
-    async def test_network_timeout_error(self) -> None:
+async def test_network_timeout_error(self, mock_dependencies: Any = None) -> None:
         """Test handling of network timeout errors"""
         # Arrange
         query = SearchQueryFactory(sources=["web"])
@@ -435,7 +435,7 @@ class TestIngestionServiceComprehensive:
             await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_error_handling
-    async def test_partial_failure_with_multiple_sources(self) -> None:
+async def test_partial_failure_with_multiple_sources(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test handling of partial failures with multiple sources"""
         # Arrange
         query = SearchQueryFactory(sources=["web", "arxiv", "pubmed"])
@@ -466,7 +466,7 @@ class TestIngestionServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_performance
-    async def test_ingestion_performance(self) -> None:
+async def test_ingestion_performance(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test ingestion performance"""
         import time
 
@@ -489,7 +489,7 @@ class TestIngestionServiceComprehensive:
         assert execution_time < 5.0  # Should complete within 5 seconds
 
     @pytest.mark.unit_performance
-    async def test_concurrent_ingestion_performance(self) -> None:
+async def test_concurrent_ingestion_performance(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, query: Any = None) -> None:
         """Test concurrent ingestion performance"""
         import time
 
@@ -501,7 +501,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["contentProcessor"].process.return_value = results
         mock_dependencies["deduplicationService"].deduplicate.return_value = results
 
-        async def ingest_query(self) -> None:
+async def ingest_query(self, query: Any = None) -> None:
             return await self.ingestion_service.ingest_content(query)
 
         # Act
@@ -516,7 +516,7 @@ class TestIngestionServiceComprehensive:
         assert execution_time < 10.0  # Should complete within 10 seconds
 
     @pytest.mark.unit_performance
-    async def test_large_result_set_performance(self) -> None:
+async def test_large_result_set_performance(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test performance with large result sets"""
         import time
 
@@ -545,7 +545,7 @@ class TestIngestionServiceComprehensive:
     # ============================================================================
 
     @pytest.mark.unit_security
-    async def test_sensitive_data_not_exposed(self) -> None:
+async def test_sensitive_data_not_exposed(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test that sensitive data is not exposed in results"""
         # Arrange
         query = SearchQueryFactory()
@@ -576,7 +576,7 @@ class TestIngestionServiceComprehensive:
         assert len(result) == 3
 
     @pytest.mark.unit_security
-    async def test_query_sanitization(self) -> None:
+async def test_query_sanitization(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test that queries are properly sanitized"""
         # Arrange
         malicious_query = SearchQueryFactory(query='<script>alert("xss")</script>')
@@ -595,7 +595,7 @@ class TestIngestionServiceComprehensive:
         mock_dependencies["webScraper"].scrape.assert_called_once()
 
     @pytest.mark.unit_security
-    async def test_rate_limiting_integration(self) -> None:
+async def test_rate_limiting_integration(self, mock_dependencies: Any = None) -> None:
         """Test that rate limiting is integrated with ingestion"""
         # Arrange
         query = SearchQueryFactory()
@@ -608,7 +608,7 @@ class TestIngestionServiceComprehensive:
             await self.ingestion_service.ingest_content(query)
 
     @pytest.mark.unit_security
-    async def test_content_validation(self) -> None:
+async def test_content_validation(self, mock_dependencies: Any = None, mock_dependencies: Any = None, mock_dependencies: Any = None) -> None:
         """Test that content is properly validated"""
         # Arrange
         query = SearchQueryFactory()

@@ -25,8 +25,8 @@ class AlertRule(BaseModel):
 
 
 # In-memory storage for TDD
-active_alerts: list[Dict[str, Any]] = []
-alert_rules: dict[str, Dict[str, Any]] = {}
+active_alerts: list[dict[str, Any]] = []
+alert_rules: dict[str, dict[str, Any]] = {}
 
 
 app = FastAPI(

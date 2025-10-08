@@ -10,15 +10,14 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 import logging
-from typing import Any, Dict, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List
 
+import asyncpg
+import psycopg2
+import pydantic
 import redis.asyncio as redis
-
 import sqlalchemy
 import sqlalchemy.exc
-import pydantic
-import psycopg2
-import asyncpg
 
 from src.utils.secure_serialization import deserialize, serialize
 
@@ -58,7 +57,7 @@ class CacheMetadata:
     expires_at: datetime
     access_count: int = 0
     last_accessed: datetime | None = None
-    tags: List[str] | None = None
+    tags: list[str] | None = None
 
     def __post_init__(self) -> None:
         if self.tags is None:
@@ -72,11 +71,11 @@ class CacheEntry:
         self.data = data
         self.metadata = metadata
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"data": self.data, "metadata": asdict(self.metadata)}
 
     @classmethod
-    def from_dict(cls, cache_dict: Dict[str, Any]) -> "CacheEntry":
+    def from_dict(cls, cache_dict: dict[str, Any]) -> "CacheEntry":
         metadata_dict = cache_dict["metadata"]
         metadata = CacheMetadata(
             created_at=datetime.fromisoformat(metadata_dict["created_at"]),
@@ -109,7 +108,13 @@ class RedisCacheService:
     - Automatic cleanup.
     """
 
-    def __init__(self, config: CacheConfig | None = None, redis_url: str = "redis://localhost:6379/0", default_ttl: int = 3600, max_memory_cache_size: int = 1000) -> None:
+    def __init__(
+        self,
+        config: CacheConfig | None = None,
+        redis_url: str = "redis://localhost:6379/0",
+        default_ttl: int = 3600,
+        max_memory_cache_size: int = 1000,
+    ) -> None:
         if config:
             self.redis_url = config.redis_url
             self.default_ttl = config.default_ttl
@@ -121,7 +126,7 @@ class RedisCacheService:
 
         # L1 Cache (in-memory)
         self._memory_cache: dict[str, CacheEntry] = {}
-        self._memory_access_order: List[str] = []
+        self._memory_access_order: list[str] = []
 
         # Redis connection
         self._redis: Redis | None = None
@@ -234,7 +239,7 @@ class RedisCacheService:
         key: str | CacheKey,
         value: Any,
         ttl: int | None = None,
-        tags: List[str] | None = None,
+        tags: list[str] | None = None,
     ) -> None:
         """Set value in cache (both L1 and L2)."""
         cache_key = str(key)
@@ -326,7 +331,7 @@ class RedisCacheService:
             except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
                 logger.error("Redis clear error: %s", e)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache performance statistics."""
         total_requests = self.stats["hits"] + self.stats["misses"]
         hit_rate = (
@@ -342,7 +347,7 @@ class RedisCacheService:
         }
 
     # Cache warming methods
-    async def warm_search_cache(self, popular_queries: List[str]) -> None:
+    async def warm_search_cache(self, popular_queries: list[str]) -> None:
         """Pre-warm cache with popular search queries."""
         logger.info("Warming cache with %s popular queries", len(popular_queries))
 
@@ -459,7 +464,7 @@ async def create_redis_cache_service(config: CacheConfig) -> RedisCacheService:
 # Decorators for caching
 
 
-def cached(ttl: int = 3600, tags: List[str] | None = None) -> Any:
+def cached(ttl: int = 3600, tags: list[str] | None = None) -> Any:
     """Decorator for caching function results."""
 
     def decorator(func: Any) -> Any:

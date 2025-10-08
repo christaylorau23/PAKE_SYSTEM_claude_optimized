@@ -76,7 +76,12 @@ class VaultSecretsBackend(SecretsBackendInterface):
         await self.secrets_manager.__aenter__()
         return self
 
-    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         """Async context manager exit."""
         if self.secrets_manager:
             await self.secrets_manager.__aexit__(exc_type, exc_val, exc_tb)
@@ -138,7 +143,9 @@ class VaultSecretsBackend(SecretsBackendInterface):
 class AzureKeyVaultBackend(SecretsBackendInterface):
     """Azure Key Vault secrets backend."""
 
-    def __init__(self, vault_url: str, client_id: str, client_secret: str, tenant_id: str) -> None:
+    def __init__(
+        self, vault_url: str, client_id: str, client_secret: str, tenant_id: str
+    ) -> None:
         self.vault_url = vault_url
         self.client_id = client_id
         self.client_secret = client_secret
@@ -163,7 +170,12 @@ class AzureKeyVaultBackend(SecretsBackendInterface):
             msg = "Azure Key Vault SDK not available"
             raise RuntimeError(msg)
 
-    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         """Async context manager exit."""
         if self._client:
             await self._client.close()
@@ -243,7 +255,12 @@ class AWSSecretsManagerBackend(SecretsBackendInterface):
             msg = "AWS SDK not available"
             raise RuntimeError(msg)
 
-    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         """Async context manager exit."""
         # boto3 client doesn't need explicit cleanup
 
@@ -350,7 +367,12 @@ class EnterpriseSecretsManager:
         await self._initialize_backend()
         return self
 
-    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         """Async context manager exit."""
         if self._current_backend and hasattr(self._current_backend, "__aexit__"):
             await self._current_backend.__aexit__(exc_type, exc_val, exc_tb)

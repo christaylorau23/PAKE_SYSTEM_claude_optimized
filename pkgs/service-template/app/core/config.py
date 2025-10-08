@@ -64,14 +64,14 @@ class Settings(BaseSettings):
     CACHE_MAX_SIZE: int = Field(default=1000, env="CACHE_MAX_SIZE")
 
     @validator("ALLOWED_HOSTS", pre=True)
-    def parse_allowed_hosts(self) -> None:
+def parse_allowed_hosts(self, v: Any = None, v: Any = None) -> None:
         """Parse ALLOWED_HOSTS from string or list."""
         if isinstance(v, str):
             return [host.strip() for host in self.v.split(",")]
         return v
 
     @validator("ENVIRONMENT")
-    def validate_environment(self) -> None:
+def validate_environment(self, v: Any = None, v: Any = None) -> None:
         """Validate environment setting."""
         allowed_envs = ["development", "staging", "production"]
         if v not in allowed_envs:

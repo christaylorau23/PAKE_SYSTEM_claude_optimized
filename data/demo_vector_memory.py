@@ -1,3 +1,7 @@
+import asyncpg
+import psycopg2
+import sqlalchemy
+
 """AI Long-Term Memory with Vector Database - Demonstration
 Showcases the capabilities of the vector memory system.
 """

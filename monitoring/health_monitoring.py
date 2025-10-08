@@ -386,7 +386,7 @@ class HealthMonitoringSystem:
 
         # Keep only last 1000 metrics per type
         cleaned_metrics = []
-        for metric_name, metrics in metric_groups.items():
+        for _metric_name, metrics in metric_groups.items():
             sorted_metrics = sorted(metrics, key=lambda x: x.timestamp, reverse=True)
             cleaned_metrics.extend(sorted_metrics[:1000])
 
@@ -446,13 +446,12 @@ class HealthMonitoringSystem:
         """Check API gateway health."""
         try:
             # Check if API gateway is responding
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    "http://localhost:8000/health", timeout=5
-                ) as response:
-                    if response.status == 200:
-                        return HealthStatus.HEALTHY
-                    return HealthStatus.DEGRADED
+            async with aiohttp.ClientSession() as session, session.get(
+                "http://localhost:8000/health", timeout=5
+            ) as response:
+                if response.status == 200:
+                    return HealthStatus.HEALTHY
+                return HealthStatus.DEGRADED
         except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
             self.logger.error("API gateway health check failed: %s", str(e))
             return HealthStatus.CRITICAL
@@ -949,7 +948,7 @@ class HealthMonitoringSystem:
     # Health Monitoring Loop
     # ========================================================================
 
-    async def start_monitoring(self) -> None:
+async def start_monitoring(self, interval_seconds: Any = None, interval_seconds: Any = None, interval_seconds: Any = None) -> None:
         """Start continuous health monitoring."""
         self.monitoring_active = True
         self.logger.info(

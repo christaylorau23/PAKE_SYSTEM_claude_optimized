@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 End-to-End Tests for Authentication User Journeys
 
@@ -21,8 +23,8 @@ import pytest
 # ============================================================================
 
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestUserRegistrationJourney:
     """Test complete user registration and first login journey"""
 
@@ -85,8 +87,8 @@ class TestUserRegistrationJourney:
 # ============================================================================
 
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestLoginAccessLogoutJourney:
     """Test complete login, access, and logout journey"""
 
@@ -139,8 +141,8 @@ class TestLoginAccessLogoutJourney:
 # ============================================================================
 
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestTokenRefreshJourney:
     """Test token refresh workflow"""
 
@@ -178,8 +180,8 @@ class TestTokenRefreshJourney:
 # ============================================================================
 
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestPasswordChangeJourney:
     """Test password change workflow"""
 
@@ -208,8 +210,8 @@ class TestPasswordChangeJourney:
 # ============================================================================
 
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
 class TestFailedAuthenticationJourneys:
     """Test various failure scenarios in authentication"""
 
@@ -294,9 +296,9 @@ class TestFailedAuthenticationJourneys:
 # ============================================================================
 
 
-@pytest.mark.e2e
-@pytest.mark.e2e_user_journey
-@pytest.mark.slow
+@pytest.mark.e2e()
+@pytest.mark.e2e_user_journey()
+@pytest.mark.slow()
 class TestCompleteApplicationFlow:
     """Test complete application workflows end-to-end"""
 
@@ -366,9 +368,9 @@ class TestCompleteApplicationFlow:
 # ============================================================================
 
 
-@pytest.mark.e2e
-@pytest.mark.e2e_performance
-@pytest.mark.slow
+@pytest.mark.e2e()
+@pytest.mark.e2e_performance()
+@pytest.mark.slow()
 class TestAuthPerformanceAndReliability:
     """Test authentication performance and reliability"""
 
@@ -393,21 +395,22 @@ class TestAuthPerformanceAndReliability:
         assert all(r.status_code == 200 for r in responses)
         assert all("access_token" in r.json() for r in responses)
 
-    def test_authentication_response_time(self) -> None:
-        """
-        Test authentication response time meets SLA
 
-        Steps:
-        1. Benchmark login endpoint response time
-        2. Verify response time < 500ms
-        """
+def test_authentication_response_time(self, benchmark: Any = None) -> None:
+    """
+    Test authentication response time meets SLA
 
-        def login(self) -> None:
-            return self.test_client.post(
-                "/token", data={"username": "admin", "password": "secret"}
-            )
+    Steps:
+    1. Benchmark login endpoint response time
+    2. Verify response time < 500ms
+    """
 
-        result = benchmark(login)
-        assert result.status_code == 200
+    def login(self) -> None:
+        return self.test_client.post(
+            "/token", data={"username": "admin", "password": "secret"}
+        )
 
-        # Benchmark will provide timing information
+    result = benchmark(login)
+    assert result.status_code == 200
+
+    # Benchmark will provide timing information

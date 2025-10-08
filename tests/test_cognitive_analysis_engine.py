@@ -61,7 +61,7 @@ class TestCognitiveAnalysisEngine:
         )
 
     @pytest_asyncio.fixture
-    async def cognitive_engine(self) -> None:
+async def cognitive_engine(self, cognitive_config: Any = None) -> None:
         """Create cognitive analysis engine instance for testing"""
         engine = CognitiveAnalysisEngine(cognitive_config)
         yield engine
@@ -125,7 +125,7 @@ class TestCognitiveAnalysisEngine:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_initialize_cognitive_engine_with_configuration(self) -> None:
+async def test_should_initialize_cognitive_engine_with_configuration(self, cognitive_config: Any = None, cognitive_config: Any = None) -> None:
         """
         Test: Should initialize cognitive analysis engine with proper configuration
         and component setup.
@@ -147,7 +147,7 @@ class TestCognitiveAnalysisEngine:
         assert engine.stats["cache_hits"] == 0
 
     @pytest.mark.asyncio
-    async def test_should_perform_comprehensive_content_analysis(self) -> None:
+async def test_should_perform_comprehensive_content_analysis(self, sample_research_content: Any = None, sample_research_content: Any = None) -> None:
         """
         Test: Should perform comprehensive content analysis including sentiment,
         topics, quality, and categorization.
@@ -195,7 +195,7 @@ class TestCognitiveAnalysisEngine:
         assert 0.0 <= result.confidence_score <= 1.0
 
     @pytest.mark.asyncio
-    async def test_should_detect_high_quality_academic_content(self) -> None:
+async def test_should_detect_high_quality_academic_content(self, sample_research_content: Any = None, sample_research_content: Any = None) -> None:
         """
         Test: Should correctly identify and assess high-quality academic content
         with appropriate quality metrics.
@@ -234,7 +234,7 @@ class TestCognitiveAnalysisEngine:
         )
 
     @pytest.mark.asyncio
-    async def test_should_analyze_social_media_sentiment_correctly(self) -> None:
+async def test_should_analyze_social_media_sentiment_correctly(self, sample_social_content: Any = None, sample_social_content: Any = None) -> None:
         """
         Test: Should correctly analyze sentiment in social media content
         with emoji and informal language detection.
@@ -262,7 +262,7 @@ class TestCognitiveAnalysisEngine:
         assert len(result.sentiment_analysis.emotion_scores) > 0
 
     @pytest.mark.asyncio
-    async def test_should_detect_negative_sentiment_in_news_content(self) -> None:
+async def test_should_detect_negative_sentiment_in_news_content(self, sample_news_content: Any = None, sample_news_content: Any = None) -> None:
         """
         Test: Should detect negative sentiment in news content with
         negative business indicators.
@@ -283,7 +283,7 @@ class TestCognitiveAnalysisEngine:
         ]
 
     @pytest.mark.asyncio
-    async def test_should_extract_relevant_topics_from_content(self) -> None:
+async def test_should_extract_relevant_topics_from_content(self, sample_research_content: Any = None, sample_research_content: Any = None) -> None:
         """
         Test: Should extract relevant topics from content using
         keyword matching and relevance scoring.
@@ -306,7 +306,7 @@ class TestCognitiveAnalysisEngine:
         assert "machine_learning" in topic_names or "technology" in topic_names
 
     @pytest.mark.asyncio
-    async def test_should_generate_content_summary_and_entities(self) -> None:
+async def test_should_generate_content_summary_and_entities(self, sample_research_content: Any = None, sample_research_content: Any = None) -> None:
         """
         Test: Should generate meaningful content summary and extract
         key entities from content.
@@ -565,7 +565,7 @@ class TestIndividualAnalyzers:
         """Test configuration for analyzers"""
         return CognitiveConfig()
 
-    def test_sentiment_analyzer_should_detect_positive_sentiment(self) -> None:
+def test_sentiment_analyzer_should_detect_positive_sentiment(self, test_config: Any = None) -> None:
         """
         Test: SentimentAnalyzer should correctly identify positive sentiment
         in content with positive indicators.
@@ -585,7 +585,7 @@ class TestIndividualAnalyzers:
         assert result["polarity"] in ["positive", "very_positive"]
         assert result["confidence"] > 0.0
 
-    def test_sentiment_analyzer_should_detect_negative_sentiment(self) -> None:
+def test_sentiment_analyzer_should_detect_negative_sentiment(self, test_config: Any = None) -> None:
         """
         Test: SentimentAnalyzer should correctly identify negative sentiment
         in content with negative indicators.
@@ -605,7 +605,7 @@ class TestIndividualAnalyzers:
         assert result["polarity"] in ["negative", "very_negative"]
         assert result["confidence"] > 0.0
 
-    def test_topic_extractor_should_identify_relevant_topics(self) -> None:
+def test_topic_extractor_should_identify_relevant_topics(self, test_config: Any = None) -> None:
         """
         Test: TopicExtractor should identify relevant topics based on
         keyword matching and relevance scoring.
@@ -626,7 +626,7 @@ class TestIndividualAnalyzers:
         topic_names = [topic["topic"] for topic in topics]
         assert "machine_learning" in topic_names
 
-    def test_quality_assessor_should_evaluate_content_quality(self) -> None:
+def test_quality_assessor_should_evaluate_content_quality(self, test_config: Any = None) -> None:
         """
         Test: QualityAssessor should evaluate content quality based on
         multiple quality indicators and metrics.
@@ -656,7 +656,7 @@ class TestIndividualAnalyzers:
         assert high_result["overall_score"] > low_result["overall_score"]
         assert high_result["technical_depth"] > low_result["technical_depth"]
 
-    def test_content_categorizer_should_classify_content_types(self) -> None:
+def test_content_categorizer_should_classify_content_types(self, test_config: Any = None) -> None:
         """
         Test: ContentCategorizer should classify content into appropriate
         categories based on content patterns and metadata.

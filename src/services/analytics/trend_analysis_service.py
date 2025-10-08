@@ -62,27 +62,27 @@ class TrendAnalysisResult:
     trend_r_squared: float
     seasonality_type: SeasonalityType
     seasonality_strength: float
-    stationarity_test: Dict[str, Any]
+    stationarity_test: dict[str, Any]
     decomposition: dict[str, list[float]]
     confidence_interval: tuple[float, float]
     forecast_horizon: int
     forecast_values: list[float]
     forecast_confidence: list[tuple[float, float]]
     trend_breakpoints: list[int]
-    trend_segments: list[Dict[str, Any]]
+    trend_segments: list[dict[str, Any]]
 
 
 @dataclass
 class TrendComparison:
     """Comparison between multiple trends."""
 
-    metrics: List[str]
+    metrics: list[str]
     trend_directions: dict[str, str]
     trend_strengths: dict[str, float]
     correlation_matrix: np.ndarray
     synchronized_trends: list[tuple[str, str]]
     divergent_trends: list[tuple[str, str]]
-    trend_clusters: list[List[str]]
+    trend_clusters: list[list[str]]
 
 
 @dataclass
@@ -93,8 +93,8 @@ class TrendBreakpoint:
     breakpoint_date: datetime
     confidence: float
     change_magnitude: float
-    trend_before: Dict[str, Any]
-    trend_after: Dict[str, Any]
+    trend_before: dict[str, Any]
+    trend_after: dict[str, Any]
 
 
 class TrendAnalysisService:
@@ -582,7 +582,7 @@ class TrendAnalysisService:
                 "residual": [0.0] * n,
             }
 
-    async def _test_stationarity(self, series: pd.Series) -> Dict[str, Any]:
+    async def _test_stationarity(self, series: pd.Series) -> dict[str, Any]:
         """Test for stationarity using Augmented Dickey-Fuller test."""
         try:
             values = series.values
@@ -610,7 +610,7 @@ class TrendAnalysisService:
     async def _detect_trend_breakpoints(
         self,
         series: pd.Series,
-    ) -> tuple[list[int], list[Dict[str, Any]]]:
+    ) -> tuple[list[int], list[dict[str, Any]]]:
         """Detect trend breakpoints in the time series."""
         try:
             values = series.values
@@ -959,7 +959,7 @@ class TrendAnalysisService:
         self,
         trend_results: list[TrendAnalysisResult],
         correlation_matrix: np.ndarray,
-    ) -> list[List[str]]:
+    ) -> list[list[str]]:
         """Cluster trends based on similarity."""
         try:
             if len(trend_results) < 2:
@@ -1005,7 +1005,7 @@ class TrendAnalysisService:
             logger.error("Trend clustering failed: %s", e)
             return [[result.metric_name] for result in trend_results]
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check the health of the trend analysis service."""
         try:
             # Test basic functionality

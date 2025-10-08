@@ -462,7 +462,7 @@ class IntelligenceInsightService:
 
             # Update statistics
             self._update_correlation_stats(correlations, start_time)
-            
+
             logger.info("Discovered %s significant correlations", len(correlations))
             return correlations
 
@@ -470,7 +470,9 @@ class IntelligenceInsightService:
             logger.error("Error analyzing correlations: %s", e)
             return []
 
-    def _validate_correlation_inputs(self, metric_pairs: list[tuple[str, pd.Series]]) -> bool:
+    def _validate_correlation_inputs(
+        self, metric_pairs: list[tuple[str, pd.Series]]
+    ) -> bool:
         """Validate inputs for correlation analysis."""
         if len(metric_pairs) < 2:
             logger.warning("Need at least 2 metrics for correlation analysis")
@@ -480,35 +482,36 @@ class IntelligenceInsightService:
     def _get_correlation_config(self, max_lag: int | None) -> dict:
         """Get correlation analysis configuration."""
         return {
-            "max_lag": max_lag or self.config["correlation_analysis"]["max_lag_periods"],
+            "max_lag": max_lag
+            or self.config["correlation_analysis"]["max_lag_periods"],
             "min_corr": self.config["correlation_analysis"]["min_correlation"],
             "alpha": self.config["correlation_analysis"]["significance_level"],
             "min_samples": self.config["correlation_analysis"]["min_sample_size"],
         }
 
     def _analyze_metric_pairs(
-        self, 
-        metric_pairs: list[tuple[str, pd.Series]], 
-        config: dict
+        self, metric_pairs: list[tuple[str, pd.Series]], config: dict
     ) -> list[CorrelationInsight]:
         """Analyze all pairs of metrics for correlations."""
         correlations = []
-        
+
         for i, (name1, series1) in enumerate(metric_pairs):
-            for j, (name2, series2) in enumerate(metric_pairs[i + 1 :], i + 1):
-                correlation = self._analyze_single_pair(name1, series1, name2, series2, config)
+            for _j, (name2, series2) in enumerate(metric_pairs[i + 1 :], i + 1):
+                correlation = self._analyze_single_pair(
+                    name1, series1, name2, series2, config
+                )
                 if correlation:
                     correlations.append(correlation)
-        
+
         return correlations
 
     def _analyze_single_pair(
-        self, 
-        name1: str, 
-        series1: pd.Series, 
-        name2: str, 
-        series2: pd.Series, 
-        config: dict
+        self,
+        name1: str,
+        series1: pd.Series,
+        name2: str,
+        series2: pd.Series,
+        config: dict,
     ) -> CorrelationInsight | None:
         """Analyze correlation between a single pair of metrics."""
         # Early validation
@@ -516,7 +519,9 @@ class IntelligenceInsightService:
             return None
 
         # Align series
-        s1_aligned, s2_aligned = self._align_series(series1, series2, config["min_samples"])
+        s1_aligned, s2_aligned = self._align_series(
+            series1, series2, config["min_samples"]
+        )
         if s1_aligned is None or s2_aligned is None:
             return None
 
@@ -526,33 +531,31 @@ class IntelligenceInsightService:
             return None
 
         # Create correlation insight
-        return self._create_correlation_insight(name1, name2, best_result, len(s1_aligned))
+        return self._create_correlation_insight(
+            name1, name2, best_result, len(s1_aligned)
+        )
 
-    def _validate_series_pair(self, series1: pd.Series, series2: pd.Series, min_samples: int) -> bool:
+    def _validate_series_pair(
+        self, series1: pd.Series, series2: pd.Series, min_samples: int
+    ) -> bool:
         """Validate that series pair meets minimum requirements."""
         return len(series1) >= min_samples and len(series2) >= min_samples
 
     def _align_series(
-        self, 
-        series1: pd.Series, 
-        series2: pd.Series, 
-        min_samples: int
+        self, series1: pd.Series, series2: pd.Series, min_samples: int
     ) -> tuple[pd.Series | None, pd.Series | None]:
         """Align two series by index and validate alignment."""
         aligned = pd.concat([series1, series2], axis=1, join="inner")
         if aligned.shape[0] < min_samples:
             return None, None
-        
+
         s1_aligned = aligned.iloc[:, 0].dropna()
         s2_aligned = aligned.iloc[:, 1].dropna()
-        
+
         return s1_aligned, s2_aligned
 
     def _find_best_correlation(
-        self, 
-        s1_aligned: pd.Series, 
-        s2_aligned: pd.Series, 
-        config: dict
+        self, s1_aligned: pd.Series, s2_aligned: pd.Series, config: dict
     ) -> dict | None:
         """Find the best correlation across all lags and methods."""
         best_correlation = 0
@@ -572,7 +575,10 @@ class IntelligenceInsightService:
                 best_p_value = result["p_value"]
                 best_type = result["type"]
 
-        if abs(best_correlation) >= config["min_corr"] and best_p_value < config["alpha"]:
+        if (
+            abs(best_correlation) >= config["min_corr"]
+            and best_p_value < config["alpha"]
+        ):
             return {
                 "correlation": best_correlation,
                 "lag": best_lag,
@@ -581,19 +587,22 @@ class IntelligenceInsightService:
             }
         return None
 
-    def _apply_lag(self, s1: pd.Series, s2: pd.Series, lag: int) -> tuple[pd.Series, pd.Series]:
+    def _apply_lag(
+        self, s1: pd.Series, s2: pd.Series, lag: int
+    ) -> tuple[pd.Series, pd.Series]:
         """Apply lag to series pair."""
         if lag == 0:
             return s1, s2
-        elif lag > 0:
+        if lag > 0:
             return s1[:-lag], s2[lag:]
-        else:
-            return s1[-lag:], s2[:lag]
+        return s1[-lag:], s2[:lag]
 
-    def _test_correlation_methods(self, x: pd.Series, y: pd.Series, min_corr: float) -> dict | None:
+    def _test_correlation_methods(
+        self, x: pd.Series, y: pd.Series, min_corr: float
+    ) -> dict | None:
         """Test different correlation methods and return best result."""
         best_result = None
-        
+
         for corr_type in ["pearson", "spearman"]:
             if corr_type == "pearson":
                 corr, p_val = stats.pearsonr(x, y)
@@ -607,20 +616,18 @@ class IntelligenceInsightService:
                         "p_value": p_val,
                         "type": corr_type,
                     }
-        
+
         return best_result
 
     def _create_correlation_insight(
-        self, 
-        name1: str, 
-        name2: str, 
-        best_result: dict, 
-        sample_size: int
+        self, name1: str, name2: str, best_result: dict, sample_size: int
     ) -> CorrelationInsight:
         """Create CorrelationInsight object from analysis results."""
         # Calculate confidence interval
         ci_lower, ci_upper = self._calculate_confidence_interval(
-            best_result["correlation"], sample_size, self.config["correlation_analysis"]["significance_level"]
+            best_result["correlation"],
+            sample_size,
+            self.config["correlation_analysis"]["significance_level"],
         )
 
         # Determine temporal pattern
@@ -638,7 +645,9 @@ class IntelligenceInsightService:
             temporal_pattern=temporal_pattern,
         )
 
-    def _calculate_confidence_interval(self, correlation: float, sample_size: int, alpha: float) -> tuple[float, float]:
+    def _calculate_confidence_interval(
+        self, correlation: float, sample_size: int, alpha: float
+    ) -> tuple[float, float]:
         """Calculate confidence interval for correlation coefficient."""
         z_score = stats.norm.ppf(1 - alpha / 2)
         se = 1 / np.sqrt(sample_size - 3)
@@ -651,12 +660,13 @@ class IntelligenceInsightService:
         """Determine temporal pattern based on lag."""
         if lag > 0:
             return "leading"  # series1 leads series2
-        elif lag < 0:
+        if lag < 0:
             return "lagging"  # series1 lags series2
-        else:
-            return "concurrent"
+        return "concurrent"
 
-    def _update_correlation_stats(self, correlations: list[CorrelationInsight], start_time: datetime) -> None:
+    def _update_correlation_stats(
+        self, correlations: list[CorrelationInsight], start_time: datetime
+    ) -> None:
         """Update statistics with correlation analysis results."""
         processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
         self._stats["correlations_discovered"] += len(correlations)
@@ -811,7 +821,7 @@ class IntelligenceInsightService:
 
                 # Find topic intersections
                 topic_words_sets = [
-                    set(word for word, _ in topic.topic_words[:5])
+                    {word for word, _ in topic.topic_words[:5]}
                     for topic in emerging_topics
                 ]
                 common_concepts = (
@@ -1087,12 +1097,14 @@ class IntelligenceInsightService:
         try:
             results = self._initialize_analysis_results(start_time)
             tasks = self._prepare_analysis_tasks(documents, time_series_data)
-            
+
             if tasks:
                 analysis_results = await asyncio.gather(*tasks, return_exceptions=True)
-                self._process_analysis_results(results, analysis_results, documents, time_series_data)
+                self._process_analysis_results(
+                    results, analysis_results, documents, time_series_data
+                )
                 await self._generate_insights_and_alerts(results)
-            
+
             self._finalize_results(results, start_time)
             return results
 
@@ -1113,52 +1125,54 @@ class IntelligenceInsightService:
         }
 
     def _prepare_analysis_tasks(
-        self, 
-        documents: list[str] | None, 
-        time_series_data: dict[str, pd.Series] | None
+        self, documents: list[str] | None, time_series_data: dict[str, pd.Series] | None
     ) -> list:
         """Prepare analysis tasks for parallel execution."""
         tasks = []
-        
+
         if documents:
             tasks.append(self.detect_emerging_topics(documents))
-        
+
         if self.knowledge_graph:
             tasks.append(self.detect_communities())
-        
+
         if time_series_data and len(time_series_data) >= 2:
             metric_pairs = list(time_series_data.items())
             tasks.append(self.analyze_correlations(metric_pairs))
-        
+
         return tasks
 
     def _process_analysis_results(
-        self, 
-        results: dict[str, Any], 
-        analysis_results: list, 
-        documents: list[str] | None, 
-        time_series_data: dict[str, pd.Series] | None
+        self,
+        results: dict[str, Any],
+        analysis_results: list,
+        documents: list[str] | None,
+        time_series_data: dict[str, pd.Series] | None,
     ) -> None:
         """Process the results from parallel analysis tasks."""
         if not analysis_results:
             return
-            
+
         # Process topic evolutions
         if documents and self._is_valid_result(analysis_results[0]):
             results["topic_evolutions"] = analysis_results[0]
 
         # Process communities
         community_idx = 1 if documents else 0
-        if (self.knowledge_graph and 
-            len(analysis_results) > community_idx and 
-            self._is_valid_result(analysis_results[community_idx])):
+        if (
+            self.knowledge_graph
+            and len(analysis_results) > community_idx
+            and self._is_valid_result(analysis_results[community_idx])
+        ):
             results["communities"] = analysis_results[community_idx]
 
         # Process correlations
         corr_idx = self._calculate_correlation_index(documents)
-        if (time_series_data and 
-            len(analysis_results) > corr_idx and 
-            self._is_valid_result(analysis_results[corr_idx])):
+        if (
+            time_series_data
+            and len(analysis_results) > corr_idx
+            and self._is_valid_result(analysis_results[corr_idx])
+        ):
             results["correlations"] = analysis_results[corr_idx]
 
     def _is_valid_result(self, result: Any) -> bool:
@@ -1169,10 +1183,9 @@ class IntelligenceInsightService:
         """Calculate the index for correlation results in analysis_results."""
         if documents and self.knowledge_graph:
             return 2
-        elif documents or self.knowledge_graph:
+        if documents or self.knowledge_graph:
             return 1
-        else:
-            return 0
+        return 0
 
     async def _generate_insights_and_alerts(self, results: dict[str, Any]) -> None:
         """Generate synthesis insights and alerts from analysis results."""
@@ -1201,12 +1214,15 @@ class IntelligenceInsightService:
             len(results["alerts"]),
         )
 
-    def _create_error_result(self, error: Exception, start_time: datetime) -> dict[str, Any]:
+    def _create_error_result(
+        self, error: Exception, start_time: datetime
+    ) -> dict[str, Any]:
         """Create error result structure."""
         return {
             "error": str(error),
             "analysis_timestamp": datetime.now(UTC).isoformat(),
-            "processing_time_ms": (datetime.now(UTC) - start_time).total_seconds() * 1000,
+            "processing_time_ms": (datetime.now(UTC) - start_time).total_seconds()
+            * 1000,
         }
 
     async def get_service_stats(self) -> dict[str, Any]:

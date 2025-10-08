@@ -67,9 +67,9 @@ class ModelMetric:
     metric_type: MetricType
     value: float
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "model_id": self.model_id,
@@ -90,14 +90,14 @@ class DriftAlert:
     severity: AlertLevel
     drift_score: float
     threshold: float
-    affected_features: List[str] = field(default_factory=list)
+    affected_features: list[str] = field(default_factory=list)
     detection_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
     description: str = ""
-    recommendations: List[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "alert_id": self.alert_id,
@@ -128,9 +128,9 @@ class PerformanceAlert:
         default_factory=lambda: datetime.now(UTC),
     )
     description: str = ""
-    recommendations: List[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "alert_id": self.alert_id,
@@ -166,7 +166,7 @@ class ABTestResult:
         default_factory=lambda: datetime.now(UTC),
     )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "test_id": self.test_id,
@@ -230,7 +230,7 @@ class DriftDetector(ABC):
         reference_data: pd.DataFrame,
         current_data: pd.DataFrame,
         model_id: str,
-    ) -> tuple[bool, float, List[str]]:
+    ) -> tuple[bool, float, list[str]]:
         """Detect drift between reference and current data."""
 
 
@@ -245,7 +245,7 @@ class StatisticalDriftDetector(DriftDetector):
         reference_data: pd.DataFrame,
         current_data: pd.DataFrame,
         model_id: str,
-    ) -> tuple[bool, float, List[str]]:
+    ) -> tuple[bool, float, list[str]]:
         """Detect drift using statistical tests."""
         try:
             from scipy import stats
@@ -302,7 +302,7 @@ class PerformanceDriftDetector(DriftDetector):
         reference_data: pd.DataFrame,
         current_data: pd.DataFrame,
         model_id: str,
-    ) -> tuple[bool, float, List[str]]:
+    ) -> tuple[bool, float, list[str]]:
         """Detect performance drift."""
         try:
             # This is a simplified implementation
@@ -331,7 +331,9 @@ class ModelDriftDetector:
     def __init__(self, config: MLMonitoringConfig | None = None) -> None:
         self.config = config or MLMonitoringConfig()
         self.drift_detectors = {
-            DriftType.DATA_DRIFT: StatisticalDriftDetector(self.config.data_drift_threshold),
+            DriftType.DATA_DRIFT: StatisticalDriftDetector(
+                self.config.data_drift_threshold
+            ),
             DriftType.PERFORMANCE_DRIFT: PerformanceDriftDetector(
                 self.config.performance_drift_threshold,
             ),
@@ -341,7 +343,9 @@ class ModelDriftDetector:
         self.reference_data: dict[str, pd.DataFrame] = {}
         self.reference_timestamps: dict[str, datetime] = {}
 
-    async def set_reference_data(self, model_id: str, reference_data: pd.DataFrame) -> None:
+    async def set_reference_data(
+        self, model_id: str, reference_data: pd.DataFrame
+    ) -> None:
         """Set reference data for drift detection."""
         try:
             self.reference_data[model_id] = reference_data.copy()
@@ -420,7 +424,7 @@ class ModelDriftDetector:
         self,
         drift_type: DriftType,
         drift_score: float,
-    ) -> List[str]:
+    ) -> list[str]:
         """Get recommendations for drift type."""
         recommendations = []
 
@@ -460,10 +464,10 @@ class MLMonitor:
 
         # Data storage
         self.model_metrics: dict[str, deque] = defaultdict(lambda: deque(maxlen=10000))
-        self.active_alerts: dict[str, list[DriftAlert | PerformanceAlert]] = (
-            defaultdict(list)
-        )
-        self.ab_tests: dict[str, Dict[str, Any]] = {}
+        self.active_alerts: dict[
+            str, list[DriftAlert | PerformanceAlert]
+        ] = defaultdict(list)
+        self.ab_tests: dict[str, dict[str, Any]] = {}
         self.ab_test_results: dict[str, ABTestResult] = {}
 
         # Monitoring tasks
@@ -682,7 +686,7 @@ class MLMonitor:
         metric_type: MetricType,
         value: float,
         threshold: float,
-    ) -> List[str]:
+    ) -> list[str]:
         """Get performance recommendations."""
         recommendations = []
 
@@ -786,7 +790,9 @@ class MLMonitor:
             logger.error("Failed to start A/B test %s: %s", test_id, e)
             return False
 
-    async def record_ab_test_metric(self, test_id: str, model_id: str, metric_value: float) -> None:
+    async def record_ab_test_metric(
+        self, test_id: str, model_id: str, metric_value: float
+    ) -> None:
         """Record metric for A/B test."""
         try:
             if test_id not in self.ab_tests:
@@ -916,7 +922,7 @@ class MLMonitor:
         """Get A/B test result."""
         return self.ab_test_results.get(test_id)
 
-    def get_monitoring_statistics(self) -> Dict[str, Any]:
+    def get_monitoring_statistics(self) -> dict[str, Any]:
         """Get monitoring statistics."""
         stats = self.stats.copy()
         stats["monitored_models"] = len(self.monitoring_tasks)

@@ -71,7 +71,7 @@ class VectorEmbedding:
         """Convert to numpy array for calculations."""
         return np.array(self.vector)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "content_id": self.content_id,
@@ -92,7 +92,7 @@ class SimilarityScore:
     metric_used: SimilarityMetric
     confidence: float = 0.0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "content_id_1": self.content_id_1,
@@ -110,11 +110,11 @@ class SearchResult:
     content_id: str
     relevance_score: float  # 0.0 to 1.0
     content_snippet: str = ""
-    matched_terms: List[str] = field(default_factory=list)
+    matched_terms: list[str] = field(default_factory=list)
     search_mode: SearchMode = SearchMode.SEMANTIC_SEARCH
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "content_id": self.content_id,
@@ -137,9 +137,9 @@ class SemanticSearchQuery:
     max_results: int = 50
     min_similarity_threshold: float = 0.1
     include_snippets: bool = True
-    context_filters: Dict[str, Any] = field(default_factory=dict)
+    context_filters: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "query_text": self.query_text,
@@ -171,7 +171,7 @@ class SemanticSearchResponse:
         default_factory=lambda: datetime.now(UTC),
     )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "query": self.query.to_dict(),
@@ -227,14 +227,14 @@ class EmbeddingGenerator(ABC):
     async def generate_embedding(
         self,
         content: str,
-        metadata: Dict[str, Any] = None,
+        metadata: dict[str, Any] = None,
     ) -> VectorEmbedding:
         """Generate vector embedding for content."""
 
     @abstractmethod
     async def batch_generate_embeddings(
         self,
-        content_items: list[tuple[str, str, Dict[str, Any]]],
+        content_items: list[tuple[str, str, dict[str, Any]]],
     ) -> list[VectorEmbedding]:
         """Generate embeddings for multiple content items."""
 
@@ -242,7 +242,7 @@ class EmbeddingGenerator(ABC):
 class TFIDFEmbeddingGenerator(EmbeddingGenerator):
     """TF-IDF based embedding generator with enhancements."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
         self.vocabulary: dict[str, int] = {}
         self.idf_scores: dict[str, float] = {}
@@ -312,12 +312,12 @@ class TFIDFEmbeddingGenerator(EmbeddingGenerator):
         }
 
         # Build initial vocabulary from semantic categories
-        for category, terms in self.semantic_categories.items():
+        for _category, terms in self.semantic_categories.items():
             for term in terms:
                 if term not in self.vocabulary:
                     self.vocabulary[term] = len(self.vocabulary)
 
-    def _preprocess_text(self, content: str) -> List[str]:
+    def _preprocess_text(self, content: str) -> list[str]:
         """Preprocess text for embedding generation."""
         # Convert to lowercase and extract words
         normalized = content.lower()
@@ -359,7 +359,7 @@ class TFIDFEmbeddingGenerator(EmbeddingGenerator):
 
         return [word for word in words if word not in stop_words and len(word) > 2]
 
-    def _update_vocabulary_and_idf(self, processed_words: List[str]) -> None:
+    def _update_vocabulary_and_idf(self, processed_words: list[str]) -> None:
         """Update vocabulary and IDF scores."""
         # Add new words to vocabulary
         unique_words = set(processed_words)
@@ -378,7 +378,7 @@ class TFIDFEmbeddingGenerator(EmbeddingGenerator):
                 math.log((self.total_documents + 1) / (doc_freq + 1)) + 1
             )
 
-    def _calculate_tf_idf_vector(self, processed_words: List[str]) -> list[float]:
+    def _calculate_tf_idf_vector(self, processed_words: list[str]) -> list[float]:
         """Calculate TF-IDF vector for processed words."""
         # Initialize vector with configured dimensionality
         vector = [0.0] * self.config.embedding_dimensionality
@@ -414,7 +414,7 @@ class TFIDFEmbeddingGenerator(EmbeddingGenerator):
     async def generate_embedding(
         self,
         content: str,
-        metadata: Dict[str, Any] = None,
+        metadata: dict[str, Any] = None,
     ) -> VectorEmbedding:
         """Generate TF-IDF embedding for content."""
         if not content or len(content.strip()) < 10:
@@ -456,7 +456,7 @@ class TFIDFEmbeddingGenerator(EmbeddingGenerator):
 
     async def batch_generate_embeddings(
         self,
-        content_items: list[tuple[str, str, Dict[str, Any]]],
+        content_items: list[tuple[str, str, dict[str, Any]]],
     ) -> list[VectorEmbedding]:
         """Generate embeddings for multiple content items."""
         results = []
@@ -562,7 +562,7 @@ class SemanticSearchEngine:
     Provides intelligent content discovery and contextual search capabilities.
     """
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or SemanticConfig()
 
         # Initialize components
@@ -571,7 +571,7 @@ class SemanticSearchEngine:
 
         # Storage
         self.embeddings_store: dict[str, VectorEmbedding] = {}
-        self.content_metadata: dict[str, Dict[str, Any]] = {}
+        self.content_metadata: dict[str, dict[str, Any]] = {}
 
         # Caching
         self.search_cache: dict[str, SemanticSearchResponse] = {}
@@ -591,7 +591,7 @@ class SemanticSearchEngine:
         self,
         content_id: str,
         content: str,
-        metadata: Dict[str, Any] = None,
+        metadata: dict[str, Any] = None,
     ) -> VectorEmbedding:
         """Index content by generating and storing its vector embedding."""
         start_time = time.time()
@@ -628,7 +628,7 @@ class SemanticSearchEngine:
 
     async def batch_index_content(
         self,
-        content_items: list[tuple[str, str, Dict[str, Any]]],
+        content_items: list[tuple[str, str, dict[str, Any]]],
     ) -> list[VectorEmbedding]:
         """Index multiple content items in batch for efficiency."""
         start_time = time.time()
@@ -809,7 +809,7 @@ class SemanticSearchEngine:
 
         return results
 
-    def _calculate_recency_boost(self, metadata: Dict[str, Any]) -> float:
+    def _calculate_recency_boost(self, metadata: dict[str, Any]) -> float:
         """Calculate recency boost factor."""
         indexed_at_str = metadata.get("indexed_at")
         if not indexed_at_str:
@@ -833,7 +833,7 @@ class SemanticSearchEngine:
         # For now, return a placeholder snippet
         return f"Content snippet for {content_id} related to: {query_text[:100]}..."
 
-    def _extract_matched_terms(self, query_text: str, content_id: str) -> List[str]:
+    def _extract_matched_terms(self, query_text: str, content_id: str) -> list[str]:
         """Extract terms that matched between query and content."""
         query_terms = set(re.findall(r"\b[a-zA-Z]{2,}\b", query_text.lower()))
 
@@ -854,7 +854,7 @@ class SemanticSearchEngine:
         query_str = json.dumps(query_data, sort_keys=True)
         return hashlib.sha256(query_str.encode()).hexdigest()[:16]
 
-    def get_search_statistics(self) -> Dict[str, Any]:
+    def get_search_statistics(self) -> dict[str, Any]:
         """Get semantic search engine statistics."""
         stats = self.stats.copy()
         stats["indexed_content_count"] = len(self.embeddings_store)

@@ -140,7 +140,7 @@ class StreamManager:
     async def start_stream(
         self,
         platform: Platform,
-        keywords: List[str] = None,
+        keywords: list[str] = None,
     ) -> bool:
         """Start streaming for a specific platform."""
         if platform in self.active_streams:
@@ -214,7 +214,7 @@ class StreamManager:
 
     async def start_all_streams(
         self,
-        keywords: List[str] = None,
+        keywords: list[str] = None,
     ) -> dict[Platform, bool]:
         """Start all enabled streams."""
         results = {}
@@ -230,7 +230,7 @@ class StreamManager:
             results[platform] = await self.stop_stream(platform)
         return results
 
-    async def get_status(self, platform: Platform = None) -> Dict[str, Any]:
+    async def get_status(self, platform: Platform = None) -> dict[str, Any]:
         """Get status for specific platform or all platforms."""
         if platform:
             status = self.stream_status.get(platform)
@@ -252,7 +252,9 @@ class StreamManager:
         uptime = (datetime.now(UTC) - self.start_time).total_seconds()
         return self.trends_processed_total / uptime if uptime > 0 else 0.0
 
-    async def _run_platform_stream(self, platform: Platform, keywords: List[str]) -> None:
+    async def _run_platform_stream(
+        self, platform: Platform, keywords: list[str]
+    ) -> None:
         """Run the streaming loop for a specific platform."""
         config = self.stream_configs[platform]
 
@@ -302,7 +304,7 @@ class StreamManager:
     async def _fetch_platform_trends(
         self,
         platform: Platform,
-        keywords: List[str],
+        keywords: list[str],
     ) -> list[TrendSignal]:
         """Fetch trends from platform API (placeholder implementation)."""
         # This is a placeholder - real implementation would use actual API clients
@@ -344,7 +346,9 @@ class StreamManager:
         except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to publish trend: %s", e)
 
-    async def _update_latency_metrics(self, platform: Platform, latency_ms: float) -> None:
+    async def _update_latency_metrics(
+        self, platform: Platform, latency_ms: float
+    ) -> None:
         """Update latency metrics for platform."""
         if platform in self.stream_status:
             status = self.stream_status[platform]

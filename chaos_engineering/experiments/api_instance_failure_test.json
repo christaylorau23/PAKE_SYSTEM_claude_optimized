@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "title": "PAKE System API Instance Failure Test",
+  "description": "Tests stateless service resilience through instance failure simulation as specified in Section 3.2 of the Engineering Guide",
+  "tags": ["api", "instance-failure", "load-balancer", "stateless"],
+  "steady-state-hypothesis": {
+    "title": "API instances are healthy before failure",
+    "probes": [
+      {
+        "type": "probe",
+        "name": "api-instances-healthy",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "probes.application_probe",
+          "func": "check_api_instances_health"
+        }
+      },
+      {
+        "type": "probe",
+        "name": "load-balancer-healthy",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "probes.application_probe",
+          "func": "check_load_balancer_health"
+        }
+      }
+    ]
+  },
+  "method": [
+    {
+      "type": "action",
+      "name": "terminate-random-api-instance",
+      "provider": {
+        "type": "python",
+        "module": "activities.application_activities",
+        "func": "terminate_random_api_instance"
+      }
+    },
+    {
+      "type": "probe",
+      "name": "measure-error-rate-during-failure",
+      "provider": {
+        "type": "python",
+        "module": "probes.application_probe",
+        "func": "measure_error_rate_during_failure"
+      },
+      "tolerance": 0.01,
+      "timeout": 300
+    },
+    {
+      "type": "probe",
+      "name": "measure-latency-during-failure",
+      "provider": {
+        "type": "python",
+        "module": "probes.application_probe",
+        "func": "measure_latency_during_failure"
+      },
+      "tolerance": 2000,
+      "timeout": 300
+    },
+    {
+      "type": "probe",
+      "name": "verify-load-balancer-redirect",
+      "provider": {
+        "type": "python",
+        "module": "probes.application_probe",
+        "func": "verify_load_balancer_redirect"
+      },
+      "tolerance": true
+    }
+  ],
+  "rollbacks": [
+    {
+      "type": "action",
+      "name": "restore-api-instance",
+      "provider": {
+        "type": "python",
+        "module": "activities.application_activities",
+        "func": "restore_api_instance"
+      }
+    }
+  ]
+}

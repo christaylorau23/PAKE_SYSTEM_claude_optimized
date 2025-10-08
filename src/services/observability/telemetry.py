@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import aiohttp
+
 """PAKE System - OpenTelemetry Observability Framework
 Comprehensive observability solution for hierarchical event-driven architecture.
 
@@ -12,6 +13,7 @@ Implements:
 """
 
 import asyncio
+from collections.abc import Callable
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -38,9 +40,6 @@ from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace import Status, StatusCode
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -468,7 +467,12 @@ class TelemetrySystem:
         logger.info("Structured logging initialized")
 
     @contextmanager
-    def trace_operation(self, operation_name: str, span_kind: str = "INTERNAL", attributes: dict[str, Any] | None = None):
+    def trace_operation(
+        self,
+        operation_name: str,
+        span_kind: str = "INTERNAL",
+        attributes: dict[str, Any] | None = None,
+    ):
         """Context manager for tracing operations."""
         if not self.tracer:
             yield None
@@ -524,7 +528,12 @@ class TelemetrySystem:
                     ][-1000:]
 
     @asynccontextmanager
-    async def trace_async_operation(self, operation_name: str, span_kind: str = "INTERNAL", attributes: dict[str, Any] | None = None):
+    async def trace_async_operation(
+        self,
+        operation_name: str,
+        span_kind: str = "INTERNAL",
+        attributes: dict[str, Any] | None = None,
+    ):
         """Async context manager for tracing operations."""
         if not self.tracer:
             yield None
@@ -567,7 +576,13 @@ class TelemetrySystem:
                         {"operation": operation_name},
                     )
 
-    def record_metric(self, metric_name: str, metric_type: MetricType, value: float, attributes: dict[str, str] | None = None) -> None:
+    def record_metric(
+        self,
+        metric_name: str,
+        metric_type: MetricType,
+        value: float,
+        attributes: dict[str, str] | None = None,
+    ) -> None:
         """Record a custom metric."""
         if metric_name not in self.custom_metrics:
             logger.warning("Metric %s not found in custom metrics", metric_name)
@@ -583,7 +598,13 @@ class TelemetrySystem:
         elif metric_type == MetricType.UP_DOWN_COUNTER:
             metric.add(value, attrs)
 
-    def record_task_execution(self, task_type: str, duration: float, success: bool, agent_id: str | None = None) -> None:
+    def record_task_execution(
+        self,
+        task_type: str,
+        duration: float,
+        success: bool,
+        agent_id: str | None = None,
+    ) -> None:
         """Record task execution metrics."""
         attributes = {"task_type": task_type}
         if agent_id:
@@ -602,7 +623,9 @@ class TelemetrySystem:
         if not success and "error_counter" in self.custom_metrics:
             self.custom_metrics["error_counter"].add(1, attributes)
 
-    def record_message_processing(self, message_type: str, agent_type: str, success: bool) -> None:
+    def record_message_processing(
+        self, message_type: str, agent_type: str, success: bool
+    ) -> None:
         """Record message processing metrics."""
         if "message_counter" in self.custom_metrics:
             attributes = {
@@ -814,7 +837,9 @@ async def setup_observability(config: TelemetryConfig | None = None) -> Telemetr
 
 
 # Convenience decorators
-def trace_function(operation_name: str | None = None, attributes: dict[str, Any] | None = None) -> Callable:
+def trace_function(
+    operation_name: str | None = None, attributes: dict[str, Any] | None = None
+) -> Callable:
     """Decorator for tracing functions."""
 
     def decorator(func: Callable) -> Callable:
@@ -839,7 +864,9 @@ def trace_function(operation_name: str | None = None, attributes: dict[str, Any]
     return decorator
 
 
-def record_execution_time(metric_name: str, attributes: dict[str, Any] | None = None) -> Callable:
+def record_execution_time(
+    metric_name: str, attributes: dict[str, Any] | None = None
+) -> Callable:
     """Decorator for recording execution time."""
 
     def decorator(func: Callable) -> Callable:

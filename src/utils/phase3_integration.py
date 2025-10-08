@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE+ Phase 3 Frontend Integration Components
@@ -16,7 +17,6 @@ from typing import Any, Dict, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
 from utils.api_patterns import (
     APIConfig,
     APIResponse,
@@ -75,7 +75,7 @@ class SystemHealthData:
     overall_status: SystemStatus
     components: dict[str, str]
     metrics: dict[str, float]
-    alerts: List[str] = field(default_factory=list)
+    alerts: list[str] = field(default_factory=list)
     last_check: datetime = field(default_factory=datetime.utcnow)
 
 
@@ -84,7 +84,7 @@ class DashboardRequest(BaseModel):
     """Dashboard data request."""
 
     timeRange: str = Field(default="24h", description="Time range for metrics")
-    components: List[str] = Field(default=[], description="Specific components to load")
+    components: list[str] = Field(default=[], description="Specific components to load")
     refresh: bool = Field(default=False, description="Force refresh data")
 
 
@@ -97,7 +97,7 @@ class TaskQueueStatus(BaseModel):
     total_failed: int
     queue_health: str
     average_completion_time: float
-    recent_tasks: list[Dict[str, Any]]
+    recent_tasks: list[dict[str, Any]]
 
 
 class MetricsData(BaseModel):
@@ -118,7 +118,7 @@ class SecurityStatus(BaseModel):
 
     threats_blocked: int
     security_score: float
-    recent_incidents: list[Dict[str, Any]]
+    recent_incidents: list[dict[str, Any]]
     prompt_injections_blocked: int
     authentication_failures: int
 
@@ -164,7 +164,7 @@ class Phase3IntegrationService:
             raise
 
     @with_error_handling("get_dashboard_data")
-    async def get_dashboard_data(self, request: DashboardRequest) -> Dict[str, Any]:
+    async def get_dashboard_data(self, request: DashboardRequest) -> dict[str, Any]:
         """Get comprehensive dashboard data for frontend."""
         # Check cache first
         cache_key = f"dashboard:{request.timeRange}:{hash(str(request.components))}"
@@ -352,7 +352,7 @@ class Phase3IntegrationService:
             for name, metric in self.component_metrics.items()
         }
 
-    async def _get_system_alerts(self) -> list[Dict[str, Any]]:
+    async def _get_system_alerts(self) -> list[dict[str, Any]]:
         """Get current system alerts."""
         return [
             {
@@ -363,7 +363,13 @@ class Phase3IntegrationService:
             },
         ]
 
-    def track_component_performance(self, component_name: str, component_type: UIComponentType, load_time_ms: float, render_time_ms: float) -> None:
+    def track_component_performance(
+        self,
+        component_name: str,
+        component_type: UIComponentType,
+        load_time_ms: float,
+        render_time_ms: float,
+    ) -> None:
         """Track frontend component performance."""
         if component_name not in self.component_metrics:
             self.component_metrics[component_name] = ComponentMetrics(
@@ -403,7 +409,7 @@ class Phase3IntegrationService:
             if websocket in self.websocket_connections:
                 self.websocket_connections.remove(websocket)
 
-    async def broadcast_update(self, message: Dict[str, Any]) -> None:
+    async def broadcast_update(self, message: dict[str, Any]) -> None:
         """Broadcast update to all connected WebSocket clients."""
         if not self.websocket_connections:
             return
@@ -419,7 +425,7 @@ class Phase3IntegrationService:
         for ws in disconnected:
             self.websocket_connections.remove(ws)
 
-    async def process_frontend_task(self, task_data: Dict[str, Any]) -> str:
+    async def process_frontend_task(self, task_data: dict[str, Any]) -> str:
         """Process a task requested from the frontend."""
         try:
             task_id = await self.task_queue.submit_task(
@@ -489,7 +495,9 @@ async def create_phase3_integration_app() -> FastAPI:
 
     # Dashboard endpoints
     @app.get("/api/v3/dashboard", response_model=APIResponse, tags=["Frontend"])
-    async def get_dashboard(timeRange: str = "24h", refresh: bool = False) -> APIResponse:
+    async def get_dashboard(
+        timeRange: str = "24h", refresh: bool = False
+    ) -> APIResponse:
         """Get dashboard data for frontend."""
         request = DashboardRequest(timeRange=timeRange, refresh=refresh)
         data = await service.get_dashboard_data(request)
@@ -516,7 +524,7 @@ async def create_phase3_integration_app() -> FastAPI:
         )
 
     @app.post("/api/v3/tasks", response_model=APIResponse, tags=["Frontend"])
-    async def submit_frontend_task(task_data: Dict[str, Any]) -> APIResponse:
+    async def submit_frontend_task(task_data: dict[str, Any]) -> APIResponse:
         """Submit a task from the frontend."""
         task_id = await service.process_frontend_task(task_data)
 

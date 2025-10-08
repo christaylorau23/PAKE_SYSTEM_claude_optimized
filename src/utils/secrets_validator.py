@@ -58,8 +58,8 @@ class SecretsValidator:
         """Validate all required secrets at application startup
         FAILS FAST if any required secret is missing or weak.
         """
-        missing_secrets: List[str] = []
-        weak_secrets: List[str] = []
+        missing_secrets: list[str] = []
+        weak_secrets: list[str] = []
 
         for secret_name in cls.REQUIRED_SECRETS:
             value = os.getenv(secret_name)
@@ -174,7 +174,7 @@ class SecretsValidator:
         return any(pattern.lower() in lower_value for pattern in cls.WEAK_PATTERNS)
 
     @classmethod
-    def get_database_config(cls) -> Dict[str, Any]:
+    def get_database_config(cls) -> dict[str, Any]:
         """Get validated database configuration."""
         return {
             "host": os.getenv("DB_HOST", "localhost"),
@@ -185,7 +185,7 @@ class SecretsValidator:
         }
 
     @classmethod
-    def get_redis_config(cls) -> Dict[str, Any]:
+    def get_redis_config(cls) -> dict[str, Any]:
         """Get validated Redis configuration."""
         return {
             "host": os.getenv("REDIS_HOST", "localhost"),

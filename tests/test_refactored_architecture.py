@@ -97,11 +97,11 @@ class TestRepositoryPattern:
         return MagicMock()
 
     @pytest.fixture
-    def user_repository(self) -> None:
+def user_repository(self, mock_session_maker: Any = None) -> None:
         """User repository instance"""
         return UserRepository(mock_session_maker)
 
-    def test_user_repository_creation(self) -> None:
+def test_user_repository_creation(self, user_repository: Any = None, user_repository: Any = None) -> None:
         """Test user repository creation"""
         assert user_repository is not None
         assert isinstance(user_repository, AbstractUserRepository)
@@ -231,7 +231,7 @@ class TestUserService:
         return AsyncMock(spec=AbstractNotificationService)
 
     @pytest.fixture
-    def user_service(self) -> None:
+def user_service(self, mock_user_repository: Any = None, mock_auth_service: Any = None, mock_notification_service: Any = None) -> None:
         """User service instance with mocked dependencies"""
         return UserService(
             user_repository=mock_user_repository,

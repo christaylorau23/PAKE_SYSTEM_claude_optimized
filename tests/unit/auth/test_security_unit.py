@@ -338,7 +338,7 @@ class TestSecurityEdgeCases:
 class TestSecurityPerformance:
     """Test performance characteristics of security functions"""
 
-    def test_password_hashing_performance(self) -> None:
+def test_password_hashing_performance(self, benchmark: Any = None) -> None:
         """Benchmark password hashing speed"""
         # Act
         result = benchmark(create_password_hash, "password123")
@@ -346,7 +346,7 @@ class TestSecurityPerformance:
         # Assert
         assert result.startswith("$2b$")
 
-    def test_password_verification_performance(self) -> None:
+def test_password_verification_performance(self, benchmark: Any = None) -> None:
         """Benchmark password verification speed"""
         # Arrange
         hashed = create_password_hash("password123")
@@ -358,7 +358,7 @@ class TestSecurityPerformance:
         assert result is True
 
     @patch("src.pake_system.auth.security.settings")
-    def test_token_generation_performance(self) -> None:
+def test_token_generation_performance(self, benchmark: Any = None) -> None:
         """Benchmark token generation speed"""
         # Arrange
         self.mock_settings.SECRET_KEY = "test-secret-key"
@@ -372,7 +372,7 @@ class TestSecurityPerformance:
         assert isinstance(result, str)
 
     @patch("src.pake_system.auth.security.settings")
-    def test_token_decoding_performance(self) -> None:
+def test_token_decoding_performance(self, benchmark: Any = None) -> None:
         """Benchmark token decoding speed"""
         # Arrange
         self.mock_settings.SECRET_KEY = "test-secret-key"

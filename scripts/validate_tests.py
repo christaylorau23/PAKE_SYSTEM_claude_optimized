@@ -1,5 +1,5 @@
-from typing import List
-from typing import Dict
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 Test Validation Script
@@ -17,21 +17,21 @@ from typing import Any
 class TestValidator:
     """Test validation runner"""
 
-    def __init__(self) -> None:
+def __init__(self, verbose: Any = None, parallel: Any = None) -> None:
         self.verbose = verbose
         self.parallel = parallel
         self.project_root = Path(__file__).parent.parent
-        self.results: list[tuple[str, bool, str, Dict[str, Any]]] = []
+        self.results: list[tuple[str, bool, str, dict[str, Any]]] = []
 
-    def log(self) -> None:
+def log(self, level: LogLevel, level: LogLevel, message: str) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
             print(f"[{timestamp}] [{level}] {message}")
 
     def run_command(
-        self, name: str, command: List[str], description: str
-    ) -> tuple[str, bool, str, Dict[str, Any]]:
+        self, name: str, command: list[str], description: str
+    ) -> tuple[str, bool, str, dict[str, Any]]:
         """Run a command and return results"""
         self.log(f"Running {name}: {description}")
         start_time = time.time()
@@ -69,7 +69,7 @@ class TestValidator:
 
     def _parse_test_output(
         self, test_type: str, stdout: str, stderr: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Parse test output for structured information"""
         info = {"test_type": test_type, "summary": {}}
 
@@ -132,7 +132,7 @@ class TestValidator:
 
         return info
 
-    def run_unit_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
+    def run_unit_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
         """Run unit tests"""
         command = [
             "poetry",
@@ -153,7 +153,7 @@ class TestValidator:
         description = "Run unit tests with 85% coverage requirement"
         return self.run_command("unit-tests", command, description)
 
-    def run_integration_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
+    def run_integration_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
         """Run integration tests"""
         command = [
             "poetry",
@@ -174,7 +174,7 @@ class TestValidator:
         description = "Run integration tests with 80% coverage requirement"
         return self.run_command("integration-tests", command, description)
 
-    def run_e2e_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
+    def run_e2e_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
         """Run end-to-end tests"""
         command = [
             "poetry",
@@ -195,7 +195,7 @@ class TestValidator:
         description = "Run E2E tests with 75% coverage requirement"
         return self.run_command("e2e-tests", command, description)
 
-    def run_performance_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
+    def run_performance_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
         """Run performance tests"""
         command = [
             "poetry",
@@ -212,7 +212,7 @@ class TestValidator:
         description = "Run performance tests"
         return self.run_command("performance-tests", command, description)
 
-    def run_security_tests(self) -> tuple[str, bool, str, Dict[str, Any]]:
+    def run_security_tests(self) -> tuple[str, bool, str, dict[str, Any]]:
         """Run security tests"""
         command = ["poetry", "run", "python", "scripts/security_test_suite.py"]
         description = "Run comprehensive security test suite"

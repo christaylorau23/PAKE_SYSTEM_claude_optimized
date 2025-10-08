@@ -30,7 +30,7 @@ class TestAPIGatewayRoutingContract:
             yield client
 
     @pytest.mark.asyncio
-    async def test_service_routing_to_research_orchestrator(self) -> None:
+async def test_service_routing_to_research_orchestrator(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that /services/research/* routes to research orchestrator
 
@@ -67,7 +67,7 @@ class TestAPIGatewayRoutingContract:
             ), "Research response should contain query or request_id field"
 
     @pytest.mark.asyncio
-    async def test_service_routing_to_cache_service(self) -> None:
+async def test_service_routing_to_cache_service(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that /services/cache/* routes to cache service
 
@@ -94,7 +94,7 @@ class TestAPIGatewayRoutingContract:
             ), "Cache stats response should contain hit_rate or cache_stats"
 
     @pytest.mark.asyncio
-    async def test_service_routing_to_performance_monitor(self) -> None:
+async def test_service_routing_to_performance_monitor(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that /services/performance/* routes to performance monitor
 
@@ -122,7 +122,7 @@ class TestAPIGatewayRoutingContract:
             ), "Performance metrics should contain response_time or metrics field"
 
     @pytest.mark.asyncio
-    async def test_service_registry_routing(self) -> None:
+async def test_service_registry_routing(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that /services/* endpoints are properly registered and routable
 
@@ -156,7 +156,7 @@ class TestAPIGatewayRoutingContract:
                 ), f"Expected service '{service}' not found in available services: {service_names}"
 
     @pytest.mark.asyncio
-    async def test_routing_request_headers_preserved(self) -> None:
+async def test_routing_request_headers_preserved(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that API Gateway preserves important request headers
 
@@ -186,7 +186,7 @@ class TestAPIGatewayRoutingContract:
             ), f"Correlation ID not preserved: sent test-correlation-123, got {response_correlation}"
 
     @pytest.mark.asyncio
-    async def test_routing_with_authentication_required(self) -> None:
+async def test_routing_with_authentication_required(self, api_gateway_base_url: Any = None, api_gateway_base_url: Any = None) -> None:
         """
         Test that API Gateway enforces authentication for protected routes
 
@@ -224,7 +224,7 @@ class TestAPIGatewayRoutingContract:
         ], f"Expected 401/403 for invalid token, got {response_bad_auth.status_code}"
 
     @pytest.mark.asyncio
-    async def test_routing_response_transformation(self) -> None:
+async def test_routing_response_transformation(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that API Gateway properly transforms responses
 
@@ -251,7 +251,7 @@ class TestAPIGatewayRoutingContract:
                     pytest.fail(f"Invalid response time header: {response_time}")
 
     @pytest.mark.asyncio
-    async def test_routing_error_handling(self) -> None:
+async def test_routing_error_handling(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that API Gateway handles downstream service errors properly
 
@@ -281,7 +281,7 @@ class TestAPIGatewayRoutingPerformance:
     """Performance contract tests for API Gateway routing"""
 
     @pytest.mark.asyncio
-    async def test_routing_latency_overhead(self) -> None:
+async def test_routing_latency_overhead(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that API Gateway routing adds minimal latency
 
@@ -313,14 +313,14 @@ class TestAPIGatewayRoutingPerformance:
         )
 
     @pytest.mark.asyncio
-    async def test_concurrent_routing_performance(self) -> None:
+async def test_concurrent_routing_performance(self, api_gateway_base_url: Any = None) -> None:
         """
         Test API Gateway routing under concurrent load
 
         Contract Requirement: Gateway must handle 100 concurrent requests efficiently
         """
 
-        async def single_request(self) -> None:
+async def single_request(self, api_gateway_base_url: Any = None) -> None:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(f"{api_gateway_base_url}/health")
                 return response.status_code in [200, 503]

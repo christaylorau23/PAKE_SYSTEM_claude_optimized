@@ -1,3 +1,4 @@
+from typing import Any
 #!/usr/bin/env python3
 """
 Comprehensive linting script for PAKE System
@@ -12,7 +13,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def run_command(self) -> None:
+def run_command(
+    self,
+    description: Any = None,
+    cmd: Any = None,
+    description: Any = None,
+    description: Any = None,
+    description: Any = None,
+) -> None:
     """Run a command and log results."""
     logger.info("Running %s...", description)
     try:

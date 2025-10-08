@@ -1,3 +1,7 @@
+import asyncpg
+import psycopg2
+import sqlalchemy
+
 #!/usr/bin/env python3
 """
 Vault Integration Test Script

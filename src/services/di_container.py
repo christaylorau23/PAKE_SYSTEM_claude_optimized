@@ -29,7 +29,13 @@ class ServiceLifetime:
 class ServiceRegistration:
     """Service registration metadata."""
 
-    def __init__(self, interface: type[T], implementation: type[T] | None = None, lifetime: str = ServiceLifetime.TRANSIENT, factory: Callable[[], T] | None = None) -> None:
+    def __init__(
+        self,
+        interface: type[T],
+        implementation: type[T] | None = None,
+        lifetime: str = ServiceLifetime.TRANSIENT,
+        factory: Callable[[], T] | None = None,
+    ) -> None:
         self.interface = interface
         self.implementation = implementation
         self.lifetime = lifetime
@@ -42,7 +48,7 @@ class DIContainer:
 
     def __init__(self) -> None:
         self._services: dict[str, ServiceRegistration] = {}
-        self._singletons: Dict[str, Any] = {}
+        self._singletons: dict[str, Any] = {}
         logger.info("DIContainer initialized")
 
     def register_singleton(
@@ -204,9 +210,9 @@ class DIContainer:
 
         # Add registered services
         for name, registration in self._services.items():
-            services[name] = (
-                f"{registration.implementation.__name__ if registration.implementation else 'Factory'} ({registration.lifetime})"
-            )
+            services[
+                name
+            ] = f"{registration.implementation.__name__ if registration.implementation else 'Factory'} ({registration.lifetime})"
 
         # Add singleton instances
         for name in self._singletons:
@@ -269,10 +275,10 @@ class MockConfigService:
     def get_config(self, key: str, default: Any = None) -> Any:
         return default
 
-    def get_database_config(self) -> Dict[str, Any]:
+    def get_database_config(self) -> dict[str, Any]:
         return {"host": "localhost", "port": 5432}
 
-    def get_redis_config(self) -> Dict[str, Any]:
+    def get_redis_config(self) -> dict[str, Any]:
         return {"host": "localhost", "port": 6379}
 
 

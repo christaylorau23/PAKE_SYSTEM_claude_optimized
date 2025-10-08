@@ -1,3 +1,7 @@
+import psycopg2
+import sqlalchemy
+from typing import Any
+import asyncpg
 #!/usr/bin/env python3
 """
 Test script to verify Poetry setup and dependency installation.
@@ -115,7 +119,9 @@ def test_poetry_environment(self) -> None:
         print(f"⚠️  Python path may not be from Poetry: {python_path}")
 
 
-def print_results(self) -> None:
+def print_results(
+    self, category: Any = None, category: Any = None, results: Any = None
+) -> None:
     """Print test results for a category."""
     print(f"\n📦 {category} Dependencies:")
     print("-" * 40)

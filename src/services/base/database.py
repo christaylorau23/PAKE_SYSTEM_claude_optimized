@@ -9,12 +9,12 @@ from collections.abc import AsyncGenerator
 import logging
 import os
 
+import asyncpg
+import psycopg2
 from sqlalchemy import MetaData
+import sqlalchemy.exc
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
-import sqlalchemy.exc
-import psycopg2
-import asyncpg
 
 logger = logging.getLogger(__name__)
 

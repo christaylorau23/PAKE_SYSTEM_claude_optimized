@@ -35,7 +35,7 @@ class ValidationResult:
     is_valid: bool
     sanitized_value: Any
     error_message: str | None = None
-    security_warnings: List[str] = None
+    security_warnings: list[str] = None
 
     def __post_init__(self) -> None:
         if self.security_warnings is None:
@@ -267,8 +267,8 @@ class RequestValidator:
     @classmethod
     def validate_request_data(
         cls,
-        data: Dict[str, Any],
-        schema: Dict[str, Any],
+        data: dict[str, Any],
+        schema: dict[str, Any],
         security_level: SecurityLevel = SecurityLevel.MEDIUM,
     ) -> ValidationResult:
         """Validate request data against schema.

@@ -27,7 +27,7 @@ import pytest
 # Mock the services that don't exist yet to prevent import errors
 # These will be replaced with actual imports when the services are implemented
 class MockPerformanceAnalyzer:
-    async def calculate_metrics_summary(self) -> None:
+async def calculate_metrics_summary(self, data: Any = None) -> None:
         import statistics
 
         result = {}
@@ -57,7 +57,7 @@ class MockPerformanceAnalyzer:
 
 
 class MockRedisCacheStrategy:
-    def __init__(self) -> None:
+def __init__(self, url: Any = None) -> None:
         self.url = url
 
     async def set(self) -> None:
@@ -72,7 +72,7 @@ class MockRedisCacheStrategy:
 
 
 class MockArxivResult:
-    def __init__(self) -> None:
+def __init__(self, success: Any = None, papers: Any = None, total_results: Any = None, error_message: Any = None) -> None:
         self.success = success
         self.papers = papers or []
         self.total_results = total_results
@@ -86,7 +86,7 @@ class MockArxivService:
 
 
 class MockFirecrawlResult:
-    def __init__(self) -> None:
+def __init__(self, success: Any = None, content: Any = None, url: Any = None, metadata: Any = None, error_message: Any = None) -> None:
         self.success = success
         self.content = content
         self.url = url
@@ -96,7 +96,7 @@ class MockFirecrawlResult:
 
 
 class MockFirecrawlService:
-    def __init__(self) -> None:
+def __init__(self, api_key: Any = None) -> None:
         self.api_key = api_key
 
     async def extract_content(self) -> None:
@@ -104,14 +104,14 @@ class MockFirecrawlService:
 
 
 class MockIngestionConfig:
-    def __init__(self) -> None:
+def __init__(self, max_concurrent_sources: Any = None, enable_cognitive_processing: Any = None, timeout_seconds: Any = None) -> None:
         self.max_concurrent_sources = max_concurrent_sources
         self.enable_cognitive_processing = enable_cognitive_processing
         self.timeout_seconds = timeout_seconds
 
 
 class MockIngestionResult:
-    def __init__(self) -> None:
+def __init__(self, success: Any = None, total_sources_processed: Any = None, total_content_items: Any = None, content_items: Any = None, execution_time: Any = None, errors: Any = None) -> None:
         self.success = success
         self.total_sources_processed = total_sources_processed
         self.total_content_items = total_content_items
@@ -121,12 +121,12 @@ class MockIngestionResult:
 
 
 class MockIngestionOrchestrator:
-    def __init__(self) -> None:
+def __init__(self, config: Any = None) -> None:
         self.config = config
         self.firecrawl_service = MockFirecrawlService("test_key")
         self.arxiv_service = MockArxivService()
 
-    async def execute_plan(self) -> None:
+async def execute_plan(self, plan: Any = None) -> None:
         sources = plan.get("sources", [])
         total_sources = len(sources)
         content_items = []
@@ -177,11 +177,11 @@ class MockIngestionOrchestrator:
 
 
 class MockAuthenticationService:
-    def __init__(self) -> None:
+def __init__(self, secret_key: Any = None) -> None:
         self.secret_key = secret_key
         self.token_metadata = {}  # Track token expiration
 
-    def generate_token(self) -> None:
+def generate_token(self, user_data: Any = None, expires_in: Any = None, expires_in: Any = None) -> None:
         import time
 
         token = f"mock.jwt.token.{len(self.token_metadata)}"
@@ -193,7 +193,7 @@ class MockAuthenticationService:
         }
         return token
 
-    def validate_token(self) -> None:
+def validate_token(self, token: Any = None, token: Any = None, token: Any = None, token: Any = None) -> None:
         import time
 
         if not token:
@@ -216,7 +216,7 @@ class MockAuthenticationService:
 
 
 class MockValidationResult:
-    def __init__(self) -> None:
+def __init__(self, success: Any = None, error_message: Any = None, user_data: Any = None) -> None:
         self.success = success
         self.error_message = error_message
         self.user_data = user_data or {}
@@ -227,7 +227,7 @@ class MockTimeSeriesAnalyzer:
         # This will be mocked in the test
         return datetime.now(UTC)
 
-    async def process_with_delay(self) -> None:
+async def process_with_delay(self, data: Any = None) -> None:
         await asyncio.sleep(0.1)
         return f"Processed: {data}"
 
@@ -611,7 +611,7 @@ class TestAAAUnitTestingPatterns:
             # Should not raise exceptions, should handle gracefully
 
     @pytest.mark.asyncio
-    async def test_orchestrator_should_handle_partial_source_failures(self) -> None:
+async def test_orchestrator_should_handle_partial_source_failures(self, url: Any = None) -> None:
         """
         Test: IngestionOrchestrator should handle partial source failures gracefully
 
@@ -640,7 +640,7 @@ class TestAAAUnitTestingPatterns:
             orchestrator.firecrawl_service, "extract_content"
         ) as mock_firecrawl:
             # Configure mock to return different results based on URL
-            def mock_extract_side_effect(self) -> None:
+def mock_extract_side_effect(self, url: Any = None) -> None:
                 if "working-site.com" in url:
                     return mock_success_result
                 return mock_failure_result
@@ -679,7 +679,7 @@ class TestAAAUnitTestingPatterns:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_cache_strategy_should_handle_concurrent_access_safely(self) -> None:
+async def test_cache_strategy_should_handle_concurrent_access_safely(self, operation_id: Any = None, operation_id: Any = None) -> None:
         """
         Test: RedisCacheStrategy should handle concurrent access safely
 
@@ -701,7 +701,7 @@ class TestAAAUnitTestingPatterns:
             cache = RedisCacheStrategy("redis://localhost:6379")
 
             # ACT: Perform concurrent operations
-            async def concurrent_operation(self) -> None:
+async def concurrent_operation(self, operation_id: Any = None, operation_id: Any = None) -> None:
                 key = f"concurrent_key_{operation_id}"
                 data = {"concurrent": "data", "operation_id": operation_id}
 
@@ -886,7 +886,7 @@ class TestMockingBestPractices:
             # Verify SQL queries were executed
             assert mock_cursor.execute.call_count >= 2
 
-    def test_should_mock_file_system_operations(self) -> None:
+def test_should_mock_file_system_operations(self, path: Any = None, path: Any = None) -> None:
         """
         Test: Should mock file system operations to avoid actual file I/O
 
@@ -912,11 +912,11 @@ class TestMockingBestPractices:
 
             # Real file service that uses builtin open
             class RealFileService:
-                def read_file(self) -> None:
+def read_file(self, path: Any = None) -> None:
                     with open(path) as f:
                         return f.read()
 
-                def write_file(self) -> None:
+def write_file(self, path: Any = None) -> None:
                     with open(path, "w") as f:
                         f.write(content)
                     return True

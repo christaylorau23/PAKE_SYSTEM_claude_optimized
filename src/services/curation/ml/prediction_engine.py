@@ -681,7 +681,7 @@ class PredictionEngine:
 
         logger.debug("Cleaned up %s cache entries", items_to_remove)
 
-    def get_performance_stats(self) -> Dict[str, Any]:
+    def get_performance_stats(self) -> dict[str, Any]:
         """Get performance statistics."""
         if not self.prediction_times:
             return {
@@ -710,7 +710,12 @@ class PredictionEngine:
         self.prediction_cache.clear()
         logger.info("Prediction cache cleared")
 
-    async def warm_cache(self, contents: list[ContentItem], user_profiles: list[UserProfile], interactions: list[UserInteraction]) -> None:
+    async def warm_cache(
+        self,
+        contents: list[ContentItem],
+        user_profiles: list[UserProfile],
+        interactions: list[UserInteraction],
+    ) -> None:
         """Warm up prediction cache with common predictions."""
         logger.info("Warming up prediction cache")
 

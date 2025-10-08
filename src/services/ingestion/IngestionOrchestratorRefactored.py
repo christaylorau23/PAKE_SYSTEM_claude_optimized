@@ -42,7 +42,12 @@ class OrchestratorConfig:
 class IngestionOrchestratorRefactored:
     """Refactored orchestrator following Single Responsibility Principle."""
 
-    def __init__(self, config: OrchestratorConfig | None = None, plan_builder: IngestionPlanBuilder | None = None, source_executor: SourceExecutor | None = None) -> None:
+    def __init__(
+        self,
+        config: OrchestratorConfig | None = None,
+        plan_builder: IngestionPlanBuilder | None = None,
+        source_executor: SourceExecutor | None = None,
+    ) -> None:
         self.config = config or OrchestratorConfig()
 
         # Use dependency injection for managers
@@ -137,7 +142,7 @@ class IngestionOrchestratorRefactored:
     async def _execute_sources_concurrently(
         self,
         plan: IngestionPlan,
-    ) -> list[tuple[list[Any], Dict[str, Any]]]:
+    ) -> list[tuple[list[Any], dict[str, Any]]]:
         """Execute all sources concurrently using asyncio."""
         # Create tasks for concurrent execution
         tasks = []
@@ -190,7 +195,7 @@ class IngestionOrchestratorRefactored:
 
     def _process_source_results(
         self,
-        source_results: list[tuple[list[Any], Dict[str, Any]]],
+        source_results: list[tuple[list[Any], dict[str, Any]]],
         result: IngestionResult,
     ) -> None:
         """Process results from source executions."""
@@ -227,15 +232,15 @@ class IngestionOrchestratorRefactored:
                 total_time / self._stats["plans_executed"]
             )
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get orchestrator statistics."""
         return self._stats.copy()
 
     def create_plan_from_config(
         self,
         topic: str,
-        source_configs: list[Dict[str, Any]],
-        user_preferences: Dict[str, Any] | None = None,
+        source_configs: list[dict[str, Any]],
+        user_preferences: dict[str, Any] | None = None,
     ) -> IngestionPlan:
         """Create an ingestion plan using the plan builder."""
         return self.plan_builder.build_plan(
@@ -248,7 +253,7 @@ class IngestionOrchestratorRefactored:
         """Optimize an ingestion plan using the plan builder."""
         return self.plan_builder.optimize_plan(plan)
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on orchestrator and its components."""
         return {
             "orchestrator": "healthy",

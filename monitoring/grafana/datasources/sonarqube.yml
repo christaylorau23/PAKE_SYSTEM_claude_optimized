@@ -1,0 +1,35 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+
+  - name: SonarQube
+    type: simplejson
+    access: proxy
+    url: http://sonarqube:9000
+    editable: true
+    jsonData:
+      httpMethod: GET
+      keepCookies: []
+      tlsSkipVerify: true
+    secureJsonData:
+      password: ${SONAR_TOKEN}
+    basicAuth: true
+    basicAuthUser: ${SONAR_USERNAME}
+
+  - name: GitHub Actions
+    type: prometheus
+    access: proxy
+    url: http://github-actions-exporter:9100
+    editable: true
+
+  - name: Jira
+    type: prometheus
+    access: proxy
+    url: http://jira-exporter:9200
+    editable: true

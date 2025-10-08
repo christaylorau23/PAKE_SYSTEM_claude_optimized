@@ -101,7 +101,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
     async def create_ingestion_plan(
         self,
         topic: str,
-        context: Dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,
     ) -> IngestionPlan:
         """Create ingestion plan with caching support."""
         # Generate cache key for plan
@@ -351,7 +351,7 @@ class CachedIngestionOrchestrator(IngestionOrchestrator):
         logger.info("Invalidated %s cache entries for source: %s", count, source_type)
         return count
 
-    async def get_cache_statistics(self) -> Dict[str, Any]:
+    async def get_cache_statistics(self) -> dict[str, Any]:
         """Get comprehensive cache performance statistics."""
         base_stats = {}
         if self.cache_service:

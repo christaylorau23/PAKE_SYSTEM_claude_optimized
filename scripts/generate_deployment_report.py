@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 PAKE System - Deployment Report Generator
@@ -25,7 +26,7 @@ class DeploymentReportGenerator:
             "generated_at": datetime.now(UTC).isoformat(),
         }
 
-    def add_deployment_info(self) -> None:
+def add_deployment_info(self, image_tag: Any = None, environment: Any = None, deployed_by: Any = None, deployment_time: Any = None, environment: Any = None, image_tag: Any = None) -> None:
         """Add deployment information"""
         self.report["deployment_info"] = {
             "image_tag": image_tag,
@@ -35,7 +36,7 @@ class DeploymentReportGenerator:
             "deployment_id": f"{environment}-{image_tag[:8]}-{int(time.time())}",
         }
 
-    def add_quality_gates(self) -> None:
+def add_quality_gates(self, ci_results: Any = None, ci_results: Any = None) -> None:
         """Add CI quality gate results"""
         self.report["quality_gates"] = {
             "lint_and_format": self.ci_results.get("lint_and_format", {}),
@@ -50,7 +51,7 @@ class DeploymentReportGenerator:
             else "failed",
         }
 
-    def add_performance_metrics(self) -> None:
+def add_performance_metrics(self, performance_data: Any = None, performance_data: Any = None) -> None:
         """Add performance metrics"""
         self.report["performance_metrics"] = {
             "response_times": self.performance_data.get("response_times", {}),
@@ -62,7 +63,7 @@ class DeploymentReportGenerator:
             ),
         }
 
-    def add_security_status(self) -> None:
+def add_security_status(self, security_data: Any = None) -> None:
         """Add security status"""
         self.report["security_status"] = {
             "vulnerability_scan": self.security_data.get("vulnerability_scan", {}),
@@ -71,7 +72,7 @@ class DeploymentReportGenerator:
             "overall_security_score": self._calculate_security_score(security_data),
         }
 
-    def _calculate_performance_score(self, performance_data: Dict[str, Any]) -> int:
+    def _calculate_performance_score(self, performance_data: dict[str, Any]) -> int:
         """Calculate overall performance score (0-100)"""
         # Simplified scoring logic
         score = 100
@@ -94,7 +95,7 @@ class DeploymentReportGenerator:
 
         return max(0, score)
 
-    def _calculate_security_score(self, security_data: Dict[str, Any]) -> int:
+    def _calculate_security_score(self, security_data: dict[str, Any]) -> int:
         """Calculate overall security score (0-100)"""
         # Simplified scoring logic
         score = 100
@@ -202,7 +203,7 @@ class DeploymentReportGenerator:
 
         return summary
 
-    def save_report(self) -> None:
+def save_report(self, filename: Any = None, filename: Any = None) -> None:
         """Save the complete report to file"""
         with open(filename, "w") as f:
             json.dump(self.report, f, indent=2)

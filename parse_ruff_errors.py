@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Ruff Error Analysis Script
+"""Ruff Error Analysis Script.
 =========================
 
 This script parses the ruff_errors.log file and generates a comprehensive
@@ -17,123 +16,133 @@ import sys
 from typing import DefaultDict, Dict, List, Tuple
 
 
-def parse_ruff_log(log_file_path: str) -> Tuple[Dict[str, int], Dict[str, int], List[Tuple[str, int]]]:
-    """
-    Parse the ruff error log file and extract error statistics.
-    
+def parse_ruff_log(
+    log_file_path: str,
+) -> tuple[dict[str, int], dict[str, int], list[tuple[str, int]]]:
+    """Parse the ruff error log file and extract error statistics.
+
     Args:
         log_file_path: Path to the ruff_errors.log file
-        
+
     Returns:
         Tuple containing:
         - error_code_counts: Dict mapping error codes to their frequency
         - file_error_counts: Dict mapping file paths to error counts
         - file_error_list: List of tuples (file_path, error_count) sorted by count
     """
-    
-    error_code_counts: DefaultDict[str, int] = defaultdict(int)
-    file_error_counts: DefaultDict[str, int] = defaultdict(int)
-    
+    error_code_counts: defaultdict[str, int] = defaultdict(int)
+    file_error_counts: defaultdict[str, int] = defaultdict(int)
+
     print(f"Parsing ruff error log: {log_file_path}")
-    
+
     try:
-        with open(log_file_path, 'r', encoding='utf-8') as f:
+        with open(log_file_path, encoding="utf-8") as f:
             line_count = 0
             error_count = 0
-            
+
             for line in f:
                 line_count += 1
                 line_stripped = line.strip()
-                
+
                 if not line_stripped:
                     continue
-                
+
                 # Look for error codes - they appear as ANSI escape sequences
                 # Pattern: \x1b[1m\x1b[91mS607 \x1b[0m\x1b[1mStarting a process...
-                if '\x1b' in line:
+                if "\x1b" in line:
                     # Use regex to find error codes embedded in ANSI sequences
                     # Look for pattern like \x1b[1m\x1b[91mS607
-                    error_code_match = re.search(r'\x1b\[1m\x1b\[91m([A-Z][A-Z0-9]{2,5})\s', line)
+                    error_code_match = re.search(
+                        r"\x1b\[1m\x1b\[91m([A-Z][A-Z0-9]{2,5})\s", line
+                    )
                     if error_code_match:
                         error_code = error_code_match.group(1)
                         if len(error_code) >= 3:
                             error_code_counts[error_code] += 1
                             error_count += 1
-                
+
                 # Look for file paths in lines with --> pattern
-                if '-->' in line:
+                if "-->" in line:
                     # Pattern: \x1b[ANSI_CODES]-->\x1b[ANSI_CODES] file_path:line:column
-                    if ':' in line:
+                    if ":" in line:
                         # Extract file path by finding the part after --> and before the first :
-                        after_arrow = line.split('-->', 1)
+                        after_arrow = line.split("-->", 1)
                         if len(after_arrow) > 1:
                             file_part = after_arrow[1]
                             # Remove ANSI codes and extract file path
-                            file_part_clean = re.sub(r'\x1b\[[^\]]*\]', '', file_part)
-                            if ':' in file_part_clean:
-                                file_path = file_part_clean.split(':')[0].strip()
+                            file_part_clean = re.sub(r"\x1b\[[^\]]*\]", "", file_part)
+                            if ":" in file_part_clean:
+                                file_path = file_part_clean.split(":")[0].strip()
                                 # Clean up any remaining ANSI artifacts
-                                file_path = re.sub(r'^[^\w/]*', '', file_path)  # Remove leading non-word chars
-                                if file_path and '.' in file_path:  # Basic validation that it's a file path
+                                file_path = re.sub(
+                                    r"^[^\w/]*", "", file_path
+                                )  # Remove leading non-word chars
+                                if (
+                                    file_path and "." in file_path
+                                ):  # Basic validation that it's a file path
                                     file_error_counts[file_path] += 1
-                    
+
                 # Progress indicator for large files
                 if line_count % 10000 == 0:
-                    print(f"Processed {line_count:,} lines, found {error_count:,} errors...")
-                    
+                    print(
+                        f"Processed {line_count:,} lines, found {error_count:,} errors..."
+                    )
+
     except FileNotFoundError:
         print(f"Error: Could not find log file {log_file_path}")
         sys.exit(1)
     except (FileNotFoundError, PermissionError, OSError) as e:
         print(f"Error reading log file: {e}")
         sys.exit(1)
-    
+
     # Convert to regular dicts and sort
     error_code_counts = dict(error_code_counts)
     file_error_counts = dict(file_error_counts)
-    
+
     # Sort files by error count (descending)
-    file_error_list = sorted(file_error_counts.items(), key=lambda x: x[1], reverse=True)
-    
-    print(f"Parsing complete!")
+    file_error_list = sorted(
+        file_error_counts.items(), key=lambda x: x[1], reverse=True
+    )
+
+    print("Parsing complete!")
     print(f"Total lines processed: {line_count:,}")
     print(f"Total errors found: {error_count:,}")
     print(f"Unique error codes: {len(error_code_counts)}")
     print(f"Files with errors: {len(file_error_counts)}")
-    
+
     return error_code_counts, file_error_counts, file_error_list
 
 
-def generate_markdown_report(error_code_counts: Dict[str, int], 
-                           file_error_list: List[Tuple[str, int]], 
-                           output_file: str) -> None:
-    """
-    Generate a comprehensive Markdown report of the linting analysis.
-    
+def generate_markdown_report(
+    error_code_counts: dict[str, int],
+    file_error_list: list[tuple[str, int]],
+    output_file: str,
+) -> None:
+    """Generate a comprehensive Markdown report of the linting analysis.
+
     Args:
         error_code_counts: Dict mapping error codes to their frequency
         file_error_list: List of tuples (file_path, error_count) sorted by count
         output_file: Path to the output Markdown file
     """
-    
     # Get top 10 error codes
     top_error_codes = Counter(error_code_counts).most_common(10)
-    
+
     # Get top 10 files with most errors
     top_files = file_error_list[:10]
-    
+
     # Calculate total errors
     total_errors = sum(error_code_counts.values())
-    
+
     # Safety check for empty results
     if total_errors == 0:
         print("Warning: No errors found in the log file. Check the ruff output format.")
         return
-    
+
     # Calculate F821 percentage
-    f821_count = error_code_counts.get('F821', 0)
+    f821_count = error_code_counts.get("F821", 0)
     f821_percentage = (f821_count / total_errors * 100) if total_errors > 0 else 0
-    
+
     # Generate the report
     report_content = f"""# Linting Analysis Report
 ## The Phoenix Protocol - Phase 5.1: Triage and Intelligence Gathering
@@ -162,24 +171,24 @@ This analysis reveals the scope and nature of linting violations across the PAKE
 | Rank | Error Code | Count | Percentage | Description |
 |------|------------|-------|------------|-------------|
 """
-    
+
     # Add error code table rows
     for i, (error_code, count) in enumerate(top_error_codes, 1):
         percentage = (count / total_errors * 100) if total_errors > 0 else 0
         description = get_error_description(error_code)
         report_content += f"| {i} | `{error_code}` | {count:,} | {percentage:.1f}% | {description} |\n"
-    
-    report_content += f"""
+
+    report_content += """
 ## Top 10 Files with Highest Error Density
 
 | Rank | File Path | Error Count | Percentage | Priority Level |
 |------|-----------|-------------|------------|----------------|
 """
-    
+
     # Add file table rows
     for i, (file_path, count) in enumerate(top_files, 1):
         percentage = (count / total_errors * 100) if total_errors > 0 else 0
-        
+
         # Determine priority level based on error count
         if count >= 1000:
             priority = "🔴 CRITICAL"
@@ -189,9 +198,11 @@ This analysis reveals the scope and nature of linting violations across the PAKE
             priority = "🟡 MEDIUM"
         else:
             priority = "🟢 LOW"
-            
-        report_content += f"| {i} | `{file_path}` | {count:,} | {percentage:.1f}% | {priority} |\n"
-    
+
+        report_content += (
+            f"| {i} | `{file_path}` | {count:,} | {percentage:.1f}% | {priority} |\n"
+        )
+
     report_content += f"""
 ## Strategic Remediation Recommendations
 
@@ -223,10 +234,10 @@ The error distribution reveals:
 ---
 *This report was generated as part of The Phoenix Protocol for systematic codebase modernization and architectural integrity.*
 """
-    
+
     # Write the report
     try:
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             f.write(report_content)
         print(f"Report generated successfully: {output_file}")
     except (FileNotFoundError, PermissionError, OSError) as e:
@@ -235,53 +246,52 @@ The error distribution reveals:
 
 
 def get_error_description(error_code: str) -> str:
-    """
-    Get a human-readable description for common ruff error codes.
-    
+    """Get a human-readable description for common ruff error codes.
+
     Args:
         error_code: The ruff error code (e.g., 'F821', 'ANN001')
-        
+
     Returns:
         Human-readable description of the error
     """
     descriptions = {
-        'F821': 'undefined-name - Variable/function/class name not defined',
-        'ANN001': 'missing-type-annotation - Function argument missing type annotation',
-        'ANN201': 'missing-return-type-annotation - Function missing return type annotation',
-        'ANN202': 'missing-return-type-annotation - Private function missing return type annotation',
-        'ANN101': 'missing-type-annotation - Missing type annotation for self in method',
-        'S101': 'assert-used - Use of assert detected (removed in production)',
-        'S102': 'exec-used - Use of exec detected (security risk)',
-        'S103': 'subprocess-popen-preexec-fn - Use of subprocess with shell=True',
-        'E501': 'line-too-long - Line exceeds maximum length',
-        'E302': 'expected-2-blank-lines - Expected 2 blank lines before class definition',
-        'E303': 'too-many-blank-lines - Too many blank lines',
-        'W293': 'blank-line-contains-whitespace - Blank line contains whitespace',
-        'F401': 'unused-import - Imported but unused',
-        'F841': 'unused-variable - Local variable assigned but never used',
-        'B006': 'mutable-argument - Do not use mutable data structures for argument defaults',
-        'B008': 'do-not-perform-direct-calls - Do not perform function calls in argument defaults',
+        "F821": "undefined-name - Variable/function/class name not defined",
+        "ANN001": "missing-type-annotation - Function argument missing type annotation",
+        "ANN201": "missing-return-type-annotation - Function missing return type annotation",
+        "ANN202": "missing-return-type-annotation - Private function missing return type annotation",
+        "ANN101": "missing-type-annotation - Missing type annotation for self in method",
+        "S101": "assert-used - Use of assert detected (removed in production)",
+        "S102": "exec-used - Use of exec detected (security risk)",
+        "S103": "subprocess-popen-preexec-fn - Use of subprocess with shell=True",
+        "E501": "line-too-long - Line exceeds maximum length",
+        "E302": "expected-2-blank-lines - Expected 2 blank lines before class definition",
+        "E303": "too-many-blank-lines - Too many blank lines",
+        "W293": "blank-line-contains-whitespace - Blank line contains whitespace",
+        "F401": "unused-import - Imported but unused",
+        "F841": "unused-variable - Local variable assigned but never used",
+        "B006": "mutable-argument - Do not use mutable data structures for argument defaults",
+        "B008": "do-not-perform-direct-calls - Do not perform function calls in argument defaults",
     }
-    
-    return descriptions.get(error_code, f'Unknown error code: {error_code}')
+
+    return descriptions.get(error_code, f"Unknown error code: {error_code}")
 
 
 def main():
     """Main execution function."""
     log_file = "ruff_errors.log"
     output_file = "LINTING_ANALYSIS.md"
-    
+
     print("=" * 60)
     print("RUFF ERROR ANALYSIS SCRIPT")
     print("The Phoenix Protocol - Phase 5.1")
     print("=" * 60)
-    
+
     # Parse the log file
     error_code_counts, file_error_counts, file_error_list = parse_ruff_log(log_file)
-    
+
     # Generate the markdown report
     generate_markdown_report(error_code_counts, file_error_list, output_file)
-    
+
     print("\n" + "=" * 60)
     print("ANALYSIS COMPLETE")
     print("=" * 60)

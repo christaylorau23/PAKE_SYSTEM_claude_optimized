@@ -1,4 +1,5 @@
 from typing import Dict
+
 """
 Contract Test: Service Mesh Inter-Service Communication
 Task T009 - Phase 18 Production System Integration
@@ -21,7 +22,7 @@ class TestServiceMeshCommunicationContract:
     """Contract tests for Service Mesh inter-service communication"""
 
     @pytest.fixture
-    def service_mesh_config(self) -> Dict[str, Any]:
+    def service_mesh_config(self) -> dict[str, Any]:
         """Service mesh configuration for testing"""
         return {
             "services": {
@@ -56,7 +57,7 @@ class TestServiceMeshCommunicationContract:
             yield client
 
     @pytest.mark.asyncio
-    async def test_service_discovery_registration(self) -> None:
+async def test_service_discovery_registration(self, service_mesh_config: Any = None, http_client: Any = None) -> None:
         """
         Test that services can register with service mesh
 
@@ -93,7 +94,7 @@ class TestServiceMeshCommunicationContract:
                 pytest.fail(f"Service {service_name} not registered in service mesh")
 
     @pytest.mark.asyncio
-    async def test_mtls_communication(self) -> None:
+async def test_mtls_communication(self, service_mesh_config: Any = None, service_mesh_config: Any = None) -> None:
         """
         Test that inter-service communication uses mTLS
 
@@ -128,7 +129,7 @@ class TestServiceMeshCommunicationContract:
             pytest.fail("mTLS not properly configured in service mesh")
 
     @pytest.mark.asyncio
-    async def test_circuit_breaker_pattern(self) -> None:
+async def test_circuit_breaker_pattern(self, service_mesh_config: Any = None, service_mesh_config: Any = None, http_client: Any = None) -> None:
         """
         Test that circuit breaker pattern is implemented
 
@@ -174,7 +175,7 @@ class TestServiceMeshCommunicationContract:
         ), "Circuit breaker pattern not implemented in service mesh"
 
     @pytest.mark.asyncio
-    async def test_retry_policy_implementation(self) -> None:
+async def test_retry_policy_implementation(self, service_mesh_config: Any = None, service_mesh_config: Any = None, http_client: Any = None) -> None:
         """
         Test that retry policy is implemented for failed requests
 
@@ -220,7 +221,7 @@ class TestServiceMeshCommunicationContract:
             ), "Request timed out too quickly - retries not implemented"
 
     @pytest.mark.asyncio
-    async def test_load_balancing_across_instances(self) -> None:
+async def test_load_balancing_across_instances(self, service_mesh_config: Any = None, http_client: Any = None) -> None:
         """
         Test that load balancing distributes requests across service instances
 
@@ -268,7 +269,7 @@ class TestServiceMeshCommunicationContract:
             )
 
     @pytest.mark.asyncio
-    async def test_service_mesh_observability(self) -> None:
+async def test_service_mesh_observability(self, service_mesh_config: Any = None, http_client: Any = None) -> None:
         """
         Test that service mesh provides observability features
 
@@ -317,7 +318,7 @@ class TestServiceMeshCommunicationContract:
             pytest.fail("Service mesh observability not implemented")
 
     @pytest.mark.asyncio
-    async def test_traffic_policies_enforcement(self) -> None:
+async def test_traffic_policies_enforcement(self, service_mesh_config: Any = None, http_client: Any = None, http_client: Any = None) -> None:
         """
         Test that traffic policies are enforced by service mesh
 

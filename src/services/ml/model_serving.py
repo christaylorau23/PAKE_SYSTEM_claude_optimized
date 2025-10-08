@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import aiohttp
+
 """PAKE System - Model Serving Service
 Phase 9B: Advanced AI/ML Pipeline Integration.
 
@@ -64,14 +65,14 @@ class ModelMetadata:
     model_name: str
     version: str
     framework: ModelFramework
-    input_schema: Dict[str, Any]
-    output_schema: Dict[str, Any]
+    input_schema: dict[str, Any]
+    output_schema: dict[str, Any]
     model_size_mb: float
     created_at: datetime
     last_updated: datetime
     performance_metrics: dict[str, float] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "model_id": self.model_id,
@@ -93,16 +94,16 @@ class InferenceRequest:
 
     request_id: str
     model_id: str
-    input_data: Dict[str, Any]
+    input_data: dict[str, Any]
     inference_type: InferenceType = InferenceType.REAL_TIME
     priority: int = 0  # Higher number = higher priority
     timeout_seconds: float = 30.0
     request_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "request_id": self.request_id,
@@ -122,16 +123,16 @@ class InferenceResponse:
 
     request_id: str
     model_id: str
-    predictions: Dict[str, Any]
+    predictions: dict[str, Any]
     confidence_scores: dict[str, float] = field(default_factory=dict)
     processing_time_ms: float = 0.0
     model_version: str = ""
     response_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "request_id": self.request_id,
@@ -162,7 +163,7 @@ class ModelHealth:
         default_factory=lambda: datetime.now(UTC),
     )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "model_id": self.model_id,
@@ -225,7 +226,7 @@ class ModelInterface(ABC):
         """Load model from path."""
 
     @abstractmethod
-    async def predict(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def predict(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """Run inference on input data."""
 
     @abstractmethod
@@ -233,7 +234,7 @@ class ModelInterface(ABC):
         """Unload model from memory."""
 
     @abstractmethod
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """Get model information."""
 
 
@@ -262,7 +263,7 @@ class TensorFlowModel(ModelInterface):
             logger.error("Failed to load TensorFlow model %s: %s", self.model_id, e)
             return False
 
-    async def predict(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def predict(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """Run TensorFlow inference."""
         if not self.loaded or not self.model:
             msg = f"Model {self.model_id} not loaded"
@@ -295,7 +296,7 @@ class TensorFlowModel(ModelInterface):
             logger.error("Failed to unload TensorFlow model %s: %s", self.model_id, e)
             return False
 
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """Get TensorFlow model information."""
         if not self.model:
             return {"status": "not_loaded"}
@@ -316,7 +317,7 @@ class TensorFlowModel(ModelInterface):
             "loaded": self.loaded,
         }
 
-    def _prepare_inputs(self, input_data: Dict[str, Any]) -> np.ndarray:
+    def _prepare_inputs(self, input_data: dict[str, Any]) -> np.ndarray:
         """Prepare input data for TensorFlow model."""
         # Convert input data to numpy arrays
         # This is a simplified implementation
@@ -326,7 +327,7 @@ class TensorFlowModel(ModelInterface):
             return np.array(input_data[key])
         return np.array(input_data)
 
-    def _format_predictions(self, predictions: np.ndarray) -> Dict[str, Any]:
+    def _format_predictions(self, predictions: np.ndarray) -> dict[str, Any]:
         """Format TensorFlow predictions."""
         return {"predictions": predictions.tolist(), "shape": predictions.shape}
 
@@ -356,7 +357,7 @@ class ONNXModel(ModelInterface):
             logger.error("Failed to load ONNX model %s: %s", self.model_id, e)
             return False
 
-    async def predict(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def predict(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """Run ONNX inference."""
         if not self.loaded or not self.model:
             msg = f"Model {self.model_id} not loaded"
@@ -389,7 +390,7 @@ class ONNXModel(ModelInterface):
             logger.error("Failed to unload ONNX model %s: %s", self.model_id, e)
             return False
 
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """Get ONNX model information."""
         if not self.model:
             return {"status": "not_loaded"}
@@ -404,14 +405,14 @@ class ONNXModel(ModelInterface):
             "loaded": self.loaded,
         }
 
-    def _prepare_inputs(self, input_data: Dict[str, Any]) -> dict[str, np.ndarray]:
+    def _prepare_inputs(self, input_data: dict[str, Any]) -> dict[str, np.ndarray]:
         """Prepare input data for ONNX model."""
         inputs = {}
         for name, data in input_data.items():
             inputs[name] = np.array(data)
         return inputs
 
-    def _format_predictions(self, outputs: list[np.ndarray]) -> Dict[str, Any]:
+    def _format_predictions(self, outputs: list[np.ndarray]) -> dict[str, Any]:
         """Format ONNX predictions."""
         result = {}
         for i, output in enumerate(outputs):
@@ -424,7 +425,7 @@ class ModelRegistry:
 
     def __init__(self) -> None:
         self.models: dict[str, ModelMetadata] = {}
-        self.model_versions: dict[str, List[str]] = {}
+        self.model_versions: dict[str, list[str]] = {}
         self.model_paths: dict[str, str] = {}
 
     def register_model(self, metadata: ModelMetadata, model_path: str) -> bool:
@@ -461,7 +462,7 @@ class ModelRegistry:
         """List all registered models."""
         return list(self.models.values())
 
-    def get_model_versions(self, model_name: str) -> List[str]:
+    def get_model_versions(self, model_name: str) -> list[str]:
         """Get all versions of a model."""
         return self.model_versions.get(model_name, [])
 
@@ -586,8 +587,8 @@ class ModelServingService:
         model_name: str,
         version: str,
         framework: ModelFramework,
-        input_schema: Dict[str, Any],
-        output_schema: Dict[str, Any],
+        input_schema: dict[str, Any],
+        output_schema: dict[str, Any],
     ) -> str:
         """Register a new model."""
         try:
@@ -802,7 +803,7 @@ class ModelServingService:
         except (ValueError, RuntimeError) as e:
             logger.error("Model warmup failed for %s: %s", model_id, e)
 
-    def _create_sample_input(self, input_schema: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_sample_input(self, input_schema: dict[str, Any]) -> dict[str, Any]:
         """Create sample input based on schema."""
         sample_input = {}
 
@@ -823,7 +824,9 @@ class ModelServingService:
         request_str = json.dumps(request_data, sort_keys=True)
         return hashlib.sha256(request_str.encode()).hexdigest()[:16]
 
-    async def _update_model_health(self, model_id: str, success: bool, latency_ms: float) -> None:
+    async def _update_model_health(
+        self, model_id: str, success: bool, latency_ms: float
+    ) -> None:
         """Update model health metrics."""
         if model_id not in self.model_health:
             return
@@ -894,11 +897,11 @@ class ModelServingService:
         """Get model health status."""
         return self.model_health.get(model_id)
 
-    def list_loaded_models(self) -> List[str]:
+    def list_loaded_models(self) -> list[str]:
         """List all loaded model IDs."""
         return list(self.loaded_models.keys())
 
-    def get_service_statistics(self) -> Dict[str, Any]:
+    def get_service_statistics(self) -> dict[str, Any]:
         """Get service statistics."""
         stats = self.stats.copy()
         stats["loaded_models_count"] = len(self.loaded_models)

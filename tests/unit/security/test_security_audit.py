@@ -30,7 +30,7 @@ class TestSecurityAuditor:
         }
 
     @pytest.fixture
-    def mock_project_structure(self) -> None:
+def mock_project_structure(self, tmp_path: Any = None) -> None:
         """Create mock project structure for testing."""
         project_root = tmp_path / "test_project"
         project_root.mkdir()
@@ -64,7 +64,7 @@ DATABASE_PASSWORD=db_REDACTED_SECRET
 
         return project_root
 
-    def test_security_auditor_initialization(self) -> None:
+def test_security_auditor_initialization(self, security_config: Any = None, security_config: Any = None) -> None:
         """Test security auditor initializes correctly."""
         from scripts.security_audit import SecurityAuditor
 
@@ -136,7 +136,7 @@ subprocess.call(command, shell=True)
         ]
         assert len(critical_issues) > 0
 
-    def test_environment_security_check(self) -> None:
+def test_environment_security_check(self, mock_project_structure: Any = None) -> None:
         """Test environment variables and configuration security."""
         from scripts.security_audit import SecurityAuditor
 
@@ -211,7 +211,7 @@ flask==0.12.0
         assert http_issue is not None
         assert "https" in http_issue.recommendation.lower()
 
-    def test_file_permissions_check(self) -> None:
+def test_file_permissions_check(self, mock_project_structure: Any = None, mock_project_structure: Any = None) -> None:
         """Test file permissions security validation."""
         from scripts.security_audit import SecurityAuditor
 
@@ -266,7 +266,7 @@ flask==0.12.0
         assert any("security header" in title for title in issue_titles)
         assert any("cors" in title for title in issue_titles)
 
-    def test_security_score_calculation(self) -> None:
+def test_security_score_calculation(self, mock_security_issues: Any = None, mock_security_issues: Any = None) -> None:
         """Test security score calculation algorithm."""
         from scripts.security_audit import SecurityAuditor
 
@@ -285,7 +285,7 @@ flask==0.12.0
         if critical_count > 0:
             assert score < 90.0  # Should be significantly impacted
 
-    def test_security_recommendations_generation(self) -> None:
+def test_security_recommendations_generation(self, mock_security_issues: Any = None) -> None:
         """Test generation of security recommendations."""
         from scripts.security_audit import SecurityAuditor
 
@@ -303,7 +303,7 @@ flask==0.12.0
         assert "authentication" in rec_text or "security" in rec_text
 
     @pytest.mark.asyncio
-    async def test_comprehensive_audit_execution(self) -> None:
+async def test_comprehensive_audit_execution(self, mock_project_structure: Any = None) -> None:
         """Test complete security audit execution."""
         from scripts.security_audit import SecurityAuditor, SecurityAuditResult
 
@@ -329,7 +329,7 @@ flask==0.12.0
             + result.low_issues
         ) == result.total_issues
 
-    def test_security_report_generation(self) -> None:
+def test_security_report_generation(self, mock_security_issues: Any = None, mock_security_issues: Any = None, mock_security_issues: Any = None) -> None:
         """Test comprehensive security report generation."""
         from scripts.security_audit import SecurityAuditor, SecurityAuditResult
 
@@ -394,7 +394,7 @@ async def get_user(self) -> None:  # No type validation
             "sql injection" in desc or "eval" in desc for desc in issue_descriptions
         )
 
-    def test_authentication_security_check(self) -> None:
+def test_authentication_security_check(self, mock_project_structure: Any = None, mock_project_structure: Any = None) -> None:
         """Test authentication implementation security."""
         from scripts.security_audit import SecurityAuditor
 
@@ -428,7 +428,7 @@ def create_token(self) -> None:
         assert len(jwt_issues) > 0
 
     @pytest.mark.performance
-    def test_audit_performance(self) -> None:
+def test_audit_performance(self, mock_project_structure: Any = None) -> None:
         """Test security audit performance requirements."""
         import time
 
@@ -485,7 +485,7 @@ API_KEY = os.getenv("API_KEY")
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_full_security_audit_workflow(self) -> None:
+async def test_full_security_audit_workflow(self, mock_project_structure: Any = None) -> None:
         """Test complete security audit workflow integration."""
         from scripts.security_audit import SecurityAuditor
 
@@ -523,7 +523,7 @@ API_KEY = os.getenv("API_KEY")
         auditor = SecurityAuditor("https://secure-api.example.com")
         assert auditor.base_url.startswith("https://")
 
-    def test_security_issue_serialization(self) -> None:
+def test_security_issue_serialization(self, mock_security_issues: Any = None, mock_security_issues: Any = None, mock_security_issues: Any = None) -> None:
         """Test security issue serialization for reporting."""
         import json
 

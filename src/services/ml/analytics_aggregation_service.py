@@ -38,10 +38,10 @@ class SearchSession:
     session_id: str
     start_time: datetime
     end_time: datetime | None = None
-    queries: List[str] = field(default_factory=list)
+    queries: list[str] = field(default_factory=list)
     total_results: int = 0
     avg_semantic_score: float = 0.0
-    dominant_topics: List[str] = field(default_factory=list)
+    dominant_topics: list[str] = field(default_factory=list)
     content_types_explored: dict[str, int] = field(default_factory=dict)
     session_duration_minutes: float = 0.0
 
@@ -55,8 +55,8 @@ class ResearchPattern:
     frequency: int
     confidence: float
     last_seen: datetime
-    related_queries: List[str] = field(default_factory=list)
-    insights: List[str] = field(default_factory=list)
+    related_queries: list[str] = field(default_factory=list)
+    insights: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -67,8 +67,8 @@ class KnowledgeInsight:
     title: str
     description: str
     confidence: float
-    actionable_suggestions: List[str] = field(default_factory=list)
-    related_topics: List[str] = field(default_factory=list)
+    actionable_suggestions: list[str] = field(default_factory=list)
+    related_topics: list[str] = field(default_factory=list)
     priority: str = "medium"  # low, medium, high
 
 
@@ -91,12 +91,12 @@ class DashboardMetrics:
     # Research Intelligence
     active_research_sessions: int = 0
     trending_topics: list[tuple[str, int]] = field(default_factory=list)
-    knowledge_gaps: List[str] = field(default_factory=list)
+    knowledge_gaps: list[str] = field(default_factory=list)
 
     # User Insights
     research_productivity_score: float = 0.0
     exploration_diversity: float = 0.0
-    focus_areas: List[str] = field(default_factory=list)
+    focus_areas: list[str] = field(default_factory=list)
 
 
 class MLAnalyticsAggregationService:
@@ -108,13 +108,13 @@ class MLAnalyticsAggregationService:
 
     def __init__(self) -> None:
         # Core data storage
-        self.search_history: list[Dict[str, Any]] = []
+        self.search_history: list[dict[str, Any]] = []
         self.research_sessions: dict[str, SearchSession] = {}
         self.identified_patterns: list[ResearchPattern] = []
         self.knowledge_insights: list[KnowledgeInsight] = []
 
         # Analytics cache
-        self.analytics_cache: Dict[str, Any] = {}
+        self.analytics_cache: dict[str, Any] = {}
         self.cache_expiry: dict[str, datetime] = {}
 
         # Configuration
@@ -128,10 +128,10 @@ class MLAnalyticsAggregationService:
         self,
         query: str,
         results_count: int,
-        semantic_analytics: Dict[str, Any] | None = None,
-        summarization_analytics: Dict[str, Any] | None = None,
+        semantic_analytics: dict[str, Any] | None = None,
+        summarization_analytics: dict[str, Any] | None = None,
         execution_time_ms: float = 0.0,
-        sources_used: List[str] | None = None,
+        sources_used: list[str] | None = None,
     ) -> str:
         """Record a search event for analytics processing.
 
@@ -179,7 +179,7 @@ class MLAnalyticsAggregationService:
         self,
         query: str,
         timestamp: datetime,
-        search_event: Dict[str, Any],
+        search_event: dict[str, Any],
     ) -> str:
         """Manage research sessions and detect session boundaries."""
         # Find active session (within timeout window)
@@ -351,7 +351,7 @@ class MLAnalyticsAggregationService:
 
     async def _calculate_productivity_score(
         self,
-        events: list[Dict[str, Any]],
+        events: list[dict[str, Any]],
     ) -> float:
         """Calculate research productivity score based on search patterns."""
         if not events:
@@ -389,7 +389,7 @@ class MLAnalyticsAggregationService:
 
     async def _calculate_exploration_diversity(
         self,
-        events: list[Dict[str, Any]],
+        events: list[dict[str, Any]],
     ) -> float:
         """Calculate exploration diversity based on topic spread."""
         if not events:
@@ -407,7 +407,7 @@ class MLAnalyticsAggregationService:
         diversity_score = min(unique_topics / max_expected_topics, 1.0)
         return round(diversity_score, 3)
 
-    async def _identify_focus_areas(self, events: list[Dict[str, Any]]) -> List[str]:
+    async def _identify_focus_areas(self, events: list[dict[str, Any]]) -> list[str]:
         """Identify main focus areas from search patterns."""
         topic_frequency = Counter()
 
@@ -424,7 +424,7 @@ class MLAnalyticsAggregationService:
 
         return focus_areas[:8]  # Limit to top 8 focus areas
 
-    async def _identify_knowledge_gaps(self, events: list[Dict[str, Any]]) -> List[str]:
+    async def _identify_knowledge_gaps(self, events: list[dict[str, Any]]) -> list[str]:
         """Identify potential knowledge gaps based on low-confidence searches."""
         gap_indicators = []
 
@@ -759,7 +759,7 @@ class MLAnalyticsAggregationService:
         expiry = self.cache_expiry.get(cache_key)
         return not (not expiry or datetime.now(UTC) > expiry)
 
-    def _invalidate_cache(self, cache_keys: List[str]) -> None:
+    def _invalidate_cache(self, cache_keys: list[str]) -> None:
         """Invalidate specific cache entries."""
         for key in cache_keys:
             if key in self.analytics_cache:
@@ -767,7 +767,7 @@ class MLAnalyticsAggregationService:
             if key in self.cache_expiry:
                 del self.cache_expiry[key]
 
-    async def generate_knowledge_graph(self) -> Dict[str, Any]:
+    async def generate_knowledge_graph(self) -> dict[str, Any]:
         """Generate knowledge graph from research data."""
         try:
             graph_service = get_knowledge_graph_service()
@@ -816,7 +816,7 @@ class MLAnalyticsAggregationService:
                 "error": str(e),
             }
 
-    async def get_realtime_dashboard_data(self) -> Dict[str, Any]:
+    async def get_realtime_dashboard_data(self) -> dict[str, Any]:
         """Get comprehensive real-time dashboard data."""
         # Generate all components
         metrics = await self.generate_dashboard_metrics()

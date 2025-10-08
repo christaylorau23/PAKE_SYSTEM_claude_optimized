@@ -26,13 +26,13 @@ class SafeImporter:
 
     def __init__(self) -> None:
         self._import_cache: dict[str, Any] = {}
-        self._failed_imports: List[str] = []
+        self._failed_imports: list[str] = []
 
     def safe_import_module(
         self,
         module_name: str,
         package: str | None = None,
-        fallback_modules: List[str] | None = None,
+        fallback_modules: list[str] | None = None,
     ) -> Any | None:
         """Safely import a module with fallback options.
 
@@ -84,7 +84,7 @@ class SafeImporter:
     def safe_import_from(
         self,
         module_name: str,
-        attr_names: str | List[str],
+        attr_names: str | list[str],
         package: str | None = None,
         required: bool = True,
     ) -> dict[str, Any]:
@@ -222,7 +222,7 @@ _importer = SafeImporter()
 def safe_import(
     module_name: str,
     package: str | None = None,
-    fallback_modules: List[str] | None = None,
+    fallback_modules: list[str] | None = None,
 ) -> Any | None:
     """Convenience function for safe module import.
 
@@ -239,7 +239,7 @@ def safe_import(
 
 def safe_import_from(
     module_name: str,
-    attr_names: str | List[str],
+    attr_names: str | list[str],
     package: str | None = None,
     required: bool = True,
 ) -> dict[str, Any]:

@@ -1,3 +1,4 @@
+from typing import Any
 #!/usr/bin/env python3
 """
 GitHub Release Setup Script
@@ -10,7 +11,9 @@ import subprocess
 import sys
 
 
-def run_command(self) -> None:
+def run_command(
+    self, command: Any = None, check: Any = None, command: Any = None
+) -> None:
     """Run a shell command and return the output."""
     try:
         result = subprocess.run(

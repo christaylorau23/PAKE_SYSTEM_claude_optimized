@@ -1,3 +1,5 @@
+import aiohttp
+
 """Audit Integration for Python/FastAPI Services
 Provides audit logging integration with the PAKE Audit System.
 """

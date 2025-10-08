@@ -1,6 +1,6 @@
 import logging
+
 logger = logging.getLogger(__name__)
-config
 """PAKE System Performance Testing Environment Configuration.
 ========================================================
 
@@ -46,7 +46,7 @@ class PerformanceEnvironmentConfig:
 class PerformanceEnvironmentManager:
     """Manages performance testing environments."""
 
-    def __init__(self) -> None:
+def __init__(self, config_path: Any = None) -> None:
         self.config_path = Path(config_path)
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.docker_client = docker.from_env()
@@ -137,7 +137,7 @@ class PerformanceEnvironmentManager:
             print(f"Failed to provision environment '{env_name}': {e}")
             return False
 
-    def _start_database(self) -> None:
+def _start_database(self, config: Any = None) -> None:
         """Start database service."""
         if config.name == "local":
             # Start local PostgreSQL container
@@ -158,7 +158,7 @@ class PerformanceEnvironmentManager:
             except docker.errors.ContainerError:
                 print("PostgreSQL container already running")
 
-    def _start_redis(self) -> None:
+def _start_redis(self, config: Any = None) -> None:
         """Start Redis service."""
         if config.name == "local":
             try:
@@ -173,7 +173,7 @@ class PerformanceEnvironmentManager:
             except docker.errors.ContainerError:
                 print("Redis container already running")
 
-    def _start_application(self) -> None:
+def _start_application(self, config: Any = None, config: Any = None) -> None:
         """Start application service."""
         if config.name == "local":
             # Set environment variables
@@ -203,7 +203,7 @@ class PerformanceEnvironmentManager:
             except (ValueError, RuntimeError) as e:
                 print(f"Failed to start application: {e}")
 
-    def _wait_for_services(self) -> None:
+def _wait_for_services(self, timeout: Any = None, config: Any = None) -> None:
         """Wait for services to be ready."""
         print("Waiting for services to be ready...")
 
@@ -216,7 +216,7 @@ class PerformanceEnvironmentManager:
                 if response.status_code == 200:
                     print("Services are ready")
                     return True
-            except (ConnectionError, TimeoutError, aiohttp.ClientError) as e as e:
+            except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:
 
                 logger.debug(f"Exception in environment_manager.py: {e}")
 
@@ -258,7 +258,7 @@ class PerformanceEnvironmentManager:
             print(f"Health check error: {e}")
             return False
 
-    def cleanup_environment(self) -> None:
+def cleanup_environment(self, env_name: Any = None, env_name: Any = None, env_name: Any = None) -> None:
         """Clean up environment after testing."""
         if env_name not in self.environments:
             return
@@ -288,7 +288,7 @@ class PerformanceEnvironmentManager:
 class PerformanceTestRunner:
     """Runs performance tests against configured environments."""
 
-    def __init__(self) -> None:
+def __init__(self, env_manager: Any = None) -> None:
         self.env_manager = env_manager
         self.results_dir = Path("performance_tests/results")
         self.results_dir.mkdir(parents=True, exist_ok=True)
@@ -500,7 +500,7 @@ class PerformanceTestRunner:
 
         return validation
 
-    def _save_results(self) -> None:
+def _save_results(self, test_name: Any = None, results: Any = None) -> None:
         """Save test results to file."""
         timestamp = int(time.time())
         filename = f"{test_name}_{timestamp}.json"

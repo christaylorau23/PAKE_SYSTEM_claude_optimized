@@ -57,7 +57,7 @@ class TestRealTimeProcessingPipeline:
             await pipeline.stop_pipeline()
 
     @pytest_asyncio.fixture
-    async def running_pipeline(self) -> None:
+async def running_pipeline(self, pipeline: Any = None) -> None:
         """Create and start a running pipeline for testing"""
         await self.pipeline.start_pipeline()
         yield pipeline
@@ -165,7 +165,7 @@ class TestRealTimeProcessingPipeline:
     # Content Processing Tests
     # ========================================================================
 
-    async def test_should_process_single_content_item_successfully(self) -> None:
+async def test_should_process_single_content_item_successfully(self, sample_content_items: Any = None) -> None:
         """
         Test: Should process single content item through full pipeline
         with proper stage execution and result generation.
@@ -195,7 +195,7 @@ class TestRealTimeProcessingPipeline:
         if result.quality_score >= self.running_pipeline.config.min_quality_threshold:
             assert result.semantic_indexed
 
-    async def test_should_handle_different_priority_levels_correctly(self) -> None:
+async def test_should_handle_different_priority_levels_correctly(self, sample_content_items: Any = None, sample_content_items: Any = None) -> None:
         """
         Test: Should handle different priority levels with appropriate
         processing order and performance characteristics.
@@ -423,7 +423,7 @@ class TestRealTimeProcessingPipeline:
             ]
             assert result.processing_time_ms >= 0
 
-    async def test_should_handle_concurrent_processing_safely(self) -> None:
+async def test_should_handle_concurrent_processing_safely(self, item: Any = None) -> None:
         """
         Test: Should handle concurrent processing operations
         without race conditions or data corruption.
@@ -440,7 +440,7 @@ class TestRealTimeProcessingPipeline:
             concurrent_items.append(content)
 
         # Submit items concurrently
-        async def submit_item(self) -> None:
+async def submit_item(self, item: Any = None) -> None:
             content_id = await self.running_pipeline.submit_content(item)
             return await self.running_pipeline.get_result(content_id, timeout=15.0)
 

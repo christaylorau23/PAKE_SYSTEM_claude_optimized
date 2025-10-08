@@ -103,11 +103,11 @@ class TestRaceConditionDetection:
 
     @pytest.mark.asyncio
     @pytest.mark.race_condition
-    async def test_async_safe_dict(self) -> None:
+async def test_async_safe_dict(self, key: str, value: float, key: str) -> None:
         """Test async-safe dictionary prevents race conditions"""
         safe_dict = AsyncSafeDict()
 
-        async def set_task(self) -> None:
+async def set_task(self, key: str, value: float, key: str) -> None:
             await safe_dict.set(key, value)
             return await safe_dict.get(key)
 
@@ -125,11 +125,11 @@ class TestRaceConditionDetection:
 
     @pytest.mark.asyncio
     @pytest.mark.race_condition
-    async def test_concurrent_shared_state_access(self) -> None:
+async def test_concurrent_shared_state_access(self, task_id: Any = None) -> None:
         """Test detection of concurrent shared state access"""
         detector = get_race_detector()
 
-        async def access_shared_state(self) -> None:
+async def access_shared_state(self, task_id: Any = None) -> None:
             await detector.track_shared_state_access(
                 "test_state", f"operation_{task_id}"
             )
@@ -171,10 +171,10 @@ class TestConcurrentTasks:
 
     @pytest.mark.asyncio
     @pytest.mark.concurrent_tasks
-    async def test_run_concurrent_tasks(self) -> None:
+async def test_run_concurrent_tasks(self, task_id: Any = None) -> None:
         """Test running multiple async tasks concurrently"""
 
-        async def test_task(self) -> None:
+async def test_task(self, task_id: Any = None) -> None:
             await asyncio.sleep(0.01)
             return f"task_{task_id}_completed"
 
@@ -186,10 +186,10 @@ class TestConcurrentTasks:
 
     @pytest.mark.asyncio
     @pytest.mark.concurrent_tasks
-    async def test_concurrent_tasks_with_semaphore(self) -> None:
+async def test_concurrent_tasks_with_semaphore(self, task_id: Any = None) -> None:
         """Test concurrent tasks with semaphore limiting"""
 
-        async def limited_task(self) -> None:
+async def limited_task(self, task_id: Any = None) -> None:
             await asyncio.sleep(0.01)
             return f"limited_task_{task_id}"
 
@@ -339,13 +339,13 @@ class TestAsyncDebuggingIntegration:
     @pytest.mark.asyncio
     @pytest.mark.async_debug
     @pytest.mark.race_condition
-    async def test_comprehensive_async_debugging(self) -> None:
+async def test_comprehensive_async_debugging(self, task_id: Any = None, task_id: Any = None, task_id: Any = None, task_id: Any = None, task_id: Any = None) -> None:
         """Comprehensive test of async debugging capabilities"""
         # Test async-safe data structures
         counter = AsyncSafeCounter()
         safe_dict = AsyncSafeDict()
 
-        async def complex_operation(self) -> None:
+async def complex_operation(self, task_id: Any = None, task_id: Any = None, task_id: Any = None, task_id: Any = None, task_id: Any = None) -> None:
             async with AsyncDebugContext(f"complex_operation_{task_id}"):
                 # Increment counter
                 await counter.increment()
@@ -421,7 +421,7 @@ async def async_debug_cleanup(self) -> None:
 
 if __name__ == "__main__":
     # Example of running async debugging tests
-    async def run_example_tests(self) -> None:
+async def run_example_tests(self, task_id: Any = None) -> None:
         print("Running Async Debugging Test Examples")
 
         # Test async-safe counter
@@ -442,7 +442,7 @@ if __name__ == "__main__":
         print("\n2. Testing race condition detection...")
         detector = get_race_detector()
 
-        async def access_shared_state(self) -> None:
+async def access_shared_state(self, task_id: Any = None) -> None:
             await detector.track_shared_state_access(
                 "test_state", f"operation_{task_id}"
             )

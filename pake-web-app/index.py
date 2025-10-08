@@ -1,6 +1,9 @@
-request
-data
+from typing import Any
+from fastapi import Request
+# TODO: Remove orphaned identifier - request
+# TODO: Remove orphaned identifier - data
 from typing import List
+
 #!/usr/bin/env python3
 """PAKE System - Vercel API Entry Point
 Simplified FastAPI application for Vercel deployment.
@@ -44,7 +47,7 @@ class SystemInfo(BaseModel):
     name: str
     version: str
     description: str
-    features: List[str]
+    features: list[str]
 
 
 # Routes
@@ -146,7 +149,9 @@ async def system_info(self) -> None:
 
 
 @app.get("/api/v1/search")
-async def search_knowledge(self) -> None:
+async def search_knowledge(
+    self, query: Any = None, limit: Any = None, query: Any = None
+) -> None:
     """Knowledge search endpoint."""
     results = [
         {
@@ -168,7 +173,7 @@ async def search_knowledge(self) -> None:
 
 
 @app.post("/api/v1/analyze")
-async def analyze_content(self) -> None:
+async def analyze_content(self, data: Any = None) -> None:
     """AI content analysis endpoint."""
     content = data.get("content", "")
 
@@ -239,5 +244,5 @@ async def internal_error_handler(self) -> None:
 
 
 # Vercel handler
-def handler(self) -> None:
+def handler(self, request: Request, request: Request, request: Request) -> None:
     return app(request.scope, request.receive, request.send)

@@ -1,5 +1,5 @@
-from typing import List
-from typing import Dict
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 PAKE+ Syntax Validation Script
@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 class SyntaxValidator:
     """Validates syntax across Python and JavaScript files"""
 
-    def __init__(self) -> None:
+def __init__(self, base_path: Any = None) -> None:
         self.base_path = Path(base_path)
-        self.errors: list[Dict[str, Any]] = []
+        self.errors: list[dict[str, Any]] = []
 
         # Pattern definitions based on monorepo issues we found
         self.python_patterns = {
@@ -67,7 +67,7 @@ class SyntaxValidator:
             },
         }
 
-    def validate_file(self, file_path: Path) -> list[Dict[str, Any]]:
+    def validate_file(self, file_path: Path) -> list[dict[str, Any]]:
         """Validate a single file for syntax issues"""
         file_errors = []
 
@@ -138,7 +138,7 @@ class SyntaxValidator:
 
         return "\n".join(context)
 
-    def validate_directory(self, extensions: List[str] = None) -> None:
+    def validate_directory(self, extensions: list[str] = None) -> None:
         """Validate all files in directory tree"""
         if extensions is None:
             extensions = [".py", ".js", ".ts"]

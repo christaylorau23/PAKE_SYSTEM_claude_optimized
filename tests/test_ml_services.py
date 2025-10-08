@@ -58,7 +58,7 @@ class TestMLServices:
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
     @patch("src.services.ml.semantic_search_service.SemanticSearchService")
-    def test_semantic_search_service_creation(self) -> None:
+def test_semantic_search_service_creation(self, mock_service: Any = None) -> None:
         """Test semantic search service creation"""
         # Mock the service creation
         mock_instance = Mock()
@@ -70,7 +70,7 @@ class TestMLServices:
 
     @pytest.mark.skipif(not ML_SERVICES_AVAILABLE, reason="ML services not available")
     @patch("src.services.ml.content_summarization_service.ContentSummarizationService")
-    def test_content_summarization_service_creation(self) -> None:
+def test_content_summarization_service_creation(self, mock_service: Any = None) -> None:
         """Test content summarization service creation"""
         # Mock the service creation
         mock_instance = Mock()
@@ -84,7 +84,7 @@ class TestMLServices:
     @patch(
         "src.services.ml.analytics_aggregation_service.MLAnalyticsAggregationService"
     )
-    def test_ml_analytics_service_creation(self) -> None:
+def test_ml_analytics_service_creation(self, mock_service: Any = None) -> None:
         """Test ML analytics service creation"""
         # Mock the service creation
         mock_instance = Mock()
@@ -164,7 +164,7 @@ class MockSemanticSearchService:
     def __init__(self) -> None:
         self.initialized = False
 
-    async def search(self) -> None:
+async def search(self, query: Any = None) -> None:
         """Mock search functionality"""
         return [{"text": f"Mock result for: {query}", "score": 0.9}]
 
@@ -175,7 +175,7 @@ class MockContentSummarizationService:
     def __init__(self) -> None:
         self.initialized = False
 
-    async def summarize(self) -> None:
+async def summarize(self, content: Any = None) -> None:
         """Mock summarization functionality"""
         return f"Mock summary of content (length: {len(content)})"
 
@@ -186,7 +186,7 @@ class MockMLAnalyticsService:
     def __init__(self) -> None:
         self.initialized = False
 
-    async def analyze(self) -> None:
+async def analyze(self, data: Any = None, data: Any = None) -> None:
         """Mock analytics functionality"""
         return {"status": "analyzed", "data_points": len(data) if data else 0}
 

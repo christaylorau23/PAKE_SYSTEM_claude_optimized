@@ -1,0 +1,79 @@
+# SonarQube Exporter Configuration for PAKE System
+# This configuration enables Prometheus to scrape SonarQube metrics
+# for the Unified Quality Dashboard
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+
+scrape_configs:
+  # SonarQube Metrics Exporter
+  - job_name: 'sonarqube'
+    static_configs:
+      - targets: ['sonarqube-exporter:9300']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    params:
+      sonar_url: ['http://sonarqube:9000']
+      sonar_token: ['${SONAR_TOKEN}']
+      sonar_project_key: ['pake-system']
+
+  # SonarQube API Direct Metrics (if exporter not available)
+  - job_name: 'sonarqube-api'
+    static_configs:
+      - targets: ['sonarqube:9000']
+    metrics_path: '/api/metrics'
+    scrape_interval: 60s
+    scrape_timeout: 15s
+    basic_auth:
+      username: '${SONAR_USERNAME}'
+      password: '${SONAR_TOKEN}'
+
+  # PAKE System Application Metrics
+  - job_name: 'pake-api'
+    static_configs:
+      - targets: ['pake-api:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # PAKE Bridge Metrics
+  - job_name: 'pake-bridge'
+    static_configs:
+      - targets: ['pake-bridge:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # GitHub Actions Metrics (via webhook)
+  - job_name: 'github-actions'
+    static_configs:
+      - targets: ['github-actions-exporter:9100']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Jira Metrics (via webhook)
+  - job_name: 'jira'
+    static_configs:
+      - targets: ['jira-exporter:9200']
+    metrics_path: '/metrics'
+    scrape_interval: 60s
+    scrape_timeout: 15s
+
+# Alert Rules for Quality Gates
+rule_files:
+  - '/etc/prometheus/rules/quality-gates.yml'
+  - '/etc/prometheus/rules/security-alerts.yml'
+  - '/etc/prometheus/rules/performance-alerts.yml'
+
+# Alertmanager Configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093

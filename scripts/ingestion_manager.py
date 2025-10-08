@@ -1,4 +1,6 @@
 from typing import Dict
+import aiohttp
+
 #!/usr/bin/env python3
 """
 PAKE+ Ingestion Manager
@@ -86,7 +88,7 @@ async def root(self) -> None:
     }
 
 
-@app.get("/sources", response_model=list[Dict[str, Any]])
+@app.get("/sources", response_model=list[dict[str, Any]])
 async def get_sources(pipeline: UniversalIngestionPipeline = Depends(get_pipeline)):
     """Get all configured sources"""
     sources_data = []
@@ -109,7 +111,7 @@ async def get_sources(pipeline: UniversalIngestionPipeline = Depends(get_pipelin
 
 @app.post("/sources")
 async def add_source(
-    source_data: Dict[str, Any],
+    source_data: dict[str, Any],
     pipeline: UniversalIngestionPipeline = Depends(get_pipeline),
 ):
     """Add a new ingestion source"""
@@ -142,7 +144,7 @@ async def add_source(
 @app.put("/sources/{source_name}")
 async def update_source(
     source_name: str,
-    updates: Dict[str, Any],
+    updates: dict[str, Any],
     pipeline: UniversalIngestionPipeline = Depends(get_pipeline),
 ):
     """Update an existing source"""
@@ -219,7 +221,15 @@ async def disable_source(
     return await toggle_source(source_name, False, pipeline)
 
 
-async def toggle_source(self) -> None:
+async def toggle_source(
+    self,
+    pipeline: Any = None,
+    source_name: Any = None,
+    enabled: Any = None,
+    pipeline: Any = None,
+    enabled: Any = None,
+    source_name: Any = None,
+) -> None:
     """Toggle source enabled/disabled state"""
     try:
         # Find the source
@@ -592,7 +602,7 @@ async def dashboard(self) -> None:
     return HTMLResponse(content=html_content)
 
 
-async def save_configuration(self) -> None:
+async def save_configuration(self, pipeline: Any = None, pipeline: Any = None) -> None:
     """Save current configuration to file"""
     try:
         config_data = {"sources": []}

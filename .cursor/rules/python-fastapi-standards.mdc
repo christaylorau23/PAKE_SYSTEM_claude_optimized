@@ -1,0 +1,407 @@
+---
+description: "Enforces PAKE System Python and FastAPI best practices for high-performance, scalable, and maintainable code. Covers async patterns, type safety, Pydantic validation, datetime handling, logging, and critical anti-pattern prevention (F821, naive datetime, pseudo-random crypto)."
+globs: ["**/*.py"]
+alwaysApply: false
+---
+
+# Python & FastAPI Standards for PAKE System
+
+You are an expert in Python 3.12, FastAPI, async programming, and enterprise-grade API development. Your responses MUST be technically precise and adhere strictly to these standards.
+
+## 1. Type Safety & Data Validation (CRITICAL)
+
+### Type Hints
+**MUST**: Use Python type hints for ALL function parameters and return values.
+
+```python
+# ✅ CORRECT
+async def process_data(user_id: str, config: dict[str, Any]) -> ProcessingResult:
+    ...
+
+# ❌ WRONG - Missing type hints
+async def process_data(user_id, config):
+    ...
+```
+
+**RATIONALE**: Type hints enable static analysis with mypy, improve IDE support, and serve as executable documentation. The PAKE System has strict mypy configuration that will fail builds without proper typing.
+
+### Pydantic V2 Models
+**MUST**: Use Pydantic V2 `BaseModel` for ALL request/response validation and data contracts.
+
+**NEVER**: Use raw dictionaries for API contracts or data validation.
+
+```python
+# ✅ CORRECT - Pydantic model
+from pydantic import BaseModel, EmailStr, Field
+
+class UserCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    email: EmailStr
+    age: int = Field(..., ge=18, le=120)
+
+@app.post("/users/", response_model=UserRead)
+async def create_user(user: UserCreate) -> UserRead:
+    ...
+
+# ❌ WRONG - Raw dictionary
+@app.post("/users/")
+async def create_user(user_data: dict):
+    name = user_data.get("name")  # No validation!
+    ...
+```
+
+**RATIONALE**: Pydantic provides automatic validation, serialization, and OpenAPI documentation generation. It prevents runtime errors and is a core FastAPI feature.
+
+## 2. Async Programming Patterns (PERFORMANCE CRITICAL)
+
+### Async/Await Usage
+**MUST**: Use `async def` for ALL path operations that perform I/O (database calls, external APIs, file operations, Redis operations).
+
+**MUST**: Use `def` (synchronous) ONLY for CPU-bound, pure computation tasks.
+
+**NEVER**: Perform blocking I/O in async functions.
+
+```python
+# ✅ CORRECT - Async for I/O
+@app.get("/users/{user_id}")
+async def get_user(user_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    return user
+
+# ❌ WRONG - Sync I/O in async function
+@app.get("/users/{user_id}")
+async def get_user(user_id: str):
+    import requests
+    response = requests.get(f"http://api.example.com/users/{user_id}")  # BLOCKS!
+    return response.json()
+```
+
+**RATIONALE**: FastAPI is built on async/await. Blocking operations in async functions destroy performance and prevent handling high concurrency. PAKE's core principle: "Performance is a Feature."
+
+### Async Context Managers
+**MUST**: Use async context managers for resource management in async code.
+
+```python
+# ✅ CORRECT
+async with httpx.AsyncClient() as client:
+    response = await client.get(url)
+
+# ❌ WRONG
+client = httpx.Client()  # Sync client in async context
+```
+
+## 3. DateTime Handling (F821 & Security Critical)
+
+### UTC-Only Policy
+**MUST**: ALWAYS use `datetime.now(UTC)` from Python 3.11+ or `datetime.now(timezone.utc)`.
+
+**NEVER**: Use naive datetime objects or `datetime.utcnow()` (deprecated).
+
+```python
+# ✅ CORRECT - Timezone-aware UTC
+from datetime import UTC, datetime
+
+timestamp = datetime.now(UTC)
+created_at = datetime.now(UTC)
+
+# ❌ WRONG - Naive datetime (will cause F821-like bugs)
+from datetime import datetime
+timestamp = datetime.now()  # Naive - no timezone info!
+
+# ❌ WRONG - Deprecated method
+timestamp = datetime.utcnow()  # Deprecated in Python 3.12
+```
+
+**RATIONALE**: Naive datetime objects cause subtle bugs in distributed systems. The PAKE System's Ruff configuration (DTZ005) explicitly forbids `datetime.utcnow()`. This prevents timezone-related data corruption.
+
+## 4. Logging Standards (Structured Logging)
+
+### Structlog Usage
+**MUST**: Use structlog for ALL logging with structured context.
+
+**NEVER**: Use f-strings in log messages (Ruff G004 violation).
+
+**NEVER**: Use `print()` statements (use logger instead).
+
+```python
+# ✅ CORRECT - Structured logging
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+async def process_request(user_id: str, request_id: str):
+    logger.info(
+        "processing_request_started",
+        user_id=user_id,
+        request_id=request_id,
+        service="ingestion"
+    )
+    try:
+        result = await perform_operation()
+        logger.info("processing_request_completed", result_count=len(result))
+        return result
+    except Exception as e:
+        logger.error("processing_request_failed", error=str(e), exc_info=True)
+        raise
+
+# ❌ WRONG - f-strings in logging
+logger.info(f"Processing request for user {user_id}")  # Ruff G004 violation
+
+# ❌ WRONG - print statements
+print(f"User {user_id} processed")  # Not production-ready
+```
+
+**RATIONALE**: Structured logs enable log aggregation, parsing, and querying in production monitoring systems (Prometheus, Grafana). f-strings in logs prevent proper structured parsing.
+
+## 5. Error Handling (Exception Hierarchy)
+
+### Custom Exceptions
+**MUST**: Use the custom exception hierarchy from @src/utils/exceptions.py.
+
+**MUST**: Include context in exceptions for debugging.
+
+```python
+# ✅ CORRECT - Custom exceptions
+from src.utils.exceptions import (
+    ServiceException,
+    ValidationException,
+    ErrorCategory,
+    ErrorSeverity
+)
+
+async def fetch_user(user_id: str) -> User:
+    if not user_id:
+        raise ValidationException(
+            message="User ID cannot be empty",
+            category=ErrorCategory.VALIDATION,
+            severity=ErrorSeverity.MEDIUM,
+            context={"user_id": user_id, "function": "fetch_user"}
+        )
+
+    try:
+        user = await db.get(user_id)
+        if not user:
+            raise ServiceException(
+                message=f"User not found: {user_id}",
+                category=ErrorCategory.DATABASE,
+                context={"user_id": user_id}
+            )
+        return user
+    except DatabaseError as e:
+        raise ServiceException(
+            message="Database operation failed",
+            category=ErrorCategory.DATABASE,
+            severity=ErrorSeverity.HIGH,
+            original_exception=e
+        )
+
+# ❌ WRONG - Generic exceptions
+if not user_id:
+    raise ValueError("User ID is required")  # No context!
+```
+
+**RATIONALE**: The custom exception hierarchy provides structured error information for monitoring, logging, and API responses. It enables better debugging and error tracking in production.
+
+## 6. Code Structure & Readability
+
+### Guard Clauses (Early Returns)
+**MUST**: Use guard clauses for error handling and validation at the beginning of functions. The "happy path" MUST be the least indented code path.
+
+**AVOID**: Deeply nested if/else statements.
+
+```python
+# ✅ CORRECT - Guard clauses
+async def process_user_data(user_id: str, data: dict[str, Any]) -> ProcessingResult:
+    # Guard clauses - fail fast
+    if not user_id:
+        raise ValidationException("User ID required")
+
+    if not data:
+        raise ValidationException("Data cannot be empty")
+
+    user = await get_user(user_id)
+    if not user:
+        raise NotFoundException(f"User {user_id} not found")
+
+    # Happy path - least indented
+    validated_data = validate_schema(data)
+    result = await process_data(validated_data)
+    await save_result(result)
+    return result
+
+# ❌ WRONG - Nested conditions
+async def process_user_data(user_id: str, data: dict[str, Any]) -> ProcessingResult:
+    if user_id:
+        if data:
+            user = await get_user(user_id)
+            if user:
+                validated_data = validate_schema(data)
+                result = await process_data(validated_data)  # Too nested!
+                return result
+```
+
+**RATIONALE**: Guard clauses improve readability, reduce cyclomatic complexity, and make the code's intent immediately clear. This aligns with clean code principles.
+
+### Project Organization
+**MUST**: Organize FastAPI endpoints using `APIRouter` in logical modules.
+
+**AVOID**: Monolithic `main.py` files.
+
+```python
+# ✅ CORRECT - Modular routers
+# src/api/routers/users.py
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+@router.get("/{user_id}")
+async def get_user(user_id: str):
+    ...
+
+# src/main.py
+from src.api.routers import users
+
+app = FastAPI()
+app.include_router(users.router)
+```
+
+## 7. Dependency Injection
+
+### FastAPI Dependencies
+**MUST**: Use FastAPI's `Depends` for shared logic (database sessions, authentication, caching).
+
+**NEVER**: Create global database connection objects or manage sessions manually in path operations.
+
+```python
+# ✅ CORRECT - Dependency injection
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def get_db() -> AsyncSession:
+    async with SessionLocal() as session:
+        yield session
+
+@app.post("/users/")
+async def create_user(
+    user: UserCreate,
+    db: AsyncSession = Depends(get_db)
+) -> UserRead:
+    new_user = User(**user.model_dump())
+    db.add(new_user)
+    await db.commit()
+    return new_user
+
+# ❌ WRONG - Global connection
+db_connection = create_db_connection()  # Global state!
+
+@app.post("/users/")
+async def create_user(user: UserCreate):
+    db_connection.execute(...)  # Not testable, no lifecycle management
+```
+
+**RATIONALE**: Dependency injection promotes testability, reusability, and proper resource management. It's a core FastAPI pattern that ensures clean architecture.
+
+## 8. Critical Anti-Patterns to AVOID
+
+### F821 Prevention (Undefined Names)
+**MUST**: Import ALL symbols before use. Never assume implicit imports.
+
+```python
+# ✅ CORRECT - Explicit imports
+from datetime import UTC, datetime
+from typing import Any, Dict, List
+from src.utils.exceptions import ServiceException
+
+timestamp = datetime.now(UTC)
+
+# ❌ WRONG - Undefined names (F821 error)
+timestamp = datetime.now(UTC)  # datetime not imported!
+```
+
+### Pseudo-Random in Cryptography
+**NEVER**: Use `random` module for security-sensitive operations.
+
+**MUST**: Use `secrets` module for cryptographic operations.
+
+```python
+# ✅ CORRECT - Cryptographically secure
+import secrets
+
+token = secrets.token_urlsafe(32)
+session_id = secrets.token_hex(16)
+
+# ❌ WRONG - Insecure pseudo-random
+import random
+token = ''.join(random.choices(string.ascii_letters, k=32))  # NOT SECURE!
+```
+
+### Hard-Coded Secrets
+**NEVER**: Hard-code secrets, API keys, or passwords.
+
+**MUST**: Use HashiCorp Vault via @src/pake_system/core/vault_client.py.
+
+```python
+# ✅ CORRECT - Vault integration
+from src.pake_system.core.vault_client import get_secret
+
+api_key = await get_secret("external_api/key")
+
+# ❌ WRONG - Hard-coded secret
+API_KEY = "sk_test_abc123..."  # Security violation!
+```
+
+## 9. Status Codes & HTTP Standards
+
+**MUST**: Use appropriate HTTP status codes and FastAPI's `status` module.
+
+```python
+from fastapi import status
+
+@app.post("/users/", status_code=status.HTTP_201_CREATED)
+async def create_user(user: UserCreate) -> UserRead:
+    ...
+
+@app.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(user_id: str):
+    ...
+```
+
+## 10. Performance Optimization
+
+**MUST**: Use connection pooling for database connections.
+
+**MUST**: Implement caching for expensive operations using @src/services/caching/.
+
+**MUST**: Use async operations for all I/O to maximize concurrency.
+
+**AVOID**: N+1 query problems - use eager loading or batch operations.
+
+```python
+# ✅ CORRECT - Eager loading
+result = await db.execute(
+    select(User).options(selectinload(User.posts))
+)
+
+# ❌ WRONG - N+1 queries
+users = await db.execute(select(User))
+for user in users:
+    posts = await db.execute(select(Post).where(Post.user_id == user.id))  # N+1!
+```
+
+## Summary: Non-Negotiable Requirements
+
+| Requirement | Directive | Rationale |
+|------------|-----------|-----------|
+| Type Hints | MUST use for all functions | Enables static analysis, prevents bugs |
+| Pydantic | MUST use for validation | Automatic validation, docs generation |
+| Async I/O | MUST use `async def` for I/O | Performance, concurrency |
+| UTC DateTime | MUST use `datetime.now(UTC)` | Prevents timezone bugs |
+| Structlog | MUST use structured logging | Production monitoring, parsing |
+| Custom Exceptions | MUST use from @src/utils/exceptions.py | Structured error handling |
+| Guard Clauses | MUST use early returns | Readability, reduced complexity |
+| Dependency Injection | MUST use FastAPI `Depends` | Testability, resource management |
+| No F821 | MUST import all symbols | Code correctness |
+| Secrets Module | MUST use for crypto | Security |
+
+**REMEMBER**: Check @src/utils/ and @src/services/base/ before creating new utilities!

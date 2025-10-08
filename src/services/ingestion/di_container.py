@@ -4,10 +4,9 @@ Manages dependencies and breaks circular imports through proper injection.
 """
 
 import logging
-from typing import Any, Dict, TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, TypeVar
 
-if TYPE_CHECKING:
-    from .IngestionOrchestratorRefactored import IngestionOrchestratorRefactored
+from .IngestionOrchestratorRefactored import IngestionOrchestratorRefactored
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +17,8 @@ class DIContainer:
     """Simple dependency injection container."""
 
     def __init__(self) -> None:
-        self._services: Dict[str, Any] = {}
-        self._singletons: Dict[str, Any] = {}
+        self._services: dict[str, Any] = {}
+        self._singletons: dict[str, Any] = {}
 
     def register_singleton(self, interface: type[T], implementation: type[T]) -> None:
         """Register a singleton implementation for an interface."""

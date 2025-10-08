@@ -1,3 +1,6 @@
+import aiohttp
+import pydantic
+
 #!/usr/bin/env python3
 """PAKE System - Standalone Server
 Simplified server without database dependencies for immediate use.
@@ -661,7 +664,9 @@ async def get_knowledge_graph() -> None:
 
 
 @app.get("/analytics/enhanced-dashboard")
-async def get_enhanced_dashboard(metric_types: str = "all", time_range: str = "24h") -> None:
+async def get_enhanced_dashboard(
+    metric_types: str = "all", time_range: str = "24h"
+) -> None:
     """Get comprehensive analytics data for enhanced visualization dashboard."""
     try:
         viz_service = VisualizationAnalyticsService()
@@ -687,7 +692,9 @@ async def get_enhanced_dashboard(metric_types: str = "all", time_range: str = "2
 
 
 @app.get("/analytics/time-series")
-async def get_time_series_data(metric: str, time_range: str = "24h", granularity: str = "hour") -> None:
+async def get_time_series_data(
+    metric: str, time_range: str = "24h", granularity: str = "hour"
+) -> None:
     """Get time series data for specific metrics."""
     try:
         viz_service = VisualizationAnalyticsService()
@@ -787,7 +794,11 @@ async def get_real_time_activity() -> None:
 
 
 @app.get("/analytics/comprehensive-report")
-async def get_comprehensive_analytics_report(time_range: str = "24h", include_predictions: bool = True, include_recommendations: bool = True) -> None:
+async def get_comprehensive_analytics_report(
+    time_range: str = "24h",
+    include_predictions: bool = True,
+    include_recommendations: bool = True,
+) -> None:
     """Get comprehensive analytics report with insights and recommendations."""
     if not ADVANCED_ANALYTICS_AVAILABLE:
         raise HTTPException(status_code=503, detail="Advanced analytics not available")
@@ -836,7 +847,9 @@ async def get_system_health_analysis(time_range: str = "24h") -> None:
 
 
 @app.get("/analytics/insights")
-async def get_analytics_insights(time_range: str = "24h", priority: str = "all") -> None:
+async def get_analytics_insights(
+    time_range: str = "24h", priority: str = "all"
+) -> None:
     """Get analytics insights filtered by priority."""
     if not ADVANCED_ANALYTICS_AVAILABLE:
         raise HTTPException(status_code=503, detail="Advanced analytics not available")
@@ -1072,7 +1085,6 @@ async def search_entities(q: str, entity_types: str = None, limit: int = 50) -> 
                 type_strings = [t.strip() for t in entity_types.split(",")]
                 type_filter = [EntityType(t) for t in type_strings if t]
             except ValueError as e:
-
                 logger.debug(f"Exception in mcp_server_standalone.py: {e}")
 
                 # Continue gracefully  # Invalid types will be ignored
@@ -1094,7 +1106,9 @@ async def search_entities(q: str, entity_types: str = None, limit: int = 50) -> 
 
 
 @app.get("/graph/visualize")
-async def get_graph_visualization(center_entity_id: str = None, max_nodes: int = 100) -> None:
+async def get_graph_visualization(
+    center_entity_id: str = None, max_nodes: int = 100
+) -> None:
     """Get knowledge graph visualization data."""
     try:
         from src.services.graph.knowledge_graph_service import (

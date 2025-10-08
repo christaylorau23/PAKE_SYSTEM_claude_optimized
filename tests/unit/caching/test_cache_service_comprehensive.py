@@ -48,7 +48,7 @@ class TestCacheServiceComprehensive:
         return mock_cache
 
     @pytest.fixture
-    def cache_service(self) -> None:
+def cache_service(self, mock_redis: Any = None, mock_memory_cache: Any = None, mock_redis: Any = None, mock_memory_cache: Any = None) -> None:
         """Create CacheService instance with mocked dependencies"""
         with (
             patch("src.services.caching.cache_service.RedisCache") as mock_redis_class,

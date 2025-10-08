@@ -34,13 +34,15 @@ from src.utils.synchronization_primitives import (
 class TestAsyncLockManager:
     """Test cases for AsyncLockManager"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def lock_manager(self) -> AsyncLockManager:
         """Create AsyncLockManager instance for testing"""
         return AsyncLockManager(enable_deadlock_detection=True)
 
-    @pytest.mark.asyncio
-    async def test_lock_acquisition_and_release(self, lock_manager: AsyncLockManager) -> None:
+    @pytest.mark.asyncio()
+    async def test_lock_acquisition_and_release(
+        self, lock_manager: AsyncLockManager
+    ) -> None:
         """Test basic lock acquisition and release"""
         lock_name = "test_lock"
 
@@ -52,11 +54,13 @@ class TestAsyncLockManager:
         released = await lock_manager.release_lock(lock_name)
         assert released is True
 
-    @pytest.mark.asyncio
-    async def test_concurrent_lock_acquisition(self, lock_manager: AsyncLockManager) -> None:
+    @pytest.mark.asyncio()
+    async def test_concurrent_lock_acquisition(
+        self, lock_manager: AsyncLockManager
+    ) -> None:
         """Test concurrent lock acquisition"""
         lock_name = "concurrent_test_lock"
-        results: List[str] = []
+        results: list[str] = []
 
         async def acquire_lock_task(task_id: int) -> None:
             acquired = await lock_manager.acquire_lock(lock_name, timeout=1.0)
@@ -75,7 +79,7 @@ class TestAsyncLockManager:
         assert len(results) == 5
         assert all("acquired" in result for result in results)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_lock_timeout(self, lock_manager: AsyncLockManager) -> None:
         """Test lock acquisition timeout"""
         lock_name = "timeout_test_lock"
@@ -91,7 +95,7 @@ class TestAsyncLockManager:
         # Release first lock
         await lock_manager.release_lock(lock_name)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_deadlock_detection(self, lock_manager: AsyncLockManager) -> None:
         """Test deadlock detection"""
         lock1 = "deadlock_lock1"
@@ -114,7 +118,7 @@ class TestAsyncLockManager:
         # At least one should fail due to deadlock detection or timeout
         assert any(result is False for result in results)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_lock_metrics(self, lock_manager: AsyncLockManager) -> None:
         """Test lock performance metrics"""
         lock_name = "metrics_test_lock"
@@ -132,7 +136,7 @@ class TestAsyncLockManager:
         assert metrics.total_wait_time >= 0
         assert metrics.average_wait_time >= 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_lock_context_manager(self, lock_manager: AsyncLockManager) -> None:
         """Test lock context manager"""
         lock_name = "context_test_lock"
@@ -147,7 +151,7 @@ class TestAsyncLockManager:
 class TestThreadSafeCounter:
     """Test cases for ThreadSafeCounter"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def counter(self) -> ThreadSafeCounter:
         """Create ThreadSafeCounter instance for testing"""
         return ThreadSafeCounter()
@@ -166,7 +170,7 @@ class TestThreadSafeCounter:
 
     def test_concurrent_operations(self, counter: ThreadSafeCounter) -> None:
         """Test concurrent counter operations"""
-        results: List[int] = []
+        results: list[int] = []
 
         def increment_task(value: int) -> None:
             result = counter.increment(value)
@@ -221,12 +225,12 @@ class TestThreadSafeCounter:
 class TestAsyncSafeDict:
     """Test cases for AsyncSafeDict"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def safe_dict(self) -> AsyncSafeDict:
         """Create AsyncSafeDict instance for testing"""
         return AsyncSafeDict()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_basic_operations(self, safe_dict: AsyncSafeDict) -> None:
         """Test basic dictionary operations"""
         # Test set and get
@@ -246,11 +250,11 @@ class TestAsyncSafeDict:
         size = await safe_dict.size()
         assert size == 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_concurrent_operations(self, safe_dict: AsyncSafeDict) -> None:
         """Test concurrent dictionary operations"""
 
-        async def set_task(key: str, value: str) -> Optional[str]:
+        async def set_task(key: str, value: str) -> str | None:
             await safe_dict.set(key, value)
             return await safe_dict.get(key)
 
@@ -266,7 +270,7 @@ class TestAsyncSafeDict:
         size = await safe_dict.size()
         assert size == 10
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_keys_values_items(self, safe_dict: AsyncSafeDict) -> None:
         """Test keys, values, and items operations"""
         # Add some data
@@ -288,7 +292,7 @@ class TestAsyncSafeDict:
         assert len(items) == 5
         assert all((f"key_{i}", f"value_{i}") in items for i in range(5))
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_metrics_tracking(self, safe_dict: AsyncSafeDict) -> None:
         """Test metrics tracking"""
         # Perform some operations
@@ -304,12 +308,12 @@ class TestAsyncSafeDict:
 class TestAsyncSafeQueue:
     """Test cases for AsyncSafeQueue"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def safe_queue(self) -> AsyncSafeQueue:
         """Create AsyncSafeQueue instance for testing"""
         return AsyncSafeQueue(maxsize=10)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_basic_queue_operations(self, safe_queue: AsyncSafeQueue) -> None:
         """Test basic queue operations"""
         # Test put and get
@@ -321,8 +325,10 @@ class TestAsyncSafeQueue:
         size = await safe_queue.size()
         assert size == 0
 
-    @pytest.mark.asyncio
-    async def test_concurrent_queue_operations(self, safe_queue: AsyncSafeQueue) -> None:
+    @pytest.mark.asyncio()
+    async def test_concurrent_queue_operations(
+        self, safe_queue: AsyncSafeQueue
+    ) -> None:
         """Test concurrent queue operations"""
 
         async def producer(item: str) -> str:
@@ -345,7 +351,7 @@ class TestAsyncSafeQueue:
         assert all("produced" in result for result in producer_results)
         assert all("consumed" in result for result in consumer_results)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_priority_queue(self, safe_queue: AsyncSafeQueue) -> None:
         """Test priority queue functionality"""
         # Enable priority mode
@@ -369,7 +375,7 @@ class TestAsyncSafeQueue:
 class TestSynchronizationMonitor:
     """Test cases for SynchronizationMonitor"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def monitor(self) -> SynchronizationMonitor:
         """Create SynchronizationMonitor instance for testing"""
         return SynchronizationMonitor()
@@ -413,7 +419,7 @@ class TestSynchronizationMonitor:
 class TestSynchronizationTestHelper:
     """Test cases for SynchronizationTestHelper"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_race_condition_protection(self) -> None:
         """Test race condition protection analysis"""
         counter = AsyncSafeCounter()
@@ -428,12 +434,12 @@ class TestSynchronizationTestHelper:
         assert result["total_results"] == 50  # 5 concurrent * 10 iterations
         assert result["race_condition_detected"] is False  # Should be protected
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_performance_benchmark(self) -> None:
         """Test performance benchmarking"""
         safe_dict = AsyncSafeDict()
 
-        async def dict_operation() -> Optional[str]:
+        async def dict_operation() -> str | None:
             await safe_dict.set("test_key", "test_value")
             return await safe_dict.get("test_key")
 
@@ -451,7 +457,7 @@ class TestSynchronizationTestHelper:
 class TestContextManagers:
     """Test cases for context managers"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_async_lock_context(self) -> None:
         """Test async lock context manager"""
         lock_manager = AsyncLockManager()
@@ -477,7 +483,7 @@ class TestContextManagers:
 class TestIntegrationScenarios:
     """Integration test scenarios"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_comprehensive_synchronization_scenario(self) -> None:
         """Test comprehensive synchronization scenario"""
         # Create components
@@ -529,7 +535,7 @@ class TestIntegrationScenarios:
         metrics = monitor.get_system_metrics()
         assert metrics["summary"]["total_acquisitions"] > 0
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_race_condition_prevention(self) -> None:
         """Test that synchronization primitives prevent race conditions"""
         # Test unsafe counter (should show race condition)
@@ -568,26 +574,26 @@ class TestIntegrationScenarios:
 
 
 # Pytest fixtures for integration with existing test suite
-@pytest.fixture
+@pytest.fixture()
 async def async_lock_manager() -> AsyncLockManager:
     """Fixture providing AsyncLockManager"""
     return AsyncLockManager()
     # Cleanup if needed
 
 
-@pytest.fixture
+@pytest.fixture()
 def thread_safe_counter() -> ThreadSafeCounter:
     """Fixture providing ThreadSafeCounter"""
     return ThreadSafeCounter()
 
 
-@pytest.fixture
+@pytest.fixture()
 async def async_safe_dict() -> AsyncSafeDict:
     """Fixture providing AsyncSafeDict"""
     return AsyncSafeDict()
 
 
-@pytest.fixture
+@pytest.fixture()
 async def async_safe_queue() -> AsyncSafeQueue:
     """Fixture providing AsyncSafeQueue"""
     return AsyncSafeQueue()

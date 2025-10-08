@@ -18,37 +18,44 @@ from src.security.tenant_isolation_enforcer import enforce_tenant_isolation
 
 logger = logging.getLogger(__name__)
 
+
 # Mock dependencies for TDD (will be injected from main server)
 def get_dal() -> Any:
     """Get data access layer instance."""
     return None  # Will be injected from main server
 
+
 def get_tenant_orchestrator(tenant_id: str) -> Any:
     """Get tenant orchestrator instance."""
     return None  # Will be injected from main server
+
 
 def get_semantic_search_service() -> Any:
     """Get semantic search service instance."""
     return None  # Will be injected from main server
 
+
 def get_content_summarization_service() -> Any:
     """Get content summarization service instance."""
     return None  # Will be injected from main server
+
 
 def get_security_enforcer() -> Any:
     """Get security enforcer instance."""
     return None  # Will be injected from main server
 
+
 # Mock metrics for TDD (will be replaced with real metrics)
 class MockMetrics:
     def labels(self, **kwargs):
         return self
-    
+
     def inc(self):
         pass
-    
+
     def observe(self, value):
         pass
+
 
 SEARCH_OPERATIONS = MockMetrics()
 SEARCH_DURATION = MockMetrics()
@@ -554,7 +561,7 @@ async def process_search_results(
     request,
     tenant_id: str,
     user_id: str,
-) -> list[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Process raw search results into standardized format."""
     processed_results = []
 
@@ -599,7 +606,7 @@ async def save_search_history(
     sources: list[str],
     results_count: int,
     execution_time_ms: float,
-    results: list[Dict[str, Any]],
+    results: list[dict[str, Any]],
     dal: Any = Depends(get_dal),
 ) -> None:
     """Background task to save search history."""
@@ -633,7 +640,7 @@ async def save_search_history(
 
 
 def calculate_quality_score(
-    results: list[Dict[str, Any]],
+    results: list[dict[str, Any]],
     execution_time_ms: float,
 ) -> float:
     """Calculate search quality score based on results and performance."""
@@ -665,7 +672,7 @@ def calculate_quality_score(
         return 0.5
 
 
-async def select_optimal_sources(query: str, tenant_id: str) -> List[str]:
+async def select_optimal_sources(query: str, tenant_id: str) -> list[str]:
     """Intelligently select optimal sources based on query analysis."""
     try:
         # Default sources
@@ -736,10 +743,10 @@ class QuickSearchRequest(BaseModel):
 class SavedSearchRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     query: str = Field(..., min_length=1, max_length=500)
-    sources: List[str] = Field(default=["web"])
-    filters: Dict[str, Any] | None = Field(default=None)
+    sources: list[str] = Field(default=["web"])
+    filters: dict[str, Any] | None = Field(default=None)
     is_public: bool = Field(default=False)
-    tags: List[str] | None = Field(default=None)
+    tags: list[str] | None = Field(default=None)
 
 
 # Search metrics

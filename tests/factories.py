@@ -1,3 +1,4 @@
+from typing import Any
 """
 Test Data Factories using factory_boy
 
@@ -162,17 +163,23 @@ class TokenResponseFactory(factory.Factory):
 # ============================================================================
 
 
-def create_test_users(self) -> None:
+def create_test_users(
+    self, kwargs: Any = None, count: Any = None, **kwargs: Any
+) -> None:
     """Create a batch of test users"""
     return [UserFactory(**kwargs) for _ in range(count)]
 
 
-def create_test_search_results(self) -> None:
+def create_test_search_results(
+    self, kwargs: Any = None, count: Any = None, **kwargs: Any
+) -> None:
     """Create a batch of test search results"""
     return [SearchResultFactory(**kwargs) for _ in range(count)]
 
 
-def create_test_tenants(self) -> None:
+def create_test_tenants(
+    self, kwargs: Any = None, count: Any = None, **kwargs: Any
+) -> None:
     """Create a batch of test tenants"""
     return [TenantFactory(**kwargs) for _ in range(count)]
 

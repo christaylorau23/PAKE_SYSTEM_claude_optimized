@@ -1,5 +1,6 @@
 config
 import base64
+
 #!/usr/bin/env python3
 """PAKE System - Enterprise Security Hardening Framework
 Comprehensive security implementation following OWASP Top 10 and enterprise best practices.
@@ -133,14 +134,14 @@ class SecurityConfig(BaseModel):
     )
 
     @validator("jwt_secret_key")
-    def validate_jwt_secret(self) -> None:
+def validate_jwt_secret(self, v: Any = None, v: Any = None) -> None:
         if len(v) < 32:
             msg = "JWT secret key must be at least 32 characters"
             raise ValueError(msg)
         return v
 
     @validator("encryption_key")
-    def validate_encryption_key(self) -> None:
+def validate_encryption_key(self, v: Any = None, v: Any = None) -> None:
         if len(v) < 32:
             msg = "Encryption key must be at least 32 characters"
             raise ValueError(msg)
@@ -157,7 +158,7 @@ class SecurityHardeningFramework:
     - Incident response automation
     """
 
-    def __init__(self) -> None:
+def __init__(self, config: Any = None) -> None:
         self.config = config
         self.logger = self._setup_security_logger()
         self.security_events: list[SecurityEvent] = []
@@ -599,7 +600,7 @@ class SecurityHardeningFramework:
 
         return event
 
-    async def _send_security_alert(self) -> None:
+async def _send_security_alert(self, event: Any = None, event: Any = None) -> None:
         """Send security alert for critical events."""
         try:
             alert_data = {

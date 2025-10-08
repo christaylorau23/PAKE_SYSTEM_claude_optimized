@@ -37,7 +37,7 @@ class ServiceResult[T]:
     status: ServiceStatus
     data: T | None = None
     error: str | None = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.utcnow)
 
     def __post_init__(self) -> None:
@@ -108,7 +108,7 @@ class AbstractNotificationService(ABC):
 
     @abstractmethod
     async def send_welcome_email(
-        self, email: str, user_data: Dict[str, Any]
+        self, email: str, user_data: dict[str, Any]
     ) -> ServiceResult[bool]:
         """Send welcome email to new user."""
 
@@ -125,17 +125,17 @@ class AbstractAuthenticationService(ABC):
     @abstractmethod
     async def authenticate_user(
         self, email: str, password: str
-    ) -> ServiceResult[Dict[str, Any]]:
+    ) -> ServiceResult[dict[str, Any]]:
         """Authenticate user credentials."""
 
     @abstractmethod
     async def create_user(
-        self, user_data: Dict[str, Any]
-    ) -> ServiceResult[Dict[str, Any]]:
+        self, user_data: dict[str, Any]
+    ) -> ServiceResult[dict[str, Any]]:
         """Create new user account."""
 
     @abstractmethod
-    async def validate_token(self, token: str) -> ServiceResult[Dict[str, Any]]:
+    async def validate_token(self, token: str) -> ServiceResult[dict[str, Any]]:
         """Validate JWT token."""
 
 
@@ -164,14 +164,14 @@ class AbstractIngestionService(ABC):
 
     @abstractmethod
     async def ingest_content(
-        self, source: str, content_data: Dict[str, Any]
+        self, source: str, content_data: dict[str, Any]
     ) -> ServiceResult[str]:
         """Ingest content from external source."""
 
     @abstractmethod
     async def process_batch(
-        self, batch_data: list[Dict[str, Any]]
-    ) -> ServiceResult[List[str]]:
+        self, batch_data: list[dict[str, Any]]
+    ) -> ServiceResult[list[str]]:
         """Process batch of content items."""
 
 
@@ -185,12 +185,12 @@ class AbstractDatabaseService(ABC):
 
     @abstractmethod
     async def execute_query(
-        self, query: str, params: Dict[str, Any] | None = None
-    ) -> ServiceResult[list[Dict[str, Any]]]:
+        self, query: str, params: dict[str, Any] | None = None
+    ) -> ServiceResult[list[dict[str, Any]]]:
         """Execute raw SQL query."""
 
     @abstractmethod
-    async def health_check(self) -> ServiceResult[Dict[str, Any]]:
+    async def health_check(self) -> ServiceResult[dict[str, Any]]:
         """Check database health."""
 
     @abstractmethod
@@ -203,14 +203,14 @@ class AbstractVectorDatabaseService(ABC):
 
     @abstractmethod
     async def store_embedding(
-        self, content_id: str, embedding: list[float], metadata: Dict[str, Any]
+        self, content_id: str, embedding: list[float], metadata: dict[str, Any]
     ) -> ServiceResult[str]:
         """Store vector embedding."""
 
     @abstractmethod
     async def search_similar(
         self, query_embedding: list[float], limit: int = 10
-    ) -> ServiceResult[list[Dict[str, Any]]]:
+    ) -> ServiceResult[list[dict[str, Any]]]:
         """Search for similar vectors."""
 
 
@@ -224,12 +224,12 @@ class AbstractExternalAPIService(ABC):
 
     @abstractmethod
     async def make_request(
-        self, endpoint: str, method: str, data: Dict[str, Any] | None = None
-    ) -> ServiceResult[Dict[str, Any]]:
+        self, endpoint: str, method: str, data: dict[str, Any] | None = None
+    ) -> ServiceResult[dict[str, Any]]:
         """Make HTTP request to external API."""
 
     @abstractmethod
-    async def health_check(self) -> ServiceResult[Dict[str, Any]]:
+    async def health_check(self) -> ServiceResult[dict[str, Any]]:
         """Check external API health."""
 
 
@@ -238,8 +238,8 @@ class AbstractFirecrawlService(AbstractExternalAPIService):
 
     @abstractmethod
     async def scrape_url(
-        self, url: str, options: Dict[str, Any] | None = None
-    ) -> ServiceResult[Dict[str, Any]]:
+        self, url: str, options: dict[str, Any] | None = None
+    ) -> ServiceResult[dict[str, Any]]:
         """Scrape URL content."""
 
 
@@ -249,7 +249,7 @@ class AbstractArXivService(AbstractExternalAPIService):
     @abstractmethod
     async def search_papers(
         self, query: str, max_results: int = 10
-    ) -> ServiceResult[list[Dict[str, Any]]]:
+    ) -> ServiceResult[list[dict[str, Any]]]:
         """Search ArXiv papers."""
 
 
@@ -266,11 +266,11 @@ class AbstractConfigService(ABC):
         """Get configuration value."""
 
     @abstractmethod
-    def get_database_config(self) -> Dict[str, Any]:
+    def get_database_config(self) -> dict[str, Any]:
         """Get database configuration."""
 
     @abstractmethod
-    def get_redis_config(self) -> Dict[str, Any]:
+    def get_redis_config(self) -> dict[str, Any]:
         """Get Redis configuration."""
 
 
@@ -335,17 +335,19 @@ class AbstractServiceFactory(ABC):
 class AbstractUserService(ABC):
     """Abstract user service interface."""
 
-    def __init__(self, user_repo: Any, auth_service: Any, notification_service: Any) -> None:
+    def __init__(
+        self, user_repo: Any, auth_service: Any, notification_service: Any
+    ) -> None:
         self.user_repo = user_repo
         self.auth_service = auth_service
         self.notification_service = notification_service
 
     @abstractmethod
     async def create_user(
-        self, email: str, password: str, user_data: Dict[str, Any]
-    ) -> ServiceResult[Dict[str, Any]]:
+        self, email: str, password: str, user_data: dict[str, Any]
+    ) -> ServiceResult[dict[str, Any]]:
         """Create new user with authentication and notification."""
 
     @abstractmethod
-    async def get_user_profile(self, user_id: str) -> ServiceResult[Dict[str, Any]]:
+    async def get_user_profile(self, user_id: str) -> ServiceResult[dict[str, Any]]:
         """Get user profile information."""

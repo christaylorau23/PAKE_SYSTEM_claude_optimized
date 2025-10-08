@@ -69,7 +69,6 @@ class AsyncLockManager:
             if task:
                 return f"task_{id(task)}"
         except RuntimeError as e:
-
             logger.debug(f"Exception in synchronization_primitives.py: {e}")
 
             # Continue gracefully
@@ -424,7 +423,9 @@ class AsyncSafeQueue:
 
 
 @asynccontextmanager
-async def async_lock_context(lock_manager: AsyncLockManager, lock_name: str, timeout: float | None = None) -> None:
+async def async_lock_context(
+    lock_manager: AsyncLockManager, lock_name: str, timeout: float | None = None
+) -> None:
     """Context manager for async lock acquisition/release."""
     acquired = await lock_manager.acquire_lock(lock_name, timeout)
     if not acquired:
@@ -537,7 +538,9 @@ def get_sync_monitor() -> SynchronizationMonitor:
 
 
 # Convenience functions for common synchronization patterns
-async def with_async_lock(lock_manager: AsyncLockManager, lock_name: str, timeout: float | None = None) -> None:
+async def with_async_lock(
+    lock_manager: AsyncLockManager, lock_name: str, timeout: float | None = None
+) -> None:
     """Convenience function for async lock context."""
     return async_lock_context(lock_manager, lock_name, timeout)
 

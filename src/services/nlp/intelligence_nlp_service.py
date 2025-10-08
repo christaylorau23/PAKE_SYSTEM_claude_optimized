@@ -98,8 +98,8 @@ class ExtractedEntity:
     confidence: float
     mentions: list[EntityMention]
     semantic_embedding: np.ndarray | None = None
-    linked_entities: List[str] = field(default_factory=list)
-    properties: Dict[str, Any] = field(default_factory=dict)
+    linked_entities: list[str] = field(default_factory=list)
+    properties: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -112,7 +112,7 @@ class ExtractedRelationship:
     confidence: float
     source_sentence: str
     context: str
-    supporting_evidence: List[str] = field(default_factory=list)
+    supporting_evidence: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -147,7 +147,7 @@ class DocumentAnalysis:
     topics: list[TopicResult]
     semantic_embedding: np.ndarray
     key_phrases: list[tuple[str, float]]
-    text_statistics: Dict[str, Any]
+    text_statistics: dict[str, Any]
     processing_time_ms: float
 
 
@@ -163,7 +163,13 @@ class IntelligenceNLPService:
     - Async processing with caching
     """
 
-    def __init__(self, model_name: str = "en_core_web_sm", embedding_model: str = "all-MiniLM-L6-v2", sentiment_model: str = "cardiffnlp/twitter-roberta-base-sentiment-latest", cache_service: CacheService | None = None) -> None:
+    def __init__(
+        self,
+        model_name: str = "en_core_web_sm",
+        embedding_model: str = "all-MiniLM-L6-v2",
+        sentiment_model: str = "cardiffnlp/twitter-roberta-base-sentiment-latest",
+        cache_service: CacheService | None = None,
+    ) -> None:
         """Initialize the Intelligence NLP Service.
 
         Args:
@@ -685,7 +691,7 @@ class IntelligenceNLPService:
             logger.error("Error analyzing sentiment: %s", e)
             return SentimentResult(0.0, 0.0, 0.0, "NEUTRAL")
 
-    async def generate_embeddings(self, texts: List[str]) -> np.ndarray:
+    async def generate_embeddings(self, texts: list[str]) -> np.ndarray:
         """Generate semantic embeddings for texts.
 
         Args:
@@ -711,7 +717,7 @@ class IntelligenceNLPService:
 
     async def extract_topics(
         self,
-        documents: List[str],
+        documents: list[str],
         num_topics: int = 5,
     ) -> list[TopicResult]:
         """Extract topics using LDA topic modeling.
@@ -848,7 +854,7 @@ class IntelligenceNLPService:
             logger.error("Error extracting key phrases: %s", e)
             return []
 
-    async def _compute_text_statistics(self, text: str) -> Dict[str, Any]:
+    async def _compute_text_statistics(self, text: str) -> dict[str, Any]:
         """Compute basic text statistics."""
         try:
             if not self.nlp:
@@ -887,7 +893,7 @@ class IntelligenceNLPService:
             logger.error("Error computing text statistics: %s", e)
             return {}
 
-    async def get_service_stats(self) -> Dict[str, Any]:
+    async def get_service_stats(self) -> dict[str, Any]:
         """Get service performance statistics."""
         return {
             **self._stats,
@@ -903,7 +909,7 @@ class IntelligenceNLPService:
             ),
         }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Comprehensive health check for the service."""
         try:
             # Test basic functionality

@@ -112,7 +112,7 @@ class IntelligentCache:
 
     def __init__(self, config: OptimizationConfig | None = None) -> None:
         self.config = config or OptimizationConfig()
-        self._cache: dict[str, Dict[str, Any]] = {}
+        self._cache: dict[str, dict[str, Any]] = {}
         self._access_times: dict[str, float] = {}
         self._cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
         self._lock = asyncio.Lock()
@@ -121,7 +121,7 @@ class IntelligentCache:
         self,
         namespace: str,
         identifier: str,
-        params: Dict[str, Any] = None,
+        params: dict[str, Any] = None,
     ) -> str:
         """Generate cache key with namespace and parameter hashing."""
         key_data = f"{namespace}:{identifier}"
@@ -135,7 +135,7 @@ class IntelligentCache:
         self,
         namespace: str,
         identifier: str,
-        params: Dict[str, Any] = None,
+        params: dict[str, Any] = None,
     ) -> Any | None:
         """Retrieve item from cache with TTL validation."""
         async with self._lock:
@@ -167,7 +167,7 @@ class IntelligentCache:
         namespace: str,
         identifier: str,
         data: Any,
-        params: Dict[str, Any] = None,
+        params: dict[str, Any] = None,
         ttl_override: int | None = None,
     ) -> None:
         """Store item in cache with TTL and eviction management."""
@@ -203,7 +203,7 @@ class IntelligentCache:
         del self._access_times[oldest_key]
         self._cache_stats["evictions"] += 1
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache performance statistics."""
         total_requests = self._cache_stats["hits"] + self._cache_stats["misses"]
         hit_rate = self._cache_stats["hits"] / max(total_requests, 1)
@@ -488,7 +488,7 @@ class MemoryManager:
         if self.config.weak_reference_cleanup:
             self._weak_refs.add(weakref.ref(obj))
 
-    def get_memory_stats(self) -> Dict[str, Any]:
+    def get_memory_stats(self) -> dict[str, Any]:
         """Get memory management statistics."""
         return {
             "current_usage_mb": self.get_memory_usage(),
@@ -520,7 +520,7 @@ class PerformanceOptimizationService:
     async def optimize_concurrent_execution(
         self,
         tasks: list[Callable[[], Awaitable[Any]]],
-        task_names: List[str] = None,
+        task_names: list[str] = None,
     ) -> list[Any]:
         """Optimize concurrent task execution with adaptive concurrency."""
         if not tasks:
@@ -533,7 +533,9 @@ class PerformanceOptimizationService:
         max_concurrent = self._calculate_optimal_concurrency(len(tasks))
         semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def execute_task_with_optimization(task_name: str, task: Callable) -> None:
+        async def execute_task_with_optimization(
+            task_name: str, task: Callable
+        ) -> None:
             async with semaphore:
                 await self.rate_limiter.acquire(task_name)
 
@@ -589,9 +591,9 @@ class PerformanceOptimizationService:
 
     async def optimize_query_deduplication(
         self,
-        queries: list[Dict[str, Any]],
+        queries: list[dict[str, Any]],
         service_name: str,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Remove duplicate queries and return optimized query list."""
         if not queries:
             return []
@@ -620,7 +622,7 @@ class PerformanceOptimizationService:
         )
         return deduplicated_queries
 
-    async def get_comprehensive_metrics(self) -> Dict[str, Any]:
+    async def get_comprehensive_metrics(self) -> dict[str, Any]:
         """Get comprehensive performance metrics."""
         current_time = time.time()
         total_runtime = current_time - self._start_time
@@ -658,7 +660,7 @@ class PerformanceOptimizationService:
             "optimization_mode": self.config.mode.value,
         }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform comprehensive performance health check."""
         health_status = {"status": "healthy", "checks": {}, "recommendations": []}
 
@@ -707,7 +709,7 @@ class PerformanceOptimizationService:
 
         return health_status
 
-    async def get_performance_metrics(self) -> Dict[str, Any]:
+    async def get_performance_metrics(self) -> dict[str, Any]:
         """Get comprehensive performance metrics."""
         cache_stats = self.cache.get_stats()
         memory_stats = self.memory_manager.get_memory_stats()

@@ -53,7 +53,7 @@ class FakeUserRepository(AbstractUserRepository):
         limit: int = 100,
         offset: int = 0,
         order_by: str | None = None,
-        filters: Dict[str, Any] | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> list[User]:
         """Get all users with optional filtering and pagination."""
         users = list(self._users.values())
@@ -152,7 +152,7 @@ class FakeUserRepository(AbstractUserRepository):
         """Check if user exists."""
         return user_id in self._users
 
-    async def count(self, filters: Dict[str, Any] | None = None) -> int:
+    async def count(self, filters: dict[str, Any] | None = None) -> int:
         """Count users matching filters."""
         users = list(self._users.values())
 
@@ -275,7 +275,7 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         limit: int = 100,
         offset: int = 0,
         order_by: str | None = None,
-        filters: Dict[str, Any] | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> list[SearchHistory]:
         """Get all search history with optional filtering and pagination."""
         searches = list(self._searches.values())
@@ -359,7 +359,7 @@ class FakeSearchHistoryRepository(AbstractSearchHistoryRepository):
         """Check if search history exists."""
         return search_id in self._searches
 
-    async def count(self, filters: Dict[str, Any] | None = None) -> int:
+    async def count(self, filters: dict[str, Any] | None = None) -> int:
         """Count search history entries matching filters."""
         searches = list(self._searches.values())
 

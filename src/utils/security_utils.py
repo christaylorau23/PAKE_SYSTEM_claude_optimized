@@ -245,9 +245,9 @@ class SecureCredentialManager:
 
     def mask_sensitive_data(
         self,
-        data: Dict[str, Any],
-        sensitive_keys: List[str] | None = None,
-    ) -> Dict[str, Any]:
+        data: dict[str, Any],
+        sensitive_keys: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Mask sensitive data for logging.
 
         Args:
@@ -291,7 +291,7 @@ class SecureCredentialManager:
         self._credentials_cache.clear()
         self.logger.info("Credentials cache cleared")
 
-    def audit_secrets_usage(self) -> Dict[str, Any]:
+    def audit_secrets_usage(self) -> dict[str, Any]:
         """Get audit information about secrets usage."""
         return {
             "cached_secrets": list(self._credentials_cache.keys()),
@@ -386,16 +386,16 @@ def generate_secure_token(length: int = 64) -> str:
 
 
 def mask_sensitive_dict(
-    data: Dict[str, Any],
-    sensitive_keys: List[str] | None = None,
-) -> Dict[str, Any]:
+    data: dict[str, Any],
+    sensitive_keys: list[str] | None = None,
+) -> dict[str, Any]:
     """Mask sensitive data in a dictionary."""
     manager = get_credential_manager()
     return manager.mask_sensitive_data(data, sensitive_keys)
 
 
 # Security validation functions
-def validate_environment_security() -> List[str]:
+def validate_environment_security() -> list[str]:
     """Validate the security configuration of the environment.
 
     Returns:

@@ -1,3 +1,5 @@
+from typing import Any
+
 #!/usr/bin/env python3
 """
 PAKE System - CI/CD Pipeline Validation Script
@@ -242,12 +244,13 @@ class CICDPipelineValidator:
 
         return all_passed
 
-    def save_report(self) -> None:
-        """Save validation results to file"""
-        report_path = self.project_root / filename
-        with open(report_path, "w") as f:
-            json.dump(self.results, f, indent=2)
-        print(f"📄 Validation report saved to {report_path}")
+
+def save_report(self, filename: Any = None) -> None:
+    """Save validation results to file"""
+    report_path = self.project_root / filename
+    with open(report_path, "w") as f:
+        json.dump(self.results, f, indent=2)
+    print(f"📄 Validation report saved to {report_path}")
 
 
 def main(self) -> None:

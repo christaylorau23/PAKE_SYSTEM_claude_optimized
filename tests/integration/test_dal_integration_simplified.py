@@ -77,7 +77,7 @@ class MockDatabaseService:
 class MockTenantAwareRepository:
     """Mock tenant-aware repository for testing."""
 
-    def __init__(self) -> None:
+def __init__(self, db_service: Any = None, model_class: Any = None) -> None:
         self.db_service = db_service
         self.model_class = model_class
         self._session_maker = self.db_service._session_maker
@@ -171,7 +171,7 @@ class MockTenantAwareRepository:
 class MockTenantAwareDataAccessLayer:
     """Mock tenant-aware Data Access Layer."""
 
-    def __init__(self) -> None:
+def __init__(self, db_service: Any = None, db_service: Any = None, db_service: Any = None, db_service: Any = None, db_service: Any = None, db_service: Any = None, db_service: Any = None) -> None:
         self.db_service = db_service
 
         # Initialize repositories

@@ -53,11 +53,11 @@ class ServiceRegistry(Base):
     health_timeout_seconds: Mapped[int] = mapped_column(Integer, default=5)
 
     # Resource requirements
-    resource_requirements: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
+    resource_requirements: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
     # Service metadata
-    endpoints: Mapped[list[Dict[str, Any]] | None] = mapped_column(JSON)
-    dependencies: Mapped[list[Dict[str, Any]] | None] = mapped_column(JSON)
+    endpoints: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON)
+    dependencies: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON)
     labels: Mapped[dict[str, str] | None] = mapped_column(JSON)
 
     # Status and timestamps
@@ -190,7 +190,7 @@ class APIGatewayRoute(Base):
     # Route metadata
     description: Mapped[str | None] = mapped_column(Text)
     authentication_required: Mapped[bool] = mapped_column(Boolean, default=True)
-    rate_limit: Mapped[Dict[str, Any] | None] = mapped_column(JSON)
+    rate_limit: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
     # Status and timestamps
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

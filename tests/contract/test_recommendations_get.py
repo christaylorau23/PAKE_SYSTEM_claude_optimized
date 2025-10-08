@@ -1,4 +1,5 @@
 from typing import Dict
+
 """
 Contract Test: GET /curation/recommendations
 
@@ -29,19 +30,19 @@ class MockTestClient:
         )
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_client(self) -> None:
     """Provide test client for API testing"""
     return MockTestClient()
 
 
-@pytest.fixture
+@pytest.fixture()
 def auth_headers(self) -> None:
     """Provide authentication headers"""
     return {"Authorization": "Bearer test_jwt_token"}
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_user_id(self) -> None:
     """Provide sample user ID for testing"""
     return str(uuid.uuid4())
@@ -240,8 +241,8 @@ class TestRecommendationsGetContract:
 
 
 def validate_response_schema(
-    data: Dict[str, Any],
-    expected_schema: Dict[str, Any],
+    data: dict[str, Any],
+    expected_schema: dict[str, Any],
 ) -> bool:
     """Validate response data against expected schema"""
     # This is a placeholder for actual schema validation
@@ -286,7 +287,7 @@ def validate_url(value: str) -> bool:
 # Test fixtures for data validation
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_recommendation_response(self) -> None:
     """Sample recommendation response for validation testing"""
     return {

@@ -1,5 +1,5 @@
-from typing import List
-from typing import Dict
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 PAKE System - Phase 16 Multi-Tenant Security Testing Suite
@@ -63,8 +63,8 @@ class MultiTenantSecurityTester:
         self.db_service: MultiTenantPostgreSQLService | None = None
         self.tenant_service: TenantManagementService | None = None
         self.auth_service: MultiTenantAuthService | None = None
-        self.test_tenants: list[Dict[str, Any]] = []
-        self.test_users: list[Dict[str, Any]] = []
+        self.test_tenants: list[dict[str, Any]] = []
+        self.test_users: list[dict[str, Any]] = []
         self.test_results = {
             "tenant_isolation": [],
             "data_leakage": [],
@@ -106,7 +106,7 @@ class MultiTenantSecurityTester:
 
         logger.info("🧹 Test environment cleaned up")
 
-    async def run_all_tests(self) -> Dict[str, Any]:
+    async def run_all_tests(self) -> dict[str, Any]:
         """Run all security tests"""
         try:
             await self.setup()
@@ -158,7 +158,7 @@ class MultiTenantSecurityTester:
         self,
         tenant_id: str,
         other_tenant_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Test that tenant cannot access another tenant's data"""
         try:
             # Set context to first tenant
@@ -206,7 +206,7 @@ class MultiTenantSecurityTester:
         self,
         tenant_id: str,
         other_tenant_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Test that tenant cannot modify another tenant's data"""
         try:
             # Set context to first tenant
@@ -300,7 +300,7 @@ class MultiTenantSecurityTester:
         token: str,
         original_tenant: str,
         target_tenant: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Test if token can be used to access other tenant's data"""
         try:
             # Validate token
@@ -366,7 +366,7 @@ class MultiTenantSecurityTester:
         self,
         tenant_id: str,
         malicious_input: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Test protection against malicious input"""
         try:
             # Set tenant context
@@ -451,7 +451,7 @@ class MultiTenantSecurityTester:
         self,
         tenant_id: str,
         weak_REDACTED_SECRET: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Test that weak REDACTED_SECRETs are rejected"""
         try:
             # Try to create user with weak REDACTED_SECRET
@@ -710,7 +710,7 @@ class MultiTenantSecurityTester:
             except (ValueError, RuntimeError) as e:
                 logger.warning("Error cleaning up tenant: %s", e)
 
-    def _generate_security_report(self) -> Dict[str, Any]:
+    def _generate_security_report(self) -> dict[str, Any]:
         """Generate comprehensive security test report"""
         total_tests = sum(len(tests) for tests in self.test_results.values())
         passed_tests = sum(
@@ -753,7 +753,7 @@ class MultiTenantSecurityTester:
             ),
         }
 
-    def _generate_security_recommendations(self) -> List[str]:
+    def _generate_security_recommendations(self) -> list[str]:
         """Generate security recommendations based on test results"""
         recommendations = []
 
@@ -782,7 +782,7 @@ class MultiTenantSecurityTester:
 # Test execution
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_multi_tenant_security(self) -> None:
     """Main test function for multi-tenant security"""
     tester = MultiTenantSecurityTester()

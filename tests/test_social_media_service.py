@@ -79,7 +79,7 @@ class TestSocialMediaService:
         return engine
 
     @pytest.fixture
-    def social_media_service(self) -> None:
+def social_media_service(self, twitter_config: Any = None, linkedin_config: Any = None, reddit_config: Any = None, mock_cognitive_engine: Any = None) -> None:
         """Create social media service with all platforms"""
         return SocialMediaService(
             configs=[twitter_config, linkedin_config, reddit_config],
@@ -87,7 +87,7 @@ class TestSocialMediaService:
         )
 
     @pytest.fixture
-    def twitter_service(self) -> None:
+def twitter_service(self, twitter_config: Any = None, mock_cognitive_engine: Any = None) -> None:
         """Create Twitter-only service"""
         return SocialMediaService(
             configs=[twitter_config],
@@ -312,7 +312,7 @@ class TestSocialMediaService:
             assert -1.0 <= post.sentiment_score <= 1.0
 
     @pytest.mark.asyncio
-    async def test_should_detect_positive_sentiment_accurately(self) -> None:
+async def test_should_detect_positive_sentiment_accurately(self, social_media_service: Any = None) -> None:
         """
         Test: Should accurately detect positive sentiment in posts
         with positive language and expressions.

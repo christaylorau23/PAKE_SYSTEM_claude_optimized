@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 Test script for Node.js integration and bridge services
@@ -21,7 +22,7 @@ class NodeJSIntegrationTester:
         self.package_json_path = self.project_root / "package.json"
         self.tsconfig_path = self.project_root / "tsconfig.json"
 
-    async def test_bridge_service(self) -> Dict[str, Any]:
+    async def test_bridge_service(self) -> dict[str, Any]:
         """Test TypeScript bridge service functionality"""
         print("Testing TypeScript Bridge Service...")
 
@@ -82,7 +83,7 @@ class NodeJSIntegrationTester:
 
         return results
 
-    async def test_npm_packages(self) -> Dict[str, Any]:
+    async def test_npm_packages(self) -> dict[str, Any]:
         """Test npm package management and installation"""
         print("Testing NPM Package Management...")
 
@@ -139,7 +140,7 @@ class NodeJSIntegrationTester:
 
         return results
 
-    async def test_nodejs_services(self) -> Dict[str, Any]:
+    async def test_nodejs_services(self) -> dict[str, Any]:
         """Test Node.js service integration"""
         print("Testing Node.js Service Integration...")
 
@@ -187,7 +188,7 @@ class NodeJSIntegrationTester:
 
         return results
 
-    async def test_typescript_compilation(self) -> Dict[str, Any]:
+    async def test_typescript_compilation(self) -> dict[str, Any]:
         """Test TypeScript compilation process"""
         print("Testing TypeScript Compilation...")
 
@@ -222,7 +223,7 @@ class NodeJSIntegrationTester:
 
         return results
 
-    async def test_bridge_api_integration(self) -> Dict[str, Any]:
+    async def test_bridge_api_integration(self) -> dict[str, Any]:
         """Test bridge API integration with Python services"""
         print("Testing Bridge API Integration...")
 
@@ -273,7 +274,7 @@ class NodeJSIntegrationTester:
 
         return results
 
-    async def _test_typescript_compilation(self) -> Dict[str, Any]:
+    async def _test_typescript_compilation(self) -> dict[str, Any]:
         """Test TypeScript compilation"""
         try:
             # Simulate TypeScript compilation
@@ -281,7 +282,7 @@ class NodeJSIntegrationTester:
         except (ValueError, RuntimeError) as e:
             return {"status": "error", "errors": [str(e)], "warnings": []}
 
-    async def _test_npm_commands(self) -> Dict[str, Any]:
+    async def _test_npm_commands(self) -> dict[str, Any]:
         """Test npm commands"""
         try:
             # Simulate npm command testing
@@ -300,7 +301,7 @@ class NodeJSIntegrationTester:
                 "error": str(e),
             }
 
-    async def _test_api_responses(self) -> Dict[str, Any]:
+    async def _test_api_responses(self) -> dict[str, Any]:
         """Test API response handling"""
         try:
             # Simulate API response testing
@@ -312,7 +313,7 @@ class NodeJSIntegrationTester:
         except (ValueError, RuntimeError) as e:
             return {"error": str(e)}
 
-    async def _test_data_flow(self) -> Dict[str, Any]:
+    async def _test_data_flow(self) -> dict[str, Any]:
         """Test data flow between Node.js and Python"""
         try:
             # Simulate data flow testing
@@ -324,7 +325,7 @@ class NodeJSIntegrationTester:
         except (json.JSONDecodeError, ValueError) as e:
             return {"error": str(e)}
 
-    async def _test_error_handling(self) -> Dict[str, Any]:
+    async def _test_error_handling(self) -> dict[str, Any]:
         """Test error handling in bridge services"""
         try:
             # Simulate error handling testing
@@ -336,7 +337,7 @@ class NodeJSIntegrationTester:
         except (ImportError, ModuleNotFoundError) as e:
             return {"error": str(e)}
 
-    async def generate_integration_report(self) -> Dict[str, Any]:
+    async def generate_integration_report(self) -> dict[str, Any]:
         """Generate comprehensive Node.js integration report"""
         print("Generating Node.js Integration Report...")
 

@@ -112,10 +112,7 @@ class RateLimitController:
             return False
 
         # Check budget constraints
-        if not self._check_budget_constraints(rate_limit.cost_per_request):
-            return False
-
-        return True
+        return self._check_budget_constraints(rate_limit.cost_per_request)
 
     def _check_rate_limits(
         self,
@@ -145,10 +142,7 @@ class RateLimitController:
             return False
         if hour_count >= rate_limit.requests_per_hour:
             return False
-        if day_count >= rate_limit.requests_per_day:
-            return False
-
-        return True
+        return not day_count >= rate_limit.requests_per_day
 
     def _check_budget_constraints(self, cost_per_request: float) -> bool:
         """Check if request fits within budget constraints."""
@@ -163,14 +157,13 @@ class RateLimitController:
         hourly_spending = 0.0
         daily_spending = 0.0
 
-        for api_name, history in self.request_history.items():
+        for _api_name, history in self.request_history.items():
             for i, timestamp in enumerate(history.timestamps):
-                if timestamp > day_ago:
-                    if i < len(history.costs):
-                        cost = history.costs[i]
-                        daily_spending += cost
-                        if timestamp > hour_ago:
-                            hourly_spending += cost
+                if timestamp > day_ago and i < len(history.costs):
+                    cost = history.costs[i]
+                    daily_spending += cost
+                    if timestamp > hour_ago:
+                        hourly_spending += cost
 
         # Check if new request would exceed budget
         if hourly_spending + cost_per_request > self.hourly_budget:
@@ -234,7 +227,7 @@ class RateLimitController:
             "day_remaining": max(0, rate_limit.requests_per_day - day_count),
         }
 
-    async def get_cost_summary(self) -> Dict[str, Any]:
+    async def get_cost_summary(self) -> dict[str, Any]:
         """Get cost summary across all APIs."""
         now = time.time()
         hour_ago = now - 3600
@@ -297,8 +290,8 @@ class RateLimitController:
 
     async def optimize_request_scheduling(
         self,
-        api_requests: list[Dict[str, Any]],
-    ) -> list[Dict[str, Any]]:
+        api_requests: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """Optimize request scheduling based on rate limits and costs.
 
         Args:
@@ -332,7 +325,7 @@ class RateLimitController:
 
         return optimized_schedule
 
-    def get_rate_limit_status(self) -> Dict[str, Any]:
+    def get_rate_limit_status(self) -> dict[str, Any]:
         """Get comprehensive rate limit status."""
         status = {}
 
@@ -389,7 +382,9 @@ class RateLimitController:
             daily_budget,
         )
 
-    async def emergency_throttle(self, api_name: str, reduction_factor: float = 0.5) -> None:
+    async def emergency_throttle(
+        self, api_name: str, reduction_factor: float = 0.5
+    ) -> None:
         """Emergency throttle for specific API."""
         if api_name in self.rate_limits:
             rate_limit = self.rate_limits[api_name]

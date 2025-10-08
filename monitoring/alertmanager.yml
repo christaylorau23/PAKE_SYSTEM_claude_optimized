@@ -1,0 +1,145 @@
+# PAKE System - Alertmanager Configuration
+# This configuration manages alerts from the Unified Quality Dashboard
+
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@pake-system.com'
+  smtp_auth_username: 'alerts@pake-system.com'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+
+route:
+  group_by: ['alertname', 'category']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'default-receiver'
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical-receiver'
+      group_wait: 0s
+      repeat_interval: 5m
+
+    # Security alerts - high priority
+    - match:
+        category: security
+      receiver: 'security-receiver'
+      group_wait: 30s
+      repeat_interval: 30m
+
+    # Code quality alerts - normal priority
+    - match:
+        category: code-quality
+      receiver: 'quality-receiver'
+      group_wait: 2m
+      repeat_interval: 2h
+
+    # CI/CD alerts - normal priority
+    - match:
+        category: ci-cd
+      receiver: 'cicd-receiver'
+      group_wait: 1m
+      repeat_interval: 1h
+
+receivers:
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://webhook:8080/webhook'
+        send_resolved: true
+
+  - name: 'critical-receiver'
+    email_configs:
+      - to: 'engineering-lead@pake-system.com'
+        subject: 'CRITICAL: PAKE System Quality Alert'
+        body: |
+          Critical quality alert in PAKE System:
+
+          Alert: {{ .GroupLabels.alertname }}
+          Severity: {{ .GroupLabels.severity }}
+          Category: {{ .GroupLabels.category }}
+
+          {{ range .Alerts }}
+          Description: {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+
+          Please investigate immediately.
+    webhook_configs:
+      - url: 'http://webhook:8080/webhook/critical'
+        send_resolved: true
+
+  - name: 'security-receiver'
+    email_configs:
+      - to: 'security-team@pake-system.com'
+        subject: 'SECURITY: PAKE System Security Alert'
+        body: |
+          Security alert in PAKE System:
+
+          Alert: {{ .GroupLabels.alertname }}
+          Severity: {{ .GroupLabels.severity }}
+
+          {{ range .Alerts }}
+          Description: {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+
+          Please review security implications.
+    webhook_configs:
+      - url: 'http://webhook:8080/webhook/security'
+        send_resolved: true
+
+  - name: 'quality-receiver'
+    email_configs:
+      - to: 'engineering-team@pake-system.com'
+        subject: 'QUALITY: PAKE System Code Quality Alert'
+        body: |
+          Code quality alert in PAKE System:
+
+          Alert: {{ .GroupLabels.alertname }}
+          Severity: {{ .GroupLabels.severity }}
+
+          {{ range .Alerts }}
+          Description: {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+
+          Please review code quality.
+    webhook_configs:
+      - url: 'http://webhook:8080/webhook/quality'
+        send_resolved: true
+
+  - name: 'cicd-receiver'
+    email_configs:
+      - to: 'devops-team@pake-system.com'
+        subject: 'CI/CD: PAKE System Pipeline Alert'
+        body: |
+          CI/CD pipeline alert in PAKE System:
+
+          Alert: {{ .GroupLabels.alertname }}
+          Severity: {{ .GroupLabels.severity }}
+
+          {{ range .Alerts }}
+          Description: {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+
+          Please review pipeline performance.
+    webhook_configs:
+      - url: 'http://webhook:8080/webhook/cicd'
+        send_resolved: true
+
+inhibit_rules:
+  # Inhibit security alerts when critical alerts are firing
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ['alertname', 'category']
+
+  # Inhibit quality alerts when security alerts are firing
+  - source_match:
+      category: security
+    target_match:
+      category: code-quality
+    equal: ['alertname']

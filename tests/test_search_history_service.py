@@ -81,7 +81,7 @@ class TestSearchHistoryService:
         return mock_cache
 
     @pytest.fixture
-    async def search_history_service(self) -> None:
+async def search_history_service(self, mock_database_service: Any = None, mock_cache_service: Any = None) -> None:
         """Create SearchHistoryService instance"""
         return SearchHistoryService(mock_database_service, mock_cache_service)
 

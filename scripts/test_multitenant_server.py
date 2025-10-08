@@ -1,3 +1,5 @@
+import json
+
 #!/usr/bin/env python3
 """
 PAKE System - Multi-Tenant Server Validation Script

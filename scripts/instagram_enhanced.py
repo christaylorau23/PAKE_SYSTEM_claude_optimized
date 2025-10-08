@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Enhanced Instagram Integration with Reels Support
@@ -30,7 +31,7 @@ class InstagramMedia:
 class InstagramEnhanced:
     """Enhanced Instagram posting with full feature support"""
 
-    def __init__(self) -> None:
+def __init__(self, access_token: Any = None, business_account_id: Any = None) -> None:
         self.access_token = access_token
         self.business_account_id = business_account_id
         self.base_url = "https://graph.facebook.com/v18.0"
@@ -249,7 +250,7 @@ class InstagramEnhanced:
 
     async def _create_carousel_container(
         self,
-        child_containers: List[str],
+        child_containers: list[str],
         caption: str,
     ) -> str:
         """Create carousel album container"""
@@ -284,7 +285,7 @@ class InstagramEnhanced:
 
         return data
 
-    async def _wait_for_video_processing(self) -> None:
+async def _wait_for_video_processing(self, timeout: Any = None, container_id: Any = None) -> None:
         """Wait for video processing to complete"""
         start_time = time.time()
 
@@ -340,7 +341,7 @@ class InstagramEnhanced:
 
         return caption
 
-    def _extract_hashtags(self, caption: str) -> tuple[str, List[str]]:
+    def _extract_hashtags(self, caption: str) -> tuple[str, list[str]]:
         """Extract hashtags from caption"""
         import re
 

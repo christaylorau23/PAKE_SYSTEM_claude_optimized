@@ -279,7 +279,7 @@ async def generate_password(length: int = 16) -> dict[str, str]:
 
 
 @router.post("/validate-password")
-async def validate_password(password: str) -> Dict[str, Any]:
+async def validate_password(password: str) -> dict[str, Any]:
     """Validate password strength.
 
     This endpoint checks if a password meets enterprise security

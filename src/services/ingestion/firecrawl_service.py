@@ -63,12 +63,12 @@ class FirecrawlResult:
     url: str
     content: str | None = None
     title: str | None = None
-    headings: List[str] | None = field(default_factory=list)
-    links: List[str] | None = field(default_factory=list)
-    metadata: Dict[str, Any] | None = field(default_factory=dict)
+    headings: list[str] | None = field(default_factory=list)
+    links: list[str] | None = field(default_factory=list)
+    metadata: dict[str, Any] | None = field(default_factory=dict)
     error: FirecrawlError | None = None
     quality_score: float | None = None
-    cognitive_assessment: Dict[str, Any] | None = None
+    cognitive_assessment: dict[str, Any] | None = None
     optimization_applied: bool = False
     scraping_attempts: int = 1
     retry_after: int | None = None
@@ -80,7 +80,12 @@ class FirecrawlService:
     Supports both real API integration and mock testing mode.
     """
 
-    def __init__(self, api_key: str = "fc-test-key-development-only", base_url: str = "https://api.firecrawl.dev", test_mode: bool | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str = "fc-test-key-development-only",
+        base_url: str = "https://api.firecrawl.dev",
+        test_mode: bool | None = None,
+    ) -> None:
         """Initialize FirecrawlService with API credentials."""
         self.api_key = api_key
         self.base_url = base_url
@@ -110,8 +115,8 @@ class FirecrawlService:
     async def _get_mock_response(
         self,
         url: str,
-        data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Generate realistic mock response for testing mode."""
         # Handle specific test scenarios
         if "rate-limit-test" in url:
@@ -175,7 +180,7 @@ class FirecrawlService:
             },
         }
 
-    async def _make_api_request(self, url: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _make_api_request(self, url: str, data: dict[str, Any]) -> dict[str, Any]:
         """Make API request to Firecrawl service or return mock data in test mode.
         REFACTOR phase: Production-ready implementation with real API integration.
         """
@@ -425,7 +430,7 @@ class FirecrawlService:
 
     async def scrape_bulk(
         self,
-        urls: List[str],
+        urls: list[str],
         max_concurrent: int = 2,
         delay_between_requests: float = 1.0,
     ) -> list[FirecrawlResult]:
@@ -561,7 +566,7 @@ class FirecrawlService:
         result: FirecrawlResult,
         n8n_manager,
         workflow_type: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Trigger n8n workflow processing.
         REFACTOR PHASE: Enhanced implementation with error handling.
         """

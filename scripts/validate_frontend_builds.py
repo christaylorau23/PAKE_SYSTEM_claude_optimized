@@ -77,7 +77,7 @@ class BuildReproducibilityValidator:
                 if file_path.is_file():
                     file_path.unlink()
 
-    async def _test_build_scenario(self) -> None:
+async def _test_build_scenario(self, scenario: Any = None, scenario: Any = None, scenario: Any = None, scenario: Any = None, scenario: Any = None) -> None:
         """Test a specific build scenario."""
         logger.info("Testing build scenario: %s", scenario["name"])
 
@@ -313,7 +313,7 @@ find frontend/.next src/bridge -name "*.js" -exec md5sum {{}} \\; | sort
         logger.info("✅ Validation report generated: %s", report_file)
 
 
-async def main(self) -> None:
+async def main(self, pydantic: Any = None) -> None:
     """Main function to execute build reproducibility validation."""
     logger.info("Starting Frontend Build Reproducibility Validation")
 

@@ -19,7 +19,7 @@ import aiohttp
 class DependencyAuditor:
     """Comprehensive dependency auditing with Poetry integration."""
 
-    def __init__(self) -> None:
+def __init__(self, project_root: Any = None, project_root: Any = None, project_root: Any = None) -> None:
         self.project_root = project_root
         self.lock_file = project_root / "poetry.lock"
         self.pyproject_file = project_root / "pyproject.toml"

@@ -1,5 +1,9 @@
-from typing import List
-from typing import Dict
+from typing import Dict, List
+
+import asyncpg
+import psycopg2
+import sqlalchemy
+
 """
 Lightweight Curation API Demo
 
@@ -103,9 +107,9 @@ class LightweightCurationAPI:
     async def get_recommendations(
         self,
         user_id: str,
-        interests: List[str] = None,
+        interests: list[str] = None,
         max_results: int = 5,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get personalized content recommendations"""
 
         # Simple recommendation logic based on interests
@@ -169,7 +173,7 @@ class LightweightCurationAPI:
         content_id: str,
         feedback_type: str,
         feedback_value: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Submit user feedback"""
 
         try:
@@ -203,7 +207,7 @@ class LightweightCurationAPI:
         content_id: str,
         interaction_type: str,
         duration: int = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Track user interaction"""
 
         try:
@@ -231,7 +235,7 @@ class LightweightCurationAPI:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
 
-    async def get_system_stats(self) -> Dict[str, Any]:
+    async def get_system_stats(self) -> dict[str, Any]:
         """Get system statistics"""
         return {
             "content_items": len(self.content_database),

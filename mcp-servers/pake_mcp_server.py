@@ -107,7 +107,7 @@ logging.getLogger().handlers.clear()
 class VaultManager:
     """File-based vault manager for Knowledge Vault operations."""
 
-    def __init__(self) -> None:
+def __init__(self, vault_path: Any = None) -> None:
         # Use configuration system for vault path
         self.vault_path = vault_path or config.get_vault_path()
         self.vault_path.mkdir(parents=True, exist_ok=True)

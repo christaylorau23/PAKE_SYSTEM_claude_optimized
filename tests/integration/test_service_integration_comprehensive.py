@@ -52,7 +52,7 @@ class TestServiceIntegrationComprehensive:
         }
 
     @pytest.fixture
-    async def redis_service(self) -> None:
+async def redis_service(self, test_redis: Any = None) -> None:
         """Create Redis service with test connection"""
         config = CacheConfig(
             redis_url=test_redis["url"], default_ttl=3600, max_memory_cache_size=1000
@@ -62,7 +62,7 @@ class TestServiceIntegrationComprehensive:
         return service
 
     @pytest.fixture
-    async def user_service(self) -> None:
+async def user_service(self, redis_service: Any = None) -> None:
         """Create UserService with real Redis integration"""
         # Create mocked dependencies
         token_service = TokenService()
@@ -83,7 +83,7 @@ class TestServiceIntegrationComprehensive:
         )
 
     @pytest.fixture
-    async def ingestion_orchestrator(self) -> None:
+async def ingestion_orchestrator(self, redis_service: Any = None) -> None:
         """Create IngestionOrchestrator with real Redis integration"""
         config = IngestionConfig(
             max_concurrent_requests=5,
@@ -99,7 +99,7 @@ class TestServiceIntegrationComprehensive:
         return orchestrator
 
     @pytest.fixture
-    async def analytics_engine(self) -> None:
+async def analytics_engine(self, redis_service: Any = None) -> None:
         """Create AdvancedAnalyticsEngine with real Redis integration"""
         engine = AdvancedAnalyticsEngine()
         # Inject Redis service for caching

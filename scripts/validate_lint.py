@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Lint Validation Script
@@ -15,20 +16,20 @@ import time
 class LintValidator:
     """Lint validation runner"""
 
-    def __init__(self) -> None:
+def __init__(self, verbose: Any = None, fix: Any = None) -> None:
         self.verbose = verbose
         self.fix = fix
         self.project_root = Path(__file__).parent.parent
         self.results: list[tuple[str, bool, str]] = []
 
-    def log(self) -> None:
+def log(self, level: LogLevel, level: LogLevel, message: str) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
             print(f"[{timestamp}] [{level}] {message}")
 
     def run_command(
-        self, name: str, command: List[str], description: str
+        self, name: str, command: list[str], description: str
     ) -> tuple[str, bool, str]:
         """Run a command and return results"""
         self.log(f"Running {name}: {description}")

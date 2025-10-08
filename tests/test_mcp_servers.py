@@ -1,3 +1,4 @@
+from typing import Any
 #!/usr/bin/env python3
 """
 Test script for MCP servers
@@ -10,7 +11,14 @@ import subprocess
 import sys
 
 
-def test_server(self) -> None:
+def test_server(
+    self,
+    server_name: Any = None,
+    server_command: Any = None,
+    server_name: Any = None,
+    server_name: Any = None,
+    server_name: Any = None,
+) -> None:
     """Test an MCP server with basic commands."""
     print(f"\nTesting {server_name}")
     print("=" * 50)

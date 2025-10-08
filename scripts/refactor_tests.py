@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class TestRefactoringTool:
-    def __init__(self) -> None:
+def __init__(self, project_root: Any = None, project_root: Any = None) -> None:
         self.project_root = project_root
         self.tests_dir = project_root / "tests"
         self.unit_dir = self.tests_dir / "unit"

@@ -28,7 +28,9 @@ class ArXivWorker(BaseWorkerAgent):
     for comprehensive academic content retrieval with cognitive assessment.
     """
 
-    def __init__(self, worker_id: str | None = None, message_bus: MessageBus | None = None) -> None:
+    def __init__(
+        self, worker_id: str | None = None, message_bus: MessageBus | None = None
+    ) -> None:
         """Initialize ArXiv worker."""
         # Define worker capabilities
         capabilities = [
@@ -111,7 +113,7 @@ class ArXivWorker(BaseWorkerAgent):
 
         logger.info("ArXivWorker %s initialized", self.worker_id)
 
-    async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_task(self, task_data: dict[str, Any]) -> dict[str, Any]:
         """Process ArXiv search task.
 
         Handles 'arxiv_ingestion' tasks from the supervisor with academic search parameters.
@@ -212,7 +214,7 @@ class ArXivWorker(BaseWorkerAgent):
                 "result": None,
             }
 
-    def _validate_categories(self, categories: List[str]) -> List[str]:
+    def _validate_categories(self, categories: list[str]) -> list[str]:
         """Validate and filter ArXiv categories."""
         if not categories:
             return ["cs.AI", "cs.LG"]  # Default to AI/ML categories
@@ -228,7 +230,13 @@ class ArXivWorker(BaseWorkerAgent):
 
         return valid_categories
 
-    def _enhance_content_metadata(self, content_item: Any, plan_context: Dict[str, Any], source_data: Dict[str, Any], cognitive_applied: bool) -> None:
+    def _enhance_content_metadata(
+        self,
+        content_item: Any,
+        plan_context: dict[str, Any],
+        source_data: dict[str, Any],
+        cognitive_applied: bool,
+    ) -> None:
         """Enhance content item with ArXiv-specific metadata."""
         if not content_item.metadata:
             content_item.metadata = {}
@@ -308,7 +316,7 @@ class ArXivWorker(BaseWorkerAgent):
         # No specific cleanup needed for stateless worker
         logger.info("ArXivWorker %s cleanup completed", self.worker_id)
 
-    async def get_health_status(self) -> Dict[str, Any]:
+    async def get_health_status(self) -> dict[str, Any]:
         """Get ArXiv worker specific health status."""
         base_health = await super().get_health_status()
 
@@ -375,12 +383,12 @@ class ArXivTaskTypes:
 
 
 def create_arxiv_task_data(
-    terms: List[str],
-    categories: List[str] = None,
+    terms: list[str],
+    categories: list[str] = None,
     max_results: int = 10,
     task_type: str = ArXivTaskTypes.BASIC_SEARCH,
     **kwargs,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create task data for ArXiv search operations.
 
     Args:
@@ -444,6 +452,6 @@ ARXIV_DOMAIN_CATEGORIES = {
 }
 
 
-def get_categories_for_domain(domain: str) -> List[str]:
+def get_categories_for_domain(domain: str) -> list[str]:
     """Get ArXiv categories for a research domain."""
     return ARXIV_DOMAIN_CATEGORIES.get(domain.lower(), ["cs.AI", "cs.LG"])

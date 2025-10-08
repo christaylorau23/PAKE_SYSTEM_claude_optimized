@@ -11,7 +11,7 @@ import aiohttp
 from dotenv import load_dotenv
 
 
-def print_status(self) -> None:
+def print_status(self, status: Any = None, message: str, status: Any = None, message: str, status: Any = None, message: str, message: str) -> None:
     """Print status without Unicode characters"""
     if status == "SUCCESS":
         print(f"[OK] {message}")
@@ -23,7 +23,7 @@ def print_status(self) -> None:
         print(f"[INFO] {message}")
 
 
-async def test_firecrawl_api(self) -> None:
+async def test_firecrawl_api(self, api_key: Any = None) -> None:
     """Test Firecrawl API"""
     try:
         async with aiohttp.ClientSession() as session:

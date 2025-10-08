@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 PAKE+ Master Orchestrator
@@ -32,7 +33,7 @@ class ServiceConfig:
     name: str
     port: int
     host: str = "localhost"
-    dependencies: List[str] = None
+    dependencies: list[str] = None
     start_command: str = None
     health_endpoint: str = None
     required: bool = True
@@ -43,7 +44,7 @@ class ServiceConfig:
 class PAKEMasterOrchestrator:
     """Unified PAKE+ system orchestrator"""
 
-    def __init__(self) -> None:
+def __init__(self, base_dir: Any = None) -> None:
         self.base_dir = Path(base_dir or os.getcwd())
         self.docker_dir = self.base_dir / "docker"
         self.scripts_dir = self.base_dir / "scripts"
@@ -199,7 +200,7 @@ class PAKEMasterOrchestrator:
         self.logger.info("✅ All prerequisites satisfied")
         return True
 
-    def _check_docker(self) -> bool:
+def _check_docker(self, logger: Any = None) -> bool:
         """Check Docker availability"""
         try:
             result = subprocess.run(
@@ -243,7 +244,7 @@ class PAKEMasterOrchestrator:
         self.logger.warning("❌ Docker Compose not found")
         return False
 
-    def _check_python(self) -> bool:
+def _check_python(self, logger: Any = None) -> bool:
         """Check Python availability"""
         try:
             result = subprocess.run(
@@ -268,7 +269,7 @@ class PAKEMasterOrchestrator:
         self.logger.warning("❌ Python not found")
         return False
 
-    def _check_node(self) -> bool:
+def _check_node(self, logger: Any = None) -> bool:
         """Check Node.js availability"""
         try:
             result = subprocess.run(
@@ -293,7 +294,7 @@ class PAKEMasterOrchestrator:
         self.logger.warning("❌ Node.js not found")
         return False
 
-    def _check_npm(self) -> bool:
+def _check_npm(self, logger: Any = None) -> bool:
         """Check npm availability"""
         try:
             result = subprocess.run(
@@ -318,7 +319,7 @@ class PAKEMasterOrchestrator:
         self.logger.warning("❌ npm not found")
         return False
 
-    def _check_git(self) -> bool:
+def _check_git(self, logger: Any = None) -> bool:
         """Check Git availability"""
         try:
             result = subprocess.run(
@@ -343,7 +344,7 @@ class PAKEMasterOrchestrator:
         self.logger.warning("❌ Git not found")
         return False
 
-    def _show_installation_instructions(self) -> None:
+def _show_installation_instructions(self, prerequisite: Any = None, prerequisite: Any = None) -> None:
         """Show installation instructions for missing prerequisites"""
         instructions = {
             "docker": "Install Docker Desktop: https://docs.docker.com/get-docker/",
@@ -495,7 +496,7 @@ class PAKEMasterOrchestrator:
 
     async def _run_command_async(
         self,
-        command: List[str],
+        command: list[str],
         cwd: Path = None,
         timeout: int = 300,
     ) -> subprocess.CompletedProcess:
@@ -685,7 +686,7 @@ class PAKEMasterOrchestrator:
         self.logger.info("✅ All services started successfully")
         return True
 
-    def _calculate_startup_order(self) -> List[str]:
+    def _calculate_startup_order(self) -> list[str]:
         """Calculate service startup order based on dependencies"""
         ordered = []
         remaining = set(self.services.keys())
@@ -840,7 +841,7 @@ class PAKEMasterOrchestrator:
         self.logger.error("❌ Deployment failed at: %s", ", ".join(failed_steps))
         return False
 
-    async def _generate_deployment_report(self) -> None:
+async def _generate_deployment_report(self, failed_steps: Any = None, failed_steps: Any = None, failed_steps: Any = None, failed_steps: Any = None) -> None:
         """Generate comprehensive deployment report"""
         report_content = f"""# PAKE+ Deployment Report
 Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}

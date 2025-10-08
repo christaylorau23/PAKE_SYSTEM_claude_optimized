@@ -59,7 +59,7 @@ class ModelConfig:
     """Configuration for model training."""
 
     model_type: str
-    hyperparameters: Dict[str, Any] = field(default_factory=dict)
+    hyperparameters: dict[str, Any] = field(default_factory=dict)
     feature_selection: bool = True
     cross_validation_folds: int = 5
     test_size: float = 0.2
@@ -77,7 +77,7 @@ class ModelTrainer:
         self.feature_extractor = FeatureExtractor()
         self.scaler = StandardScaler()
         self.label_encoder = LabelEncoder()
-        self.trained_models: Dict[str, Any] = {}
+        self.trained_models: dict[str, Any] = {}
         self.model_metrics: dict[str, ModelMetrics] = {}
 
         # Model configurations

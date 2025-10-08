@@ -16,7 +16,7 @@ class TestAuthenticationIntegration:
     """Integration tests for authentication system"""
 
     @pytest.mark.asyncio
-    async def test_user_registration_and_login_flow(self) -> None:
+async def test_user_registration_and_login_flow(self, UserCreateFactory: Any = None) -> None:
         """Test complete user registration and login flow"""
         # Arrange
         user_data = UserCreateFactory()

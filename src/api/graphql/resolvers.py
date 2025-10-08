@@ -1,4 +1,5 @@
 from typing import List
+
 """GraphQL Resolvers.
 
 Implements the business logic for GraphQL queries and mutations,
@@ -464,7 +465,7 @@ class Query:
     @strawberry.field
     async def analytics_insights(
         self,
-        metrics: List[str],
+        metrics: list[str],
         days_back: int | None = 30,
     ) -> list[InsightRecommendation]:
         """Generate AI-powered insights from analytics data."""

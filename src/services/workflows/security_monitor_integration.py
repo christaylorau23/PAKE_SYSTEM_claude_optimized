@@ -5,17 +5,15 @@ proactive anomaly-to-action workflow system.
 """
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
 import logging
-from typing import Any, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 from .anomaly_to_action import AnomalyToActionEngine
 from .task_management import TaskManagementSystem
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +85,7 @@ class ProactiveSecurityMonitor:
         self.task_management_system.add_notification_handler(log_task_creation)
         self.task_management_system.add_notification_handler(alert_on_critical_tasks)
 
-    async def process_security_alert(self, security_alert) -> Dict[str, Any]:
+    async def process_security_alert(self, security_alert) -> dict[str, Any]:
         """Process security alert through proactive workflow system."""
         # Convert to our format
         adapted_alert = SecurityAlertAdapter(security_alert)
@@ -128,7 +126,7 @@ class ProactiveSecurityMonitor:
         """Add custom alert processor."""
         self.alert_processors.append(processor)
 
-    def get_workflow_statistics(self) -> Dict[str, Any]:
+    def get_workflow_statistics(self) -> dict[str, Any]:
         """Get workflow processing statistics."""
         task_stats = self.task_management_system.get_task_manager().get_statistics()
 
@@ -148,7 +146,7 @@ class ProactiveSecurityMonitor:
 proactive_monitor = ProactiveSecurityMonitor()
 
 
-async def process_alert_with_workflows(security_alert) -> Dict[str, Any]:
+async def process_alert_with_workflows(security_alert) -> dict[str, Any]:
     """Main integration function to be called from ai-security-monitor.py.
 
     This function should be called whenever a new SecurityAlert is created
@@ -157,7 +155,7 @@ async def process_alert_with_workflows(security_alert) -> Dict[str, Any]:
     return await proactive_monitor.process_security_alert(security_alert)
 
 
-def get_workflow_dashboard() -> Dict[str, Any]:
+def get_workflow_dashboard() -> dict[str, Any]:
     """Get workflow dashboard data for integration with existing security dashboard."""
     return proactive_monitor.get_workflow_statistics()
 
@@ -227,7 +225,9 @@ async def demonstrate_integration() -> None:
 
     # Create sample alerts that would come from ai-security-monitor.py
     class MockSecurityAlert:
-        def __init__(self, id: str, severity: str, pattern_type: str, message: str) -> None:
+        def __init__(
+            self, id: str, severity: str, pattern_type: str, message: str
+        ) -> None:
             self.id = id
             self.timestamp = datetime.now(UTC)
             self.severity = severity

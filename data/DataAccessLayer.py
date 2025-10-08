@@ -1,12 +1,13 @@
 import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime
+import logging
 import os
 import sys
 import threading
 from typing import Any
 from uuid import uuid4
-import logging
+
 logger = logging.getLogger(__name__)
 
 # Add utils to path
@@ -19,7 +20,7 @@ class DataAccessLayer:
     Provides unified access to filesystem and caching operations.
     """
 
-    def __init__(self) -> None:
+def __init__(self, vault_path: Any = None) -> None:
         self.vault_path = vault_path
         self.logger = get_logger("data-access-layer")
         self.repositories = {}
@@ -37,7 +38,7 @@ class DataAccessLayer:
         self.vector_memory_db = None
         self.memory_interface = None
 
-    async def initialize(self) -> None:
+        async def initialize(self) -> None:
         """Initialize the Data Access Layer."""
         try:
             self.logger.info(
@@ -83,7 +84,7 @@ class DataAccessLayer:
 
             return repository_instance
 
-    def get_repository(self) -> None:
+def get_repository(self, name: str, name: str) -> None:
         """Get a registered repository by name."""
         repository = self.repositories.get(name)
         if not repository:
@@ -458,7 +459,7 @@ class TransactionContext:
         self.completed = False
         self.logger = dal.logger
 
-    def add_operation(self) -> None:
+def add_operation(self, operation: str, rollback: Any = None, rollback: Any = None) -> None:
         """Add operation to transaction."""
         self.operations.append(operation)
         if rollback:

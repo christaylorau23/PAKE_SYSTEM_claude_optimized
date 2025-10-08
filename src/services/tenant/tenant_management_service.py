@@ -10,10 +10,10 @@ import secrets
 import string
 from typing import Any, Dict
 
-import bcrypt
-import sqlalchemy
-import psycopg2
 import asyncpg
+import bcrypt
+import psycopg2
+import sqlalchemy
 
 from src.middleware.tenant_context import (
     create_tenant_jwt,
@@ -40,8 +40,8 @@ class TenantCreationRequest:
     admin_email: str = ""
     admin_username: str = "admin"
     admin_full_name: str | None = None
-    settings: Dict[str, Any] | None = None
-    limits: Dict[str, Any] | None = None
+    settings: dict[str, Any] | None = None
+    limits: dict[str, Any] | None = None
 
 
 @dataclass
@@ -52,8 +52,8 @@ class TenantUpdateRequest:
     domain: str | None = None
     plan: str | None = None
     status: str | None = None
-    settings: Dict[str, Any] | None = None
-    limits: Dict[str, Any] | None = None
+    settings: dict[str, Any] | None = None
+    limits: dict[str, Any] | None = None
 
 
 @dataclass
@@ -119,7 +119,7 @@ class TenantPlanLimits:
     }
 
     @classmethod
-    def get_plan_limits(cls, plan: str) -> Dict[str, Any]:
+    def get_plan_limits(cls, plan: str) -> dict[str, Any]:
         """Get limits for a specific plan."""
         return cls.PLANS.get(plan, cls.PLANS["basic"])
 
@@ -151,7 +151,7 @@ class TenantManagementService:
 
         logger.info("Tenant Management Service initialized")
 
-    async def create_tenant(self, request: TenantCreationRequest) -> Dict[str, Any]:
+    async def create_tenant(self, request: TenantCreationRequest) -> dict[str, Any]:
         """Create new tenant with admin user.
 
         Process:
@@ -288,7 +288,7 @@ class TenantManagementService:
             logger.error("Failed to create tenant: %s", e)
             raise
 
-    async def get_tenant(self, tenant_id: str) -> Dict[str, Any] | None:
+    async def get_tenant(self, tenant_id: str) -> dict[str, Any] | None:
         """Get tenant by ID with comprehensive information."""
         try:
             tenant = await self.db_service.get_tenant_by_id(tenant_id)
@@ -318,7 +318,7 @@ class TenantManagementService:
         self,
         tenant_id: str,
         request: TenantUpdateRequest,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Update tenant configuration."""
         try:
             # Get current tenant
@@ -393,7 +393,7 @@ class TenantManagementService:
         self,
         tenant_id: str,
         force: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Delete tenant and all associated data."""
         try:
             # Get tenant info for logging
@@ -444,7 +444,7 @@ class TenantManagementService:
         plan: str | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """List tenants with filtering and pagination."""
         try:
             tenants = await self.db_service.get_all_tenants(status, plan)
@@ -477,7 +477,7 @@ class TenantManagementService:
         self,
         tenant_id: str,
         request: UserCreationRequest,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create new user within tenant."""
         try:
             # Validate tenant exists and is active
@@ -560,7 +560,7 @@ class TenantManagementService:
         tenant_id: str,
         limit: int = 50,
         offset: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get users within tenant."""
         try:
             users = await self.db_service.get_tenant_users(tenant_id, limit, offset)
@@ -575,7 +575,7 @@ class TenantManagementService:
         self,
         tenant_id: str,
         days: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get comprehensive tenant analytics."""
         try:
             # Get search analytics
@@ -683,7 +683,7 @@ class TenantManagementService:
         total_users = await self._get_user_count(tenant_id)
         return max(1, int(total_users * 0.7))  # Assume 70% activity rate
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Health check for tenant management service."""
         try:
             # Test database connectivity

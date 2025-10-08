@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 PAKE System Local Validation Script
@@ -31,7 +32,7 @@ class ValidationStep:
     """Individual validation step"""
 
     name: str
-    command: List[str]
+    command: list[str]
     description: str
     timeout: int = 300
     required: bool = True
@@ -53,7 +54,7 @@ class ValidationResult:
 class LocalValidator:
     """Local validation runner for PAKE System"""
 
-    def __init__(self) -> None:
+def __init__(self, verbose: Any = None, parallel: Any = None) -> None:
         self.verbose = verbose
         self.parallel = parallel
         self.project_root = Path(__file__).parent.parent
@@ -251,7 +252,7 @@ class LocalValidator:
             ),
         ]
 
-    def log(self) -> None:
+def log(self, level: LogLevel, level: LogLevel, message: str) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
@@ -445,7 +446,7 @@ class LocalValidator:
             )
 
     def run_validation_suite(
-        self, categories: List[str] = None, skip_tests: bool = False
+        self, categories: list[str] = None, skip_tests: bool = False
     ) -> list[ValidationResult]:
         """Run validation suite"""
         self.log("Starting local validation suite...")

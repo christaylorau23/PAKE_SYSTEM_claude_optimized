@@ -1,5 +1,5 @@
-from typing import Dict
-from typing import List
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 PAKE+ Service Health Monitoring System
@@ -45,7 +45,7 @@ class ServiceConfig:
     health_endpoint: str = None
     process_name: str = None
     container_name: str = None
-    dependencies: List[str] = None
+    dependencies: list[str] = None
     critical: bool = True
     restart_command: str = None
     max_restart_attempts: int = 3
@@ -59,7 +59,7 @@ class HealthResult:
     status: HealthStatus
     response_time_ms: float
     error_message: str = None
-    details: Dict[str, Any] = None
+    details: dict[str, Any] = None
     timestamp: datetime = None
 
     def __post_init__(self) -> None:
@@ -70,7 +70,7 @@ class HealthResult:
 class PAKEServiceMonitor:
     """Comprehensive PAKE+ service monitoring system"""
 
-    def __init__(self) -> None:
+def __init__(self, config_file: Any = None) -> None:
         self.base_dir = Path(__file__).parent.parent
         self.logs_dir = self.base_dir / "logs"
         self.data_dir = self.base_dir / "data"
@@ -393,7 +393,7 @@ class PAKEServiceMonitor:
         except (ValueError, RuntimeError) as e:
             return HealthResult(service.name, HealthStatus.CRITICAL, 0.0, str(e))
 
-    async def _check_process_health(self, service: ServiceConfig) -> HealthResult:
+async def _check_process_health(self, service: ServiceConfig, logger: Any = None) -> HealthResult:
         """Check process health"""
         try:
             # Find process by name
@@ -508,7 +508,7 @@ class PAKEServiceMonitor:
         except (ValueError, RuntimeError) as e:
             return HealthResult(service.name, HealthStatus.UNKNOWN, 0.0, str(e))
 
-    def _store_health_result(self) -> None:
+def _store_health_result(self, result: str, result: str, result: str) -> None:
         """Store health check result in database"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -593,7 +593,7 @@ class PAKEServiceMonitor:
         }
         return icons.get(status, "❓")
 
-    async def _process_health_results(self) -> None:
+async def _process_health_results(self, results: Any = None) -> None:
         """Process health results and trigger recovery actions"""
         for service_name, result in results.items():
             service = self.services[service_name]
@@ -616,7 +616,7 @@ class PAKEServiceMonitor:
             if previous_status != result.status:
                 await self._generate_alert(service_name, result, previous_status)
 
-    async def _handle_service_failure(self) -> None:
+async def _handle_service_failure(self, service_name: Any = None, service: Any = None, service_name: Any = None, service_name: Any = None, result: str, service: Any = None, service: Any = None, service_name: Any = None, service: Any = None, service_name: Any = None, service_name: Any = None, service: Any = None, service_name: Any = None, service_name: Any = None, service_name: Any = None) -> None:
         """Handle service failure with recovery attempts"""
         restart_count = self.restart_attempts.get(service_name, 0)
 
@@ -715,7 +715,7 @@ class PAKEServiceMonitor:
             self.logger.error("Error executing restart command: %s", e)
             return False
 
-    async def _generate_alert(self) -> None:
+async def _generate_alert(self, level: LogLevel, result: str, custom_message: Any = None, custom_message: Any = None, previous_status: Any = None, service_name: Any = None, previous_status: Any = None, service_name: Any = None, result: str, result: str, service_name: Any = None) -> None:
         """Generate and send alerts for service status changes"""
         if level is None:
             level = self._determine_alert_level(result.status)
@@ -769,7 +769,7 @@ class PAKEServiceMonitor:
         }
         return mapping.get(status, AlertLevel.WARNING)
 
-    async def start_monitoring(self) -> None:
+async def start_monitoring(self, check_interval: Any = None, check_interval: Any = None, check_interval: Any = None) -> None:
         """Start continuous monitoring loop"""
         self.monitoring_active = True
         self.logger.info(
@@ -794,7 +794,7 @@ class PAKEServiceMonitor:
         """Stop continuous monitoring"""
         self.monitoring_active = False
 
-    def get_health_summary(self) -> Dict[str, Any]:
+    def get_health_summary(self) -> dict[str, Any]:
         """Get overall system health summary"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()

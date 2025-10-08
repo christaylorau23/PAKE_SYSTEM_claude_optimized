@@ -54,7 +54,7 @@ class StageExecution:
 class CICDSimulator:
     """CI/CD Pipeline Simulator"""
 
-    def __init__(self) -> None:
+def __init__(self, verbose: Any = None, parallel: Any = None, skip_tests: Any = None) -> None:
         self.verbose = verbose
         self.parallel = parallel
         self.skip_tests = skip_tests
@@ -244,7 +244,7 @@ class CICDSimulator:
             },
         }
 
-    def log(self) -> None:
+def log(self, level: LogLevel, level: LogLevel, message: str) -> None:
         """Log message with timestamp"""
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:

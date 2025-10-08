@@ -44,7 +44,7 @@ class FaultInjectionConfig:
 class FaultInjector:
     """Utility class for injecting faults into API responses"""
 
-    def __init__(self) -> None:
+def __init__(self, config: Any = None) -> None:
         self.config = config
         self.fault_count = 0
         self.total_requests = 0
@@ -89,7 +89,7 @@ class FaultInjectionTestMixin:
     """Mixin class providing common fault injection test utilities"""
 
     @staticmethod
-    async def test_service_resilience(self) -> None:
+async def test_service_resilience(self, fault_types: Any = None, fault_types: Any = None, service_method: Any = None, service_method: Any = None, service_method: Any = None, service_method: Any = None, args: tuple, kwargs: Any = None, expected_error_codes: Any = None, **kwargs: Any) -> None:
         """Generic test for service resilience against various fault types"""
         fault_injector = FaultInjector(FaultInjectionConfig(fault_types=fault_types))
 
@@ -128,12 +128,12 @@ class FaultInjectionMetrics:
         self.failed_recoveries = {}
         self.response_times = {}
 
-    def record_fault_injection(self) -> None:
+def record_fault_injection(self, service: Any = None, fault_type: Any = None) -> None:
         """Record a fault injection event"""
         key = f"{service}_{fault_type.value}"
         self.fault_injections[key] = self.fault_injections.get(key, 0) + 1
 
-    def record_recovery(self) -> None:
+def record_recovery(self, service: Any = None, fault_type: Any = None, successful: Any = None) -> None:
         """Record a recovery attempt"""
         key = f"{service}_{fault_type.value}"
         if successful:
@@ -141,7 +141,7 @@ class FaultInjectionMetrics:
         else:
             self.failed_recoveries[key] = self.failed_recoveries.get(key, 0) + 1
 
-    def record_response_time(self) -> None:
+def record_response_time(self, service: Any = None, service: Any = None, service: Any = None, response_time_ms: Any = None) -> None:
         """Record response time for a service call"""
         if service not in self.response_times:
             self.response_times[service] = []
@@ -197,7 +197,7 @@ external_api_marker = pytest.mark.external_api_testing
 network_required_marker = pytest.mark.requires_network
 
 
-def pytest_configure(self) -> None:
+def pytest_configure(self, config: Any = None, config: Any = None, config: Any = None) -> None:
     """Configure pytest for fault injection testing"""
     config.addinivalue_line(
         "markers", "fault_injection: Fault injection tests for API resilience"
@@ -211,7 +211,7 @@ def pytest_configure(self) -> None:
 
 
 # Utility functions for fault injection testing
-async def simulate_network_partition(self) -> None:
+async def simulate_network_partition(self, service_urls: Any = None, duration_seconds: Any = None, service_urls: Any = None, duration_seconds: Any = None) -> None:
     """Simulate network partition for specified service URLs"""
     logger.info(
         "Simulating network partition for %s for %ss", service_urls, duration_seconds
@@ -236,7 +236,7 @@ async def simulate_network_partition(self) -> None:
         await asyncio.sleep(duration_seconds)
 
 
-async def simulate_cascading_failures(self) -> None:
+async def simulate_cascading_failures(self, services: Any = None, failure_pattern: Any = None, failure_pattern: Any = None, services: Any = None) -> None:
     """Simulate cascading failures across multiple services"""
     logger.info(
         "Simulating cascading failures for %s with pattern: %s",
@@ -266,7 +266,7 @@ async def simulate_cascading_failures(self) -> None:
                 )
 
 
-def validate_error_handling(self) -> None:
+def validate_error_handling(self, result: str, service_name: Any = None, result: str, result: str, service_name: Any = None, result: str, result: str, result: str, expected_error_codes: Any = None, service_name: Any = None, result: str, result: str, service_name: Any = None, service_name: Any = None) -> None:
     """Validate that error handling meets resilience requirements"""
     assert result is not None, f"{service_name} should return a result even on failure"
 
@@ -286,7 +286,7 @@ def validate_error_handling(self) -> None:
     logger.info("✓ %s error handling validated", service_name)
 
 
-def validate_graceful_degradation(self) -> None:
+def validate_graceful_degradation(self, results: Any = None, results: Any = None, min_success_rate: Any = None, min_success_rate: Any = None) -> None:
     """Validate that system gracefully degrades under failures"""
     total_results = len(results)
     successful_results = sum(1 for r in results if hasattr(r, "success") and r.success)
@@ -307,7 +307,7 @@ class FaultInjectionPerformanceTest:
     """Performance testing utilities for fault injection scenarios"""
 
     @staticmethod
-    async def measure_recovery_time(self) -> None:
+async def measure_recovery_time(self, fault_type: Any = None, fault_type: Any = None, service_method: Any = None, service_method: Any = None, service_method: Any = None, service_method: Any = None, args: tuple, kwargs: Any = None, **kwargs: Any) -> None:
         """Measure time to recover from a specific fault type"""
         start_time = asyncio.get_event_loop().time()
 
@@ -336,10 +336,10 @@ class FaultInjectionPerformanceTest:
             return result, recovery_time
 
     @staticmethod
-    async def stress_test_with_faults(self) -> None:
+async def stress_test_with_faults(self, fault_types: Any = None, fault_types: Any = None, service_method: Any = None, args: tuple, kwargs: Any = None, concurrent_requests: Any = None, concurrent_requests: Any = None, concurrent_requests: Any = None, concurrent_requests: Any = None, **kwargs: Any) -> None:
         """Stress test service under fault injection conditions"""
 
-        async def single_request(self) -> None:
+async def single_request(self, fault_types: Any = None, fault_types: Any = None, service_method: Any = None, args: tuple, kwargs: Any = None, **kwargs: Any) -> None:
             fault_type = fault_types[hash(asyncio.current_task()) % len(fault_types)]
             return await FaultInjectionPerformanceTest.measure_recovery_time(
                 service_method, fault_type, *args, **kwargs

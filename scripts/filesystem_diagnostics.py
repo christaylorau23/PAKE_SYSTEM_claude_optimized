@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 class FilesystemDiagnostics:
     """Comprehensive filesystem analysis for CI compatibility"""
 
-    def __init__(self) -> None:
+def __init__(self, root_path: Any = None) -> None:
         self.root_path = Path(root_path or os.getcwd())
         self.issues = []
         self.warnings = []

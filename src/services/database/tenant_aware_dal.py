@@ -8,10 +8,10 @@ from datetime import UTC, datetime, timedelta
 import logging
 from typing import Any, Dict, Generic, List, TypeVar
 
+import asyncpg
+import psycopg2
 import sqlalchemy as sa
 from sqlalchemy import func
-import psycopg2
-import asyncpg
 
 from src.middleware.tenant_context import get_current_tenant_id, get_current_user_id
 from src.services.database.multi_tenant_schema import (
@@ -39,7 +39,9 @@ class TenantAwareRepository[T: Base](ABC):
     Ensures all database operations are automatically scoped to the current tenant.
     """
 
-    def __init__(self, db_service: MultiTenantPostgreSQLService, model_class: type[T]) -> None:
+    def __init__(
+        self, db_service: MultiTenantPostgreSQLService, model_class: type[T]
+    ) -> None:
         self.db_service = db_service
         self.model_class = model_class
         self._session_maker = db_service._session_maker
@@ -265,7 +267,7 @@ class SearchHistoryRepository(TenantAwareRepository[SearchHistory]):
         tenant_id: str | None = None,
         limit: int = 10,
         days: int = 7,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get popular searches within tenant."""
         since = datetime.now(UTC) - timedelta(days=days)
 
@@ -292,7 +294,7 @@ class SearchHistoryRepository(TenantAwareRepository[SearchHistory]):
         self,
         tenant_id: str | None = None,
         days: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get search analytics within tenant."""
         since = datetime.now(UTC) - timedelta(days=days)
         tenant_id = tenant_id or self._get_tenant_id()
@@ -381,7 +383,7 @@ class SavedSearchRepository(TenantAwareRepository[SavedSearch]):
 
     async def search_by_tags(
         self,
-        tags: List[str],
+        tags: list[str],
         tenant_id: str | None = None,
     ) -> list[SavedSearch]:
         """Search saved searches by tags within tenant."""
@@ -450,7 +452,7 @@ class TenantActivityRepository(TenantAwareRepository[TenantActivity]):
         self,
         activity_type: str,
         user_id: str | None = None,
-        activity_data: Dict[str, Any] | None = None,
+        activity_data: dict[str, Any] | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
     ) -> TenantActivity:
@@ -575,7 +577,7 @@ class TenantResourceUsageRepository(TenantAwareRepository[TenantResourceUsage]):
         self,
         tenant_id: str | None = None,
         days: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get usage summary within tenant."""
         since = datetime.now(UTC) - timedelta(days=days)
         tenant_id = tenant_id or self._get_tenant_id()
@@ -628,7 +630,7 @@ class TenantAwareDataAccessLayer:
 
         logger.info("Tenant-aware Data Access Layer initialized")
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Health check for tenant-aware DAL."""
         try:
             # Test tenant context
@@ -651,7 +653,7 @@ class TenantAwareDataAccessLayer:
     async def get_tenant_summary(
         self,
         tenant_id: str | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get comprehensive tenant summary."""
         tenant_id = tenant_id or get_current_tenant_id()
         if not tenant_id:

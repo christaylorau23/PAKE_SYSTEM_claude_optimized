@@ -1,0 +1,277 @@
+# PAKE System - Security Vulnerability Scanning
+
+## Automated Security Scanning Workflow
+# This workflow continuously scans for security vulnerabilities
+# in dependencies and application code
+
+name: Security Vulnerability Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  dependency-scanning:
+    runs-on: ubuntu-latest
+    name: "Dependency Vulnerability Scanning"
+
+    steps:
+    - name: "🔍 Checkout Code"
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: "🐍 Set up Python"
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"
+        cache: 'pip'
+
+    - name: "📚 Install Poetry"
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: "💾 Cache Dependencies"
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-3.12-${{ hashFiles('**/poetry.lock') }}
+
+    - name: "📦 Install Dependencies"
+      run: poetry install --with dev --no-root
+
+    # ===== SNYK VULNERABILITY SCANNING =====
+    - name: "🔒 Snyk Vulnerability Scan"
+      uses: snyk/actions/python@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=medium --json --output=snyk-report.json
+
+    - name: "📊 Upload Snyk Report"
+      uses: actions/upload-artifact@v3
+      with:
+        name: snyk-vulnerability-report
+        path: snyk-report.json
+        retention-days: 30
+
+    # ===== DEPENDABOT SECURITY CHECK =====
+    - name: "🔍 Dependabot Security Check"
+      run: |
+        echo "🔍 Running Dependabot security check..."
+        poetry run safety check --json --output dependabot-report.json
+        echo "✅ Dependabot security check completed"
+
+    - name: "📊 Upload Dependabot Report"
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependabot-security-report
+        path: dependabot-report.json
+        retention-days: 30
+
+    # ===== PIP-AUDIT SCANNING =====
+    - name: "🔒 pip-audit Vulnerability Scan"
+      run: |
+        echo "🔒 Running pip-audit vulnerability scan..."
+        poetry run pip-audit --format=json --output=pip-audit-report.json
+        echo "✅ pip-audit scan completed"
+
+    - name: "📊 Upload pip-audit Report"
+      uses: actions/upload-artifact@v3
+      with:
+        name: pip-audit-vulnerability-report
+        path: pip-audit-report.json
+        retention-days: 30
+
+    # ===== SAFETY SCANNING =====
+    - name: "🔒 Safety Vulnerability Scan"
+      run: |
+        echo "🔒 Running Safety vulnerability scan..."
+        poetry run safety check --json --output safety-report.json
+        echo "✅ Safety scan completed"
+
+    - name: "📊 Upload Safety Report"
+      uses: actions/upload-artifact@v3
+      with:
+        name: safety-vulnerability-report
+        path: safety-report.json
+        retention-days: 30
+
+    # ===== VULNERABILITY ANALYSIS =====
+    - name: "📊 Vulnerability Analysis"
+      run: |
+        echo "📊 Analyzing vulnerability reports..."
+
+        # Create comprehensive vulnerability report
+        poetry run python << 'EOF'
+        import json
+        import sys
+        from datetime import datetime
+
+        def load_report(filename):
+            try:
+                with open(filename, 'r') as f:
+                    return json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                return {}
+
+        # Load all reports
+        snyk_report = load_report('snyk-report.json')
+        dependabot_report = load_report('dependabot-report.json')
+        pip_audit_report = load_report('pip-audit-report.json')
+        safety_report = load_report('safety-report.json')
+
+        # Analyze vulnerabilities
+        vulnerabilities = {
+            'critical': [],
+            'high': [],
+            'medium': [],
+            'low': []
+        }
+
+        # Process Snyk report
+        if 'vulnerabilities' in snyk_report:
+            for vuln in snyk_report['vulnerabilities']:
+                severity = vuln.get('severity', 'low').lower()
+                if severity in vulnerabilities:
+                    vulnerabilities[severity].append({
+                        'tool': 'snyk',
+                        'package': vuln.get('package', 'unknown'),
+                        'version': vuln.get('version', 'unknown'),
+                        'cve': vuln.get('cve', 'unknown'),
+                        'description': vuln.get('description', 'No description'),
+                        'severity': severity
+                    })
+
+        # Process Safety report
+        if 'vulnerabilities' in safety_report:
+            for vuln in safety_report['vulnerabilities']:
+                severity = vuln.get('severity', 'low').lower()
+                if severity in vulnerabilities:
+                    vulnerabilities[severity].append({
+                        'tool': 'safety',
+                        'package': vuln.get('package', 'unknown'),
+                        'version': vuln.get('version', 'unknown'),
+                        'cve': vuln.get('cve', 'unknown'),
+                        'description': vuln.get('description', 'No description'),
+                        'severity': severity
+                    })
+
+        # Generate summary report
+        summary = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'total_vulnerabilities': sum(len(v) for v in vulnerabilities.values()),
+            'by_severity': {k: len(v) for k, v in vulnerabilities.items()},
+            'vulnerabilities': vulnerabilities,
+            'recommendations': []
+        }
+
+        # Generate recommendations
+        if vulnerabilities['critical']:
+            summary['recommendations'].append({
+                'priority': 'critical',
+                'action': 'immediate_update',
+                'count': len(vulnerabilities['critical']),
+                'description': 'Critical vulnerabilities require immediate attention'
+            })
+
+        if vulnerabilities['high']:
+            summary['recommendations'].append({
+                'priority': 'high',
+                'action': 'schedule_update',
+                'count': len(vulnerabilities['high']),
+                'description': 'High severity vulnerabilities should be addressed within 1 week'
+            })
+
+        if vulnerabilities['medium']:
+            summary['recommendations'].append({
+                'priority': 'medium',
+                'action': 'plan_update',
+                'count': len(vulnerabilities['medium']),
+                'description': 'Medium severity vulnerabilities should be addressed within 1 month'
+            })
+
+        # Save comprehensive report
+        with open('vulnerability-summary.json', 'w') as f:
+            json.dump(summary, f, indent=2)
+
+        print(f"Vulnerability analysis complete:")
+        print(f"  Total vulnerabilities: {summary['total_vulnerabilities']}")
+        print(f"  Critical: {summary['by_severity']['critical']}")
+        print(f"  High: {summary['by_severity']['high']}")
+        print(f"  Medium: {summary['by_severity']['medium']}")
+        print(f"  Low: {summary['by_severity']['low']}")
+
+        # Exit with error if critical vulnerabilities found
+        if vulnerabilities['critical']:
+            print("❌ Critical vulnerabilities found - failing build")
+            sys.exit(1)
+        else:
+            print("✅ No critical vulnerabilities found")
+        EOF
+
+    - name: "📊 Upload Vulnerability Summary"
+      uses: actions/upload-artifact@v3
+      with:
+        name: vulnerability-summary
+        path: vulnerability-summary.json
+        retention-days: 30
+
+    # ===== SECURITY SCAN SUMMARY =====
+    - name: "📋 Security Scan Summary"
+      uses: actions/github-script@v6
+      if: always()
+      with:
+        script: |
+          const comment = `## 🔒 Security Vulnerability Scan Results
+
+          **Scan Date:** $(new Date().toISOString())
+          **Commit:** \`${{ github.sha }}\`
+          **Branch:** \`${{ github.ref_name }}\`
+          **Triggered by:** @${{ github.actor }}
+
+          ### Scanning Tools:
+          - ✅ **Snyk:** Comprehensive vulnerability scanning
+          - ✅ **Dependabot:** Automated dependency updates
+          - ✅ **pip-audit:** Python-specific vulnerability scanning
+          - ✅ **Safety:** Python vulnerability database
+
+          ### Scan Results:
+          - 📊 **Total Vulnerabilities:** [See detailed report]
+          - 🔴 **Critical:** [See detailed report]
+          - 🟠 **High:** [See detailed report]
+          - 🟡 **Medium:** [See detailed report]
+          - 🟢 **Low:** [See detailed report]
+
+          ### Recommendations:
+          - 🔴 **Critical:** Immediate update required
+          - 🟠 **High:** Update within 1 week
+          - 🟡 **Medium:** Update within 1 month
+          - 🟢 **Low:** Update when convenient
+
+          ### Next Steps:
+          1. 📋 Review detailed vulnerability reports
+          2. 🔧 Prioritize updates based on severity
+          3. 📦 Update dependencies according to policy
+          4. 🧪 Test updates in development environment
+          5. 🚀 Deploy updates to production
+
+          **Security scanning complete!** 🔒`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

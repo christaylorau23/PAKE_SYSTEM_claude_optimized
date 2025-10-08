@@ -96,7 +96,7 @@ class TestArxivEnhancedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_search_arxiv_with_advanced_query_parameters(self) -> None:
+async def test_should_search_arxiv_with_advanced_query_parameters(self, sample_search_query: Any = None) -> None:
         """
         RED TEST: Service should support advanced ArXiv search beyond basic RSS.
 
@@ -114,7 +114,7 @@ class TestArxivEnhancedService:
         assert "cs.AI" in result.query_used.categories
 
     @pytest.mark.asyncio
-    async def test_should_parse_arxiv_xml_response_correctly(self) -> None:
+async def test_should_parse_arxiv_xml_response_correctly(self, sample_arxiv_xml: Any = None) -> None:
         """
         RED TEST: Service should correctly parse ArXiv XML API responses.
 
@@ -236,9 +236,7 @@ class TestArxivEnhancedService:
             assert hasattr(item, "metadata")
 
     @pytest.mark.asyncio
-    async def test_should_provide_enhanced_metadata_for_cognitive_analysis(
-        self,
-    ) -> None:
+async def test_should_provide_enhanced_metadata_for_cognitive_analysis(self, sample_search_query: Any = None) -> None:
         """
         RED TEST: Service should provide rich metadata for cognitive analysis.
 

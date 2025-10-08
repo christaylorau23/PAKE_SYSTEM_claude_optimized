@@ -1,4 +1,5 @@
 from fastapi import Path
+
 #!/usr/bin/env python3
 """PAKE System - Security Monitoring & Alerting System
 Comprehensive security monitoring, threat detection, and incident response.
@@ -312,7 +313,7 @@ class SecurityMonitoringSystem:
 
         return event
 
-    async def _run_detection_rules(self) -> None:
+async def _run_detection_rules(self, event: Any = None, event: Any = None, event: Any = None, event: Any = None) -> None:
         """Run detection rules against security event."""
         for rule in self.detection_rules:
             if not rule.enabled:
@@ -558,7 +559,7 @@ class SecurityMonitoringSystem:
     # Threat Intelligence and Correlation
     # ========================================================================
 
-    async def _update_threat_indicators(self) -> None:
+async def _update_threat_indicators(self, event: Any = None, event: Any = None, event: Any = None, event: Any = None) -> None:
         """Update threat indicators for correlation."""
         if self.event.source_ip:
             if self.event.source_ip not in self.threat_indicators:
@@ -572,7 +573,7 @@ class SecurityMonitoringSystem:
                 ts for ts in self.threat_indicators[event.source_ip] if ts > cutoff_time
             ]
 
-    async def _check_incident_creation(self) -> None:
+async def _check_incident_creation(self, event: Any = None, event: Any = None, event: Any = None, event: Any = None, event: Any = None, event: Any = None) -> None:
         """Check if event should trigger incident creation."""
         # Create incident for high/critical threat events
         if event.threat_level in [ThreatLevel.HIGH, ThreatLevel.CRITICAL]:
@@ -617,7 +618,7 @@ class SecurityMonitoringSystem:
 
         return None
 
-    async def _create_incident(self, event: SecurityEvent) -> SecurityIncident:
+async def _create_incident(self, event: SecurityEvent, secrets: Any = None) -> SecurityIncident:
         """Create new security incident."""
         incident = SecurityIncident(
             incident_id=f"inc_{int(time.time())}_{secrets.token_hex(4)}",
@@ -637,7 +638,7 @@ class SecurityMonitoringSystem:
     # Alerting and Notifications
     # ========================================================================
 
-    async def _send_incident_alerts(self) -> None:
+async def _send_incident_alerts(self, incident: Any = None, secrets: Any = None, incident: Any = None) -> None:
         """Send alerts for new incident."""
         alert_channels = self._get_alert_channels_for_threat_level(
             incident.threat_level
@@ -662,7 +663,7 @@ class SecurityMonitoringSystem:
             except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to send alert to %s: %s", channel, str(e))
 
-    async def _send_incident_update_alerts(self) -> None:
+async def _send_incident_update_alerts(self, incident: Any = None, secrets: Any = None, incident: Any = None) -> None:
         """Send alerts for incident updates."""
         alert_channels = self._get_alert_channels_for_threat_level(
             incident.threat_level
@@ -699,27 +700,27 @@ class SecurityMonitoringSystem:
             return [AlertChannel.EMAIL]
         return [AlertChannel.EMAIL]
 
-    async def _send_email_alert(self) -> None:
+async def _send_email_alert(self, alert: Any = None) -> None:
         """Send email alert."""
         # In production, integrate with email service (SendGrid, SES, etc.)
         self.logger.info("Email alert sent: %s", alert.title)
 
-    async def _send_slack_alert(self) -> None:
+async def _send_slack_alert(self, alert: Any = None) -> None:
         """Send Slack alert."""
         # In production, integrate with Slack API
         self.logger.info("Slack alert sent: %s", alert.title)
 
-    async def _send_webhook_alert(self) -> None:
+async def _send_webhook_alert(self, alert: Any = None) -> None:
         """Send webhook alert."""
         # In production, send to configured webhook URL
         self.logger.info("Webhook alert sent: %s", alert.title)
 
-    async def _send_sms_alert(self) -> None:
+async def _send_sms_alert(self, alert: Any = None) -> None:
         """Send SMS alert."""
         # In production, integrate with SMS service (Twilio, etc.)
         self.logger.info("SMS alert sent: %s", alert.title)
 
-    async def _send_pagerduty_alert(self) -> None:
+async def _send_pagerduty_alert(self, alert: Any = None) -> None:
         """Send PagerDuty alert."""
         # In production, integrate with PagerDuty API
         self.logger.info("PagerDuty alert sent: %s", alert.title)

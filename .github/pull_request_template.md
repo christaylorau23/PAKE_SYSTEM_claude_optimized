@@ -63,6 +63,28 @@ Related to #
 - [ ] Memory usage impact assessed
 - [ ] No secrets or sensitive data in code
 
+### Boy Scout Rule Compliance
+**I have applied the Boy Scout Rule and left the surrounding code in a better state:**
+
+- [ ] I have made small, incremental improvements to code quality
+- [ ] I have improved variable names, extracted functions, or removed small duplications
+- [ ] I have added clarifying comments where needed
+- [ ] I have not made large architectural changes (those require separate tasks)
+
+**Refactoring Summary:**
+Describe the small improvements made:
+- [ ] Improved variable/function names
+- [ ] Extracted complex logic into well-named functions
+- [ ] Removed small code duplications
+- [ ] Added clarifying comments
+- [ ] Other: _______________
+
+**Code Review Checklist:**
+- [ ] Code is cleaner than when I found it
+- [ ] Small improvements were made without changing functionality
+- [ ] No large architectural changes were made
+- [ ] Refactoring is focused and limited in scope
+
 ## Documentation
 **Documentation updates:**
 

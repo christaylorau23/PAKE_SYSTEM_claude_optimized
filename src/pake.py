@@ -954,10 +954,7 @@ Environment Variables:
                 busy_ports.append(port)
 
             except BaseException as e:
-
-
                 logger.debug(f"Exception in pake.py: {e}")
-
 
                 # Continue gracefully  # Port is free
 
@@ -978,7 +975,7 @@ Environment Variables:
             return False, f"Permission issue: {str(e)}"
 
     # Helper methods
-    def _print_status(self, status: Dict[str, Any]) -> None:
+    def _print_status(self, status: dict[str, Any]) -> None:
         """Print formatted status."""
         print(f"{Colors.blue('📊 PAKE+ System Status')}")
         print(
@@ -1086,7 +1083,6 @@ Environment Variables:
                         shutil.rmtree(file_path)
                         cleaned_count += 1
                 except Exception as e:
-
                     logger.debug(f"Exception in pake.py: {e}")
 
                     # Continue gracefully

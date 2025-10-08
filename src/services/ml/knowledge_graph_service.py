@@ -26,7 +26,7 @@ class GraphNode:
     label: str
     type: str  # 'topic', 'query', 'source', 'session'
     weight: float = 1.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     color: str = "#3498db"
     size: int = 10
 
@@ -39,7 +39,7 @@ class GraphEdge:
     target_id: str
     weight: float = 1.0
     edge_type: str = "related"  # 'related', 'contains', 'searched_together'
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -48,10 +48,10 @@ class KnowledgeGraph:
 
     nodes: list[GraphNode] = field(default_factory=list)
     edges: list[GraphEdge] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "nodes": [
@@ -106,9 +106,9 @@ class KnowledgeGraphService:
 
     async def generate_knowledge_graph(
         self,
-        search_history: list[Dict[str, Any]],
-        research_sessions: Dict[str, Any],
-        knowledge_insights: list[Dict[str, Any]],
+        search_history: list[dict[str, Any]],
+        research_sessions: dict[str, Any],
+        knowledge_insights: list[dict[str, Any]],
         max_nodes: int = 50,
     ) -> KnowledgeGraph:
         """Generate comprehensive knowledge graph from research data.
@@ -194,7 +194,7 @@ class KnowledgeGraphService:
 
     async def _generate_topic_nodes(
         self,
-        search_history: list[Dict[str, Any]],
+        search_history: list[dict[str, Any]],
     ) -> tuple[list[GraphNode], dict[str, int]]:
         """Generate nodes for topics based on search frequency."""
         topic_frequencies = Counter()
@@ -247,7 +247,7 @@ class KnowledgeGraphService:
 
     async def _generate_query_nodes(
         self,
-        recent_searches: list[Dict[str, Any]],
+        recent_searches: list[dict[str, Any]],
     ) -> list[GraphNode]:
         """Generate nodes for recent queries."""
         query_nodes = []
@@ -283,7 +283,7 @@ class KnowledgeGraphService:
 
     async def _generate_session_nodes(
         self,
-        research_sessions: Dict[str, Any],
+        research_sessions: dict[str, Any],
     ) -> list[GraphNode]:
         """Generate nodes for research sessions."""
         session_nodes = []
@@ -322,7 +322,7 @@ class KnowledgeGraphService:
 
     async def _generate_insight_nodes(
         self,
-        knowledge_insights: list[Dict[str, Any]],
+        knowledge_insights: list[dict[str, Any]],
     ) -> list[GraphNode]:
         """Generate nodes for knowledge insights."""
         insight_nodes = []
@@ -373,7 +373,7 @@ class KnowledgeGraphService:
 
     async def _generate_topic_edges(
         self,
-        search_history: list[Dict[str, Any]],
+        search_history: list[dict[str, Any]],
         topic_frequencies: dict[str, int],
     ) -> list[GraphEdge]:
         """Generate edges between topics that appear together in searches."""
@@ -429,7 +429,7 @@ class KnowledgeGraphService:
 
     async def _generate_query_topic_edges(
         self,
-        search_history: list[Dict[str, Any]],
+        search_history: list[dict[str, Any]],
         topic_frequencies: dict[str, int],
     ) -> list[GraphEdge]:
         """Generate edges from queries to their related topics."""
@@ -474,7 +474,7 @@ class KnowledgeGraphService:
 
     async def _generate_session_edges(
         self,
-        research_sessions: Dict[str, Any],
+        research_sessions: dict[str, Any],
         topic_frequencies: dict[str, int],
     ) -> list[GraphEdge]:
         """Generate edges from sessions to their dominant topics."""
@@ -511,7 +511,7 @@ class KnowledgeGraphService:
 
         return edges
 
-    def get_graph_statistics(self, graph: KnowledgeGraph) -> Dict[str, Any]:
+    def get_graph_statistics(self, graph: KnowledgeGraph) -> dict[str, Any]:
         """Calculate detailed graph statistics."""
         if not graph.nodes:
             return {"message": "Empty graph"}

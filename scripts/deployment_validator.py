@@ -7,14 +7,15 @@ Validates deployment configuration and automation
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
+
 
 class DeploymentValidator:
     """Validates deployment infrastructure"""
-    
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-    
+
     async def validate_docker(self) -> bool:
         """Validate Docker configuration"""
         try:
@@ -25,7 +26,7 @@ class DeploymentValidator:
         except Exception as e:
             self.logger.error(f"Error validating Docker: {e}")
             return False
-    
+
     async def validate_kubernetes(self) -> bool:
         """Validate Kubernetes manifests"""
         try:
@@ -36,7 +37,7 @@ class DeploymentValidator:
         except Exception as e:
             self.logger.error(f"Error validating Kubernetes: {e}")
             return False
-    
+
     async def validate_cicd(self) -> bool:
         """Validate CI/CD pipelines"""
         try:
@@ -47,6 +48,7 @@ class DeploymentValidator:
         except Exception as e:
             self.logger.error(f"Error validating CI/CD: {e}")
             return False
+
 
 if __name__ == "__main__":
     validator = DeploymentValidator()

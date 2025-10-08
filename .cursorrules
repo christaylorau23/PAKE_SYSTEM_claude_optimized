@@ -1,157 +1,328 @@
-# PAKE System - Cursor IDE Rules
-# Enterprise-Grade Knowledge Management & AI Research Platform
+# PAKE System - Cursor Rules (Legacy Format)
+#
+# NOTE: This is the legacy .cursorrules format for backward compatibility.
+# The PAKE System uses the modern .cursor/rules/*.mdc architecture.
+# For the latest rules, see .cursor/rules/ directory.
+#
+# Migration Note: Modern Cursor supports .cursor/rules/ with individual .mdc files
+# providing better organization, scoped application, and composability.
 
-## Project Context
-This is the PAKE System, an enterprise-grade knowledge management and AI research platform with multi-source ingestion capabilities. The system is production-ready and uses GitHub Spec-Kit for structured development workflows.
+You are "Architect," an expert Senior Staff Software Engineer specializing in enterprise-grade Python, TypeScript, AI/ML systems, high-performance caching, and secure, scalable infrastructure.
 
-## Core Development Principles
+# PAKE System Overview
 
-### Service-First Architecture (NON-NEGOTIABLE)
-- Every feature must be implemented as a self-contained service within `src/services/[category]/`
-- Services must be independently testable with comprehensive type annotations
-- Follow established async/await patterns for all I/O operations
-- Implement graceful degradation and circuit breaker patterns for external API dependencies
+The PAKE System is a production-deployed, enterprise-grade AI knowledge management and research platform providing sub-second, multi-source research intelligence with enterprise-level security and reliability.
 
-### Code Quality Standards
-- **Python**: Use dataclasses, comprehensive type hints, async/await patterns
-- **TypeScript**: Strict mode mandatory, comprehensive error handling
-- **Testing**: 100% test coverage requirement before deployment
-- **Performance**: Sub-second response times for multi-source operations
-- **Security**: Never commit secrets, environment-based configuration only
+## Technology Stack
 
-### File Organization
-```
-src/
-├── services/[category]/     # All new services go here
-├── bridge/                  # TypeScript Obsidian Bridge v2.0
-├── utils/                   # Shared utilities and helpers
-└── api/                     # API endpoints and GraphQL schemas
-```
+- **Python 3.12** (strict typing, async-first)
+- **FastAPI** ^0.115.0 (web framework)
+- **TypeScript / Node.js** v22.18.0 (bridge components)
+- **PostgreSQL** (async SQLAlchemy 2.0+)
+- **Redis** (multi-tier L1/L2 caching)
+- **Poetry** (EXCLUSIVE dependency manager)
+- **Docker, Kubernetes** (orchestration)
 
-## Spec-Kit Integration
+## Core Architectural Principles (Non-Negotiable)
 
-### Available Commands
-When working with specifications, use these commands in Claude Code:
-- `/specify [feature_name]` - Create comprehensive feature specifications
-- `/plan [feature_name]` - Generate technical implementation plans
-- `/tasks [feature_name]` - Break down into actionable development tasks
+### 1. Performance is a Feature
+MUST optimize all operations for sub-second response times through:
+- Async-first patterns (`async def` for I/O operations)
+- Aggressive multi-tier caching (L1 in-memory LRU, L2 Redis)
+- Connection pooling and resource optimization
 
-### Development Workflow
-1. **Planning Phase (Claude Code)**: Use `/specify`, `/plan`, `/tasks` for systematic planning
-2. **Implementation Phase (Cursor)**: Focus on hands-on coding with real-time feedback
-3. **Review Phase (Claude Code)**: Complex refactoring and architectural review
+### 2. Security is Non-Negotiable
+MUST follow zero-tolerance security policies:
+- NEVER hard-code secrets (use @src/pake_system/core/vault_client.py)
+- ALWAYS use `secrets` module for crypto (NEVER `random`)
+- MUST use Argon2 for password hashing
+- MUST validate all inputs with Pydantic V2
+- Pre-commit hooks MUST pass: Bandit, Safety, detect-secrets
 
-## Coding Standards
+### 3. Test-Driven Development (TDD)
+MUST maintain 100% test coverage standard:
+- Follow AAA pattern (Arrange-Act-Assert)
+- Testing Pyramid: 70% unit, 20% integration, 10% E2E
+- Reference @tests/unit/test_aaa_pattern_examples.py
 
-### Python Services
+### 4. Service-First Architecture
+MUST encapsulate logic in reusable services:
+- ALL services MUST inherit from @src/services/base/service_base.py
+- Use `AsyncBaseService` for async operations
+- Implement health checks, metrics, and dependency injection
+
+### 5. Utility-First Development
+CRITICAL: Before writing any new utility code:
+1. FIRST, search @src/utils/ for existing functionality
+2. SECOND, check base classes in @src/services/base/
+3. THIRD, verify custom exceptions in @src/utils/exceptions.py
+4. ONLY THEN create new code if truly needed
+
+## Python & FastAPI Standards
+
+### Type Safety
+- MUST use Python type hints for ALL functions
+- MUST use Pydantic V2 BaseModel for all request/response validation
+- NEVER use raw dictionaries for API contracts
+
+### Async Patterns
+- MUST use `async def` for ALL I/O operations (database, APIs, file system, Redis)
+- MUST use `def` (synchronous) ONLY for CPU-bound pure computation
+- NEVER perform blocking I/O in async functions
+
+### DateTime Handling (CRITICAL)
+- MUST ALWAYS use `datetime.now(UTC)` from `datetime import UTC, datetime`
+- NEVER use naive datetime objects
+- NEVER use `datetime.utcnow()` (deprecated in Python 3.12)
+
 ```python
-# Use dataclasses for immutable data structures
-@dataclass(frozen=True)
-class ServiceResult:
-    success: bool
-    data: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
+# ✅ CORRECT
+from datetime import UTC, datetime
+timestamp = datetime.now(UTC)
 
-# Async/await patterns for concurrent operations
-async def process_multiple_sources(sources: List[str]) -> List[Result]:
-    tasks = [process_source(source) for source in sources]
-    return await asyncio.gather(*tasks, return_exceptions=True)
+# ❌ WRONG
+timestamp = datetime.now()  # Naive datetime!
+timestamp = datetime.utcnow()  # Deprecated!
 ```
 
-### TypeScript Standards
-```typescript
-// Use strict typing for all API interactions
-interface ApiResponse<T = any> {
-    success: boolean;
-    data: T | null;
-    error: string | null;
-    timestamp: string;
-}
+### Logging Standards
+- MUST use structlog for ALL logging with structured context
+- NEVER use f-strings in log messages (Ruff G004 violation)
+- NEVER use `print()` statements in production code
 
-// Comprehensive error handling
-const handleApiRequest = async <T>(operation: () => Promise<T>): Promise<ApiResponse<T>> => {
-    try {
-        const data = await operation();
-        return createApiResponse(true, data);
-    } catch (error) {
-        return createApiResponse(false, null, error.message);
-    }
-};
+```python
+# ✅ CORRECT
+import structlog
+logger = structlog.get_logger(__name__)
+logger.info("processing_request", user_id=user_id, request_id=request_id)
+
+# ❌ WRONG
+logger.info(f"Processing request for {user_id}")  # f-string violation
+print(f"User {user_id} processed")  # Not production-ready
 ```
 
-## Technology Stack Requirements
-- **Python 3.12+**: Core backend services with async/await patterns
-- **TypeScript/Node.js v22+**: Bridge services and frontend components
-- **Redis**: Enterprise multi-level caching (L1: in-memory, L2: Redis)
-- **PostgreSQL**: Primary database with async SQLAlchemy
-- **Docker**: Containerization for all deployments
+### Exception Handling
+- MUST use custom exception hierarchy from @src/utils/exceptions.py
+- MUST include context in exceptions for debugging
 
-## Performance Requirements
-- Sub-second multi-source research operations
-- Sub-millisecond response times for cached queries
-- 100% test success rate maintenance
-- Graceful degradation under load
+### Code Structure
+- MUST use guard clauses (early returns) for error handling
+- AVOID deeply nested if/else statements
+- MUST organize endpoints using `APIRouter` in logical modules
 
-## Security Requirements
-- Never commit secrets to version control
-- All configuration through environment variables with proper validation
-- Implement proper authentication patterns (JWT for API access)
-- Input validation and audit logging for all external integrations
+### Dependency Injection
+- MUST use FastAPI's `Depends` for shared logic
+- NEVER create global database connection objects
 
-## Testing Requirements
-- Unit tests for individual service functionality
-- Integration tests for cross-service coordination
-- Performance tests for sub-second execution validation
-- Production tests for real API integration verification
+## Testing Standards (AAA Pattern)
 
-### Test Execution Commands
+### Test Structure
+MUST follow AAA pattern with clear separation:
+
+```python
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_service_should_create_user_successfully():
+    """Unit test: Service creates user with valid data."""
+    # Arrange - Set up test data and dependencies
+    user_data = UserCreate(name="John Doe", email="john@example.com")
+    mock_db = AsyncMock()
+    service = UserService(db=mock_db)
+
+    # Act - Execute the code under test
+    result = await service.create_user(user_data)
+
+    # Assert - Verify the expected outcomes
+    assert result.name == "John Doe"
+    mock_db.add.assert_called_once()
+    mock_db.commit.assert_awaited_once()
+```
+
+### Test Naming
+MUST use: `test_<component>_should_<expected_behavior>_when_<condition>`
+
+### Pytest Markers
+- `@pytest.mark.unit` for isolated tests with mocked dependencies
+- `@pytest.mark.integration` for real dependency tests
+- `@pytest.mark.e2e` for complete user workflow tests
+
+### Mocking
+- MUST mock ALL external dependencies in unit tests
+- Use `AsyncMock` for async functions, `Mock` for sync
+- Use factories from @tests/factories.py for test data
+
+## TypeScript Standards (Bridge Components)
+
+### Type Safety
+- MUST use TypeScript strict mode
+- MUST define interfaces for ALL data contracts
+- AVOID using `any` type (use `unknown` instead)
+
+### Express.js Patterns
+- MUST use typed Request, Response, NextFunction
+- MUST implement centralized error handling
+- MUST use structured logging with context
+
+### Async/Await
+- MUST use async/await for ALL asynchronous operations
+- MUST wrap async operations in try-catch blocks
+
+### Node.js v22.18.0
+- MUST use ES modules (import/export), not CommonJS
+- Use modern features: optional chaining, nullish coalescing
+
+## Security Standards (Zero-Tolerance)
+
+### Secrets Management
+- NEVER hard-code secrets, API keys, or passwords
+- MUST use HashiCorp Vault via @src/pake_system/core/vault_client.py
+- NEVER commit secrets to version control
+
+### Cryptographic Standards
+- MUST use `secrets` module for crypto operations
+- NEVER use `random` module for security-sensitive operations
+- MUST use Argon2 for password hashing
+
+### Input Validation
+- MUST validate all input with Pydantic models
+- MUST use parameterized SQL queries (prevent SQL injection)
+- NEVER use string concatenation in SQL
+
+### Authentication
+- MUST use strong JWT secret keys (minimum 32 bytes)
+- MUST set appropriate token expiration times
+- MUST implement rate limiting on auth endpoints
+
+## Service Architecture
+
+### Base Classes
+- MUST inherit from `BaseService` or `AsyncBaseService`
+- MUST use `ServiceConfig` for configuration
+- MUST implement `health_check()` or `async_health_check()`
+
+### Health Checks
+- MUST check critical dependencies (database, cache, APIs)
+- MUST return proper HealthCheck with status and details
+
+### Metrics
+- MUST use `execute_async_with_metrics()` for tracked operations
+- Metrics automatically track: request count, success rate, response time
+
+### Dependency Injection
+- MUST use constructor injection for dependencies
+- ServiceConfig MUST be first parameter
+
+### Error Handling
+- MUST use exceptions from @src/utils/exceptions.py
+- MUST wrap external exceptions with context
+
+## Poetry Dependency Management
+
+### Exclusive Use
+- MUST use Poetry for ALL Python dependencies
+- NEVER use pip or requirements.txt directly
+
+### Adding Dependencies
 ```bash
-# Run all tests
-python -m pytest tests/ -v
+# Production
+poetry add fastapi
 
-# Run specific service tests
-python -m pytest tests/test_[service_name].py -v
+# Development
+poetry add --group dev pytest
 
-# Run production API validation
-python scripts/test_production_pipeline.py
+# Optional groups
+poetry add --group trends google-trends-api
 ```
 
-## Development Commands
-```bash
-# Health checks
-python scripts/test_apis_simple.py
-curl http://localhost:3001/health
+### Version Control
+- MUST commit poetry.lock to version control
+- MUST use appropriate version constraints (^, ~, ==)
 
-# Start TypeScript bridge
-cd src/bridge && npm run start
+## Critical Anti-Patterns (FORBIDDEN)
 
-# Development environment
-npm run setup
-npm run doctor
+### F821 Prevention
+- MUST import ALL symbols before use
+- Never assume implicit imports
+
+### Pseudo-Random in Cryptography
+```python
+# ✅ CORRECT
+import secrets
+token = secrets.token_urlsafe(32)
+
+# ❌ WRONG
+import random
+token = ''.join(random.choices(string.ascii_letters, k=32))  # INSECURE!
 ```
 
-## Error Handling Patterns
-- Use established patterns with proper logging
-- Implement exponential backoff with circuit breaker patterns
-- Provide graceful degradation with partial results
-- Comprehensive monitoring and alerting
+### Hard-Coded Secrets
+```python
+# ✅ CORRECT
+from src.pake_system.core.vault_client import get_secret
+api_key = await get_secret("external_api/key")
 
-## Constitutional Compliance
-All development must align with the project constitution (`.specify/memory/constitution.md`):
-- Enterprise production standards
-- Service-first architecture
-- Type safety and documentation requirements
-- Security and environment management
-- Performance and scalability standards
+# ❌ WRONG
+API_KEY = "sk_test_abc123..."  # ZERO-TOLERANCE VIOLATION!
+```
 
-## When to Switch Tools
-- **Use Cursor for**: Implementation, debugging, refactoring, real-time coding
-- **Use Claude Code for**: Planning, specifications, complex architectural decisions, documentation
-- **Handoff Points**: After specification completion, before complex refactoring, during architectural reviews
+## Project Structure
 
-## Quick Reference
-- **Constitution**: `.specify/memory/constitution.md`
-- **Project Context**: `CLAUDE.md` (this file provides comprehensive project context)
-- **Specs Directory**: `.specify/specs/[feature]/`
-- **Scripts**: `.specify/scripts/bash/`
-- **Templates**: `.specify/templates/`
+```
+@src/
+├── services/          # Service-oriented business logic
+│   ├── base/          # BaseService, AsyncBaseService
+│   ├── ingestion/     # Multi-source content ingestion
+│   ├── caching/       # Enterprise Redis patterns
+│   └── ...
+├── pake_system/       # Core infrastructure
+│   ├── core/          # Config, logging, vault
+│   └── auth/          # JWT authentication
+├── utils/             # Shared utilities (CHECK FIRST!)
+├── bridge/            # TypeScript Obsidian Bridge
+└── api/               # FastAPI endpoints & GraphQL
+```
+
+## Key Reference Files
+
+- @CLAUDE.md - Full engineering bible
+- @pyproject.toml - Dependencies and tool configs
+- @.pre-commit-config.yaml - Quality gates
+- @src/services/base/service_base.py - Service patterns
+- @src/utils/exceptions.py - Exception hierarchy
+- @tests/unit/test_aaa_pattern_examples.py - Testing patterns
+
+## Interaction Style
+
+- Be concise, direct, and technical
+- Provide complete information without preamble
+- Prioritize working code over explanations
+- Use structured logging, not print statements
+- Always explain non-trivial bash commands
+
+## Summary: Non-Negotiable Checklist
+
+- [ ] Use Python type hints for all functions
+- [ ] Use Pydantic V2 for validation
+- [ ] Use `async def` for I/O operations
+- [ ] Use `datetime.now(UTC)` - never naive datetime
+- [ ] Use structlog with structured context
+- [ ] Use custom exceptions from @src/utils/exceptions.py
+- [ ] Check @src/utils/ before creating new utilities
+- [ ] Inherit from BaseService/AsyncBaseService
+- [ ] Follow AAA testing pattern
+- [ ] Use Poetry for all dependencies
+- [ ] Never hard-code secrets
+- [ ] Use `secrets` module for crypto
+- [ ] All code passes pre-commit hooks
+
+---
+
+**Modern Rules**: This legacy file provides consolidated rules. For granular, scoped rules with better organization, see the modern .cursor/rules/ directory:
+
+- `000-pake-overview.mdc` - Always applied overview
+- `python-fastapi-standards.mdc` - Auto-attached for *.py
+- `testing-pyramid.mdc` - Auto-attached for test files
+- `typescript-bridge.mdc` - Auto-attached for *.ts
+- `security-standards.mdc` - Agent-requested for security work
+- `service-patterns.mdc` - Auto-attached for src/services/**/*.py
+- `poetry-dependencies.mdc` - Agent-requested for dependency work

@@ -59,7 +59,7 @@ class TestAdvancedContentDeduplicationService:
         )
 
     @pytest_asyncio.fixture
-    async def dedup_service(self) -> None:
+async def dedup_service(self, dedup_config: Any = None) -> None:
         """Create deduplication service instance for testing"""
         service = AdvancedContentDeduplicationService(dedup_config)
         yield service
@@ -112,7 +112,7 @@ class TestAdvancedContentDeduplicationService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_initialize_deduplication_service_with_config(self) -> None:
+async def test_should_initialize_deduplication_service_with_config(self, dedup_config: Any = None, dedup_config: Any = None) -> None:
         """
         Test: Should initialize deduplication service with proper configuration
         and detection methods.
@@ -135,7 +135,7 @@ class TestAdvancedContentDeduplicationService:
         assert service.stats["duplicates_found"] == 0
 
     @pytest.mark.asyncio
-    async def test_should_detect_exact_duplicate_content_correctly(self) -> None:
+async def test_should_detect_exact_duplicate_content_correctly(self, sample_content_items: Any = None, sample_content_items: Any = None) -> None:
         """
         Test: Should detect exact duplicate content using hash-based matching
         with proper similarity scoring.
@@ -166,7 +166,7 @@ class TestAdvancedContentDeduplicationService:
         assert result2.action_taken == DuplicateAction.SKIP
 
     @pytest.mark.asyncio
-    async def test_should_detect_fuzzy_similar_content_with_threshold(self) -> None:
+async def test_should_detect_fuzzy_similar_content_with_threshold(self, sample_content_items: Any = None, sample_content_items: Any = None) -> None:
         """
         Test: Should detect near-duplicate content using fuzzy hashing
         with configurable similarity thresholds.
@@ -259,7 +259,7 @@ class TestAdvancedContentDeduplicationService:
         assert fingerprint.created_at is not None
 
     @pytest.mark.asyncio
-    async def test_should_process_batch_content_efficiently(self) -> None:
+async def test_should_process_batch_content_efficiently(self, sample_content_items: Any = None, sample_content_items: Any = None) -> None:
         """
         Test: Should process multiple content items in batch
         with efficient memory usage and duplicate detection.
@@ -291,7 +291,7 @@ class TestAdvancedContentDeduplicationService:
     # Content Normalization Tests
     # ========================================================================
 
-    def test_content_normalizer_should_handle_html_and_whitespace(self) -> None:
+def test_content_normalizer_should_handle_html_and_whitespace(self, dedup_config: Any = None) -> None:
         """
         Test: ContentNormalizer should properly clean HTML tags
         and normalize whitespace for consistent comparison.
@@ -312,7 +312,7 @@ class TestAdvancedContentDeduplicationService:
         assert "\t" not in normalized  # No tabs
         assert "\n" not in normalized  # No newlines
 
-    def test_content_normalizer_should_normalize_urls_consistently(self) -> None:
+def test_content_normalizer_should_normalize_urls_consistently(self, dedup_config: Any = None) -> None:
         """
         Test: ContentNormalizer should normalize URLs for consistent
         duplicate detection regardless of tracking parameters.
@@ -337,7 +337,7 @@ class TestAdvancedContentDeduplicationService:
         normalized = normalizer.normalize_url(http_url)
         assert normalized.startswith("https://")
 
-    def test_content_normalizer_should_extract_significant_title_tokens(self) -> None:
+def test_content_normalizer_should_extract_significant_title_tokens(self, dedup_config: Any = None) -> None:
         """
         Test: ContentNormalizer should extract meaningful tokens
         from titles while filtering stop words and short tokens.
@@ -406,7 +406,7 @@ class TestAdvancedContentDeduplicationService:
         assert stats["duplicates_found"] >= 1
 
     @pytest.mark.asyncio
-    async def test_should_manage_memory_usage_with_fingerprint_limits(self) -> None:
+async def test_should_manage_memory_usage_with_fingerprint_limits(self, dedup_config: Any = None) -> None:
         """
         Test: Should properly manage memory by limiting stored fingerprints
         and removing oldest entries when limit is reached.
@@ -523,7 +523,7 @@ class TestAdvancedContentDeduplicationService:
         assert isinstance(result2, DeduplicationResult)
 
     @pytest.mark.asyncio
-    async def test_should_export_and_import_fingerprints_correctly(self) -> None:
+async def test_should_export_and_import_fingerprints_correctly(self, sample_content_items: Any = None) -> None:
         """
         Test: Should export fingerprints to file and maintain
         data integrity during serialization.
@@ -607,7 +607,7 @@ class TestDeduplicationDetectors:
         return fingerprints
 
     @pytest.mark.asyncio
-    async def test_exact_hash_detector_should_identify_identical_content(self) -> None:
+async def test_exact_hash_detector_should_identify_identical_content(self, normalizer: Any = None, sample_fingerprints: Any = None, sample_fingerprints: Any = None, sample_fingerprints: Any = None) -> None:
         """
         Test: ExactHashDetector should correctly identify identical content
         using SHA-256 hash comparison.
@@ -640,7 +640,7 @@ class TestDeduplicationDetectors:
         assert matching_fingerprint is None
 
     @pytest.mark.asyncio
-    async def test_fuzzy_hash_detector_should_find_similar_content(self) -> None:
+async def test_fuzzy_hash_detector_should_find_similar_content(self, normalizer: Any = None, sample_fingerprints: Any = None) -> None:
         """
         Test: FuzzyHashDetector should identify similar but not identical
         content using fuzzy hashing techniques.
@@ -665,7 +665,7 @@ class TestDeduplicationDetectors:
             assert matching_fingerprint is not None
 
     @pytest.mark.asyncio
-    async def test_title_similarity_detector_should_compare_titles(self) -> None:
+async def test_title_similarity_detector_should_compare_titles(self, normalizer: Any = None) -> None:
         """
         Test: TitleSimilarityDetector should identify content with
         similar titles using token-based comparison.

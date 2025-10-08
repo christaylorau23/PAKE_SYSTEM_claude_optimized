@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 PAKE System - Phase 16 Multi-Tenant Database Migration Script
@@ -44,7 +45,7 @@ class MultiTenantMigration:
     5. Update application configuration
     """
 
-    def __init__(self) -> None:
+def __init__(self, source_config: Any = None, target_config: Any = None) -> None:
         self.source_config = source_config
         self.target_config = target_config
         self.source_db: PostgreSQLService | None = None
@@ -83,7 +84,7 @@ class MultiTenantMigration:
             await self.target_db.close()
         logger.info("Database connections closed")
 
-    async def validate_source_data(self) -> Dict[str, Any]:
+    async def validate_source_data(self) -> dict[str, Any]:
         """Validate source database data before migration"""
         logger.info("🔍 Validating source database data...")
 
@@ -329,7 +330,7 @@ class MultiTenantMigration:
             logger.error("❌ System metrics migration failed: %s", e)
             raise
 
-    async def validate_migration(self, tenant_id: str) -> Dict[str, Any]:
+    async def validate_migration(self, tenant_id: str) -> dict[str, Any]:
         """Validate migrated data integrity"""
         logger.info("🔍 Validating migration integrity...")
 
@@ -368,7 +369,7 @@ class MultiTenantMigration:
                 "migration_stats": self.migration_stats,
             }
 
-    async def generate_migration_report(self) -> Dict[str, Any]:
+    async def generate_migration_report(self) -> dict[str, Any]:
         """Generate comprehensive migration report"""
         return {
             "migration_timestamp": datetime.now(UTC).isoformat(),
@@ -393,7 +394,7 @@ class MultiTenantMigration:
             ],
         }
 
-    async def run_migration(self, dry_run: bool = False) -> Dict[str, Any]:
+    async def run_migration(self, dry_run: bool = False) -> dict[str, Any]:
         """Run complete migration process"""
         logger.info("🚀 Starting multi-tenant migration process...")
 

@@ -153,7 +153,7 @@ class TestSemanticSearchEngine:
         assert "indexed_at" in stored_metadata
         assert stored_metadata["content_length"] == len(content)
 
-    async def test_should_batch_index_multiple_content_items_efficiently(self) -> None:
+async def test_should_batch_index_multiple_content_items_efficiently(self, sample_content_items: Any = None, sample_content_items: Any = None, sample_content_items: Any = None, sample_content_items: Any = None, sample_content_items: Any = None, sample_content_items: Any = None) -> None:
         """
         Test: Should efficiently index multiple content items in batch
         with proper embedding generation and metadata storage.
@@ -180,7 +180,7 @@ class TestSemanticSearchEngine:
             assert content_id in self.semantic_engine.embeddings_store
             assert content_id in self.semantic_engine.content_metadata
 
-    async def test_should_perform_semantic_search_with_relevance_ranking(self) -> None:
+async def test_should_perform_semantic_search_with_relevance_ranking(self, sample_content_items: Any = None) -> None:
         """
         Test: Should perform semantic search and return results
         ranked by relevance with proper scoring.
@@ -219,7 +219,7 @@ class TestSemanticSearchEngine:
         assert stats["total_searches"] == 1
         assert stats["average_search_time"] > 0
 
-    async def test_should_find_similar_content_with_similarity_scoring(self) -> None:
+async def test_should_find_similar_content_with_similarity_scoring(self, sample_content_items: Any = None) -> None:
         """
         Test: Should find content similar to a specific item
         with accurate similarity scoring and ranking.
@@ -253,7 +253,7 @@ class TestSemanticSearchEngine:
     # Search Functionality Tests
     # ========================================================================
 
-    async def test_should_handle_different_search_modes_appropriately(self) -> None:
+async def test_should_handle_different_search_modes_appropriately(self, sample_content_items: Any = None) -> None:
         """
         Test: Should handle different search modes (semantic, fuzzy, hybrid)
         with appropriate result variation and performance.
@@ -290,7 +290,7 @@ class TestSemanticSearchEngine:
             for result in response.results:
                 assert result.search_mode == mode
 
-    async def test_should_apply_different_similarity_metrics_correctly(self) -> None:
+async def test_should_apply_different_similarity_metrics_correctly(self, sample_content_items: Any = None) -> None:
         """
         Test: Should apply different similarity metrics (cosine, euclidean, dot product)
         with measurable differences in results.
@@ -328,9 +328,7 @@ class TestSemanticSearchEngine:
         assert len(cosine_results.results) > 0
         assert len(euclidean_results.results) > 0
 
-    async def test_should_apply_ranking_strategies_with_different_outcomes(
-        self,
-    ) -> None:
+async def test_should_apply_ranking_strategies_with_different_outcomes(self, sample_content_items: Any = None) -> None:
         """
         Test: Should apply different ranking strategies (relevance, quality, recency, hybrid)
         with observable impact on result ordering.

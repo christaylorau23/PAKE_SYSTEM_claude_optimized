@@ -38,8 +38,6 @@ from typing import Any, Dict, List
 
 import aiofiles
 import aiosqlite
-import sqlalchemy
-import psycopg2
 import asyncpg
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
@@ -48,6 +46,8 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import GPUtil
 import psutil
+import psycopg2
+import sqlalchemy
 
 # Configure secure logging
 logging.basicConfig(
@@ -107,11 +107,11 @@ class SecurityEvent:
     user_agent: str | None
     user_id: str | None
     description: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     blocked: bool = False
     response_action: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "event_id": self.event_id,
             "timestamp": self.timestamp.isoformat(),
@@ -136,12 +136,12 @@ class SecurityPolicy:
     description: str
     enabled: bool
     severity: SecurityLevel
-    conditions: Dict[str, Any]
-    actions: List[str]
+    conditions: dict[str, Any]
+    actions: list[str]
     created_at: datetime
     updated_at: datetime
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "policy_id": self.policy_id,
             "name": self.name,
@@ -284,7 +284,7 @@ class ThreatDetectionEngine:
 
         logger.info("Threat Detection Engine initialized")
 
-    def _load_threat_patterns(self) -> dict[str, List[str]]:
+    def _load_threat_patterns(self) -> dict[str, list[str]]:
         """Load threat detection patterns."""
         return {
             "sql_injection": [
@@ -326,7 +326,7 @@ class ThreatDetectionEngine:
 
     async def analyze_request(
         self,
-        request_data: Dict[str, Any],
+        request_data: dict[str, Any],
     ) -> SecurityEvent | None:
         """Analyze incoming request for security threats."""
         try:
@@ -398,7 +398,7 @@ class ThreatDetectionEngine:
     async def _check_rate_limiting(
         self,
         source_ip: str,
-        request_data: Dict[str, Any],
+        request_data: dict[str, Any],
     ) -> SecurityEvent | None:
         """Check for rate limiting violations."""
         try:
@@ -449,7 +449,7 @@ class ThreatDetectionEngine:
 
     def _detect_sql_injection(
         self,
-        request_data: Dict[str, Any],
+        request_data: dict[str, Any],
     ) -> SecurityEvent | None:
         """Detect SQL injection attempts."""
         try:
@@ -489,7 +489,7 @@ class ThreatDetectionEngine:
 
     def _detect_xss_attack(
         self,
-        request_data: Dict[str, Any],
+        request_data: dict[str, Any],
     ) -> SecurityEvent | None:
         """Detect XSS attack attempts."""
         try:
@@ -528,7 +528,7 @@ class ThreatDetectionEngine:
 
     def _detect_directory_traversal(
         self,
-        request_data: Dict[str, Any],
+        request_data: dict[str, Any],
     ) -> SecurityEvent | None:
         """Detect directory traversal attempts."""
         try:
@@ -558,7 +558,7 @@ class ThreatDetectionEngine:
 
     def _detect_command_injection(
         self,
-        request_data: Dict[str, Any],
+        request_data: dict[str, Any],
     ) -> SecurityEvent | None:
         """Detect command injection attempts."""
         try:
@@ -595,7 +595,7 @@ class ThreatDetectionEngine:
 
     def _detect_suspicious_user_agent(
         self,
-        request_data: Dict[str, Any],
+        request_data: dict[str, Any],
     ) -> SecurityEvent | None:
         """Detect suspicious user agents."""
         try:
@@ -647,7 +647,7 @@ class ThreatDetectionEngine:
 
     async def _detect_api_abuse(
         self,
-        request_data: Dict[str, Any],
+        request_data: dict[str, Any],
     ) -> SecurityEvent | None:
         """Detect API abuse patterns."""
         try:
@@ -794,7 +794,6 @@ class SystemMonitoringService:
                             },
                         )
             except BaseException as e:
-
                 logger.debug(f"Exception in enterprise_security_hardening.py: {e}")
 
                 # Continue gracefully  # GPU monitoring not available
@@ -928,7 +927,9 @@ class SystemMonitoringService:
         except (ValueError, RuntimeError) as e:
             logger.error("Error in anomaly detection: %s", e)
 
-    async def _generate_system_alert(self, alert_type: str, message: str, metadata: dict[str, Any] | None = None) -> None:
+    async def _generate_system_alert(
+        self, alert_type: str, message: str, metadata: dict[str, Any] | None = None
+    ) -> None:
         """Generate system security alert."""
         logger.warning("SECURITY ALERT [%s]: %s", alert_type, message)
 
@@ -1115,8 +1116,8 @@ class EnterpriseSecurityHardening:
 
     async def analyze_security_event(
         self,
-        request_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        request_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Analyze request for security threats."""
         try:
             # Run threat detection
@@ -1193,7 +1194,9 @@ class EnterpriseSecurityHardening:
         except (ValueError, RuntimeError) as e:
             logger.error("Error executing response actions: %s", e)
 
-    async def _block_ip_address(self, ip_address: str, reason: str, hours: int = 24) -> None:
+    async def _block_ip_address(
+        self, ip_address: str, reason: str, hours: int = 24
+    ) -> None:
         """Block IP address in database and threat detection."""
         try:
             self.threat_detection.block_ip(ip_address, hours)
@@ -1244,7 +1247,7 @@ This is an automated security alert from the Personal Wealth Generation Platform
         except (ValueError, RuntimeError) as e:
             logger.error("Error sending security alert: %s", e)
 
-    async def get_security_dashboard(self) -> Dict[str, Any]:
+    async def get_security_dashboard(self) -> dict[str, Any]:
         """Get security dashboard data."""
         try:
             async with aiosqlite.connect(self.db_path) as db:

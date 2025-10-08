@@ -56,7 +56,7 @@ class FeatureExtractor:
 
     def __init__(self, cache_size: int = 10000) -> None:
         self.cache_size = cache_size
-        self.feature_cache: Dict[str, Any] = {}
+        self.feature_cache: dict[str, Any] = {}
         self.text_vectorizer = TfidfVectorizer(
             max_features=5000,
             stop_words="english",
@@ -532,7 +532,6 @@ class FeatureExtractor:
                 )
                 return max(0, min(100, score))
         except BaseException as e:
-
             logger.debug(f"Exception in feature_extractor.py: {e}")
 
             # Continue gracefully
@@ -555,7 +554,6 @@ class FeatureExtractor:
                 )
                 return max(0, grade)
         except BaseException as e:
-
             logger.debug(f"Exception in feature_extractor.py: {e}")
 
             # Continue gracefully

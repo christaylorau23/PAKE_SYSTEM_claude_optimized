@@ -81,7 +81,7 @@ class TestCosmicCalibrationIntegration:
         }
 
     @pytest.fixture
-    async def coordinator(self) -> None:
+async def coordinator(self, test_config: Any = None) -> None:
         """Create and initialize cosmic calibration coordinator"""
         coordinator = CosmicCalibrationCoordinator(test_config)
 
@@ -97,7 +97,7 @@ class TestCosmicCalibrationIntegration:
         await coordinator.shutdown()
 
     @pytest.mark.asyncio
-    async def test_coordinator_initialization(self) -> None:
+async def test_coordinator_initialization(self, test_config: Any = None) -> None:
         """Test cosmic calibration coordinator initialization"""
         coordinator = CosmicCalibrationCoordinator(test_config)
 
@@ -296,7 +296,7 @@ class TestCosmicCalibrationIntegration:
         assert 0.0 <= stability_index <= 1.0
 
     @pytest.mark.asyncio
-    async def test_logging_and_persistence(self) -> None:
+async def test_logging_and_persistence(self, tmp_path: Any = None) -> None:
         """Test logging and data persistence"""
 
         # Override log path for testing
@@ -347,7 +347,7 @@ class TestCosmicCalibrationIntegration:
             assert hasattr(result, "overall_system_health")
 
     @pytest.mark.asyncio
-    async def test_configuration_validation(self) -> None:
+async def test_configuration_validation(self, test_config: Any = None) -> None:
         """Test configuration validation and error handling"""
 
         # Test with valid configuration
@@ -364,7 +364,7 @@ class TestCosmicCalibrationIntegration:
         await coordinator.shutdown()
         await coordinator_partial.shutdown()
 
-    def test_component_status_formats(self) -> None:
+def test_component_status_formats(self, coordinator: Any = None) -> None:
         """Test that all components return properly formatted status"""
 
         # Get comprehensive system status

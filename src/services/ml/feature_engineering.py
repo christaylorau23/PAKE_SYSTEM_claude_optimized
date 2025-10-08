@@ -68,11 +68,11 @@ class FeatureDefinition:
     feature_type: FeatureType
     description: str = ""
     source_column: str | None = None
-    transformation_pipeline: List[str] = field(default_factory=list)
-    validation_rules: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    transformation_pipeline: list[str] = field(default_factory=list)
+    validation_rules: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "feature_name": self.feature_name,
@@ -95,9 +95,9 @@ class FeatureSet:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     version: str = "1.0"
     description: str = ""
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "feature_set_id": self.feature_set_id,
@@ -117,12 +117,12 @@ class FeaturePipeline:
     pipeline_id: str
     pipeline_name: str
     feature_set_id: str
-    transformations: list[Dict[str, Any]]
-    output_schema: Dict[str, Any]
+    transformations: list[dict[str, Any]]
+    output_schema: dict[str, Any]
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     version: str = "1.0"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "pipeline_id": self.pipeline_id,
@@ -145,11 +145,11 @@ class FeatureProcessingResult:
     processing_time_ms: float
     features_created: int
     features_dropped: int
-    validation_errors: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    validation_errors: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
     processed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "pipeline_id": self.pipeline_id,
@@ -210,7 +210,7 @@ class FeatureTransformer(ABC):
         """Fit and transform data."""
 
     @abstractmethod
-    def get_feature_names(self) -> List[str]:
+    def get_feature_names(self) -> list[str]:
         """Get output feature names."""
 
 
@@ -264,7 +264,7 @@ class NumericalScaler(FeatureTransformer):
         """Fit and transform data."""
         return self.fit(data).transform(data)
 
-    def get_feature_names(self) -> List[str]:
+    def get_feature_names(self) -> list[str]:
         """Get feature names."""
         return self.feature_names
 
@@ -341,6 +341,7 @@ class CategoricalEncoder(FeatureTransformer):
 
         elif self.method == "label":
             from sklearn.preprocessing import LabelEncoder
+
             for col in self.categorical_columns:
                 if col in data.columns:
                     le = LabelEncoder()
@@ -357,7 +358,7 @@ class CategoricalEncoder(FeatureTransformer):
         """Fit and transform data."""
         return self.fit(data).transform(data)
 
-    def get_feature_names(self) -> List[str]:
+    def get_feature_names(self) -> list[str]:
         """Get feature names."""
         return self.feature_names
 
@@ -442,7 +443,7 @@ class TextFeatureExtractor(FeatureTransformer):
         """Fit and transform data."""
         return self.fit(data).transform(data)
 
-    def get_feature_names(self) -> List[str]:
+    def get_feature_names(self) -> list[str]:
         """Get feature names."""
         return self.feature_names
 
@@ -556,7 +557,7 @@ class FeatureSelector(FeatureTransformer):
         """Fit and transform data."""
         return self.fit(data, target).transform(data)
 
-    def get_feature_names(self) -> List[str]:
+    def get_feature_names(self) -> list[str]:
         """Get selected feature names."""
         return self.selected_features
 
@@ -798,7 +799,7 @@ class FeatureEngineer:
     async def _apply_transformation(
         self,
         data: pd.DataFrame,
-        transformation: Dict[str, Any],
+        transformation: dict[str, Any],
         target: pd.Series | None = None,
     ) -> tuple[pd.DataFrame, int, int]:
         """Apply a single transformation."""
@@ -932,7 +933,7 @@ class FeatureEngineer:
             logger.error("Failed to create automated pipeline: %s", e)
             raise
 
-    def get_processing_statistics(self) -> Dict[str, Any]:
+    def get_processing_statistics(self) -> dict[str, Any]:
         """Get processing statistics."""
         stats = self.stats.copy()
 

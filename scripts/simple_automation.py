@@ -256,7 +256,7 @@ class SimpleAutomation:
         logger.info("Scan complete: %s processed, %s skipped", processed, skipped)
         return processed
 
-    def run_continuous(self) -> None:
+def run_continuous(self, interval: Any = None, interval: Any = None) -> None:
         """Run continuous monitoring"""
         logger.info("Starting PAKE+ Simple Automation System")
         logger.info("Vault: %s", self.vault_path)

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class TestExecutor:
-    def __init__(self) -> None:
+def __init__(self, project_root: Any = None, project_root: Any = None) -> None:
         self.project_root = project_root
         self.tests_dir = project_root / "tests"
         self.results = {
@@ -112,7 +112,7 @@ class TestExecutor:
         logger.error("❌ E2E tests failed: %s", output)
         return False
 
-    def parse_pytest_output(self) -> None:
+def parse_pytest_output(self, test_type: Any = None, test_type: Any = None, test_type: Any = None, execution_time: Any = None, test_type: Any = None) -> None:
         """Parse pytest output to extract test results"""
         lines = self.output.split("\n")
 

@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Comprehensive Python Linting Fixer for PAKE System
@@ -40,7 +41,7 @@ logger = logging.getLogger(__name__)
 class PythonLintingFixer:
     """Comprehensive Python linting issue fixer"""
 
-    def __init__(self) -> None:
+def __init__(self, dry_run: Any = None, backup: Any = None) -> None:
         self.dry_run = dry_run
         self.backup = backup
         self.processed_files = 0
@@ -59,7 +60,7 @@ class PythonLintingFixer:
         logger.info("Created backup directory: %s", backup_dir)
         return backup_dir
 
-    def find_python_files(self, directories: List[str]) -> List[str]:
+    def find_python_files(self, directories: list[str]) -> list[str]:
         """Find all Python files in specified directories"""
         python_files = []
 
@@ -121,7 +122,7 @@ class PythonLintingFixer:
             logger.error("Error writing %s: %s", file_path, e)
             return False
 
-    def get_used_names_from_ast(self, content: str) -> set[str]:
+def get_used_names_from_ast(self, content: str, node: Any = None, node: Any = None, node: Any = None, node: Any = None) -> set[str]:
         """Get all used names from AST to identify unused imports"""
         try:
             tree = ast.parse(content)
@@ -135,17 +136,17 @@ class PythonLintingFixer:
         used_names = set()
 
         class NameVisitor(ast.NodeVisitor):
-            def visit_Name(self) -> None:
+def visit_Name(self, node: Any = None) -> None:
                 used_names.add(self.node.id)
                 self.generic_visit(node)
 
-            def visit_Attribute(self) -> None:
+def visit_Attribute(self, node: Any = None) -> None:
                 # Handle module.attribute usage
                 if isinstance(self.node.value, ast.Name):
                     used_names.add(self.node.value.id)
                 self.generic_visit(node)
 
-            def visit_Call(self) -> None:
+def visit_Call(self, node: Any = None, node: Any = None) -> None:
                 # Handle function calls
                 if isinstance(self.node.func, ast.Name):
                     used_names.add(self.node.func.id)
@@ -308,7 +309,7 @@ class PythonLintingFixer:
 
         return lines
 
-    def _split_arguments(self, args_str: str) -> List[str]:
+    def _split_arguments(self, args_str: str) -> list[str]:
         """Split function arguments respecting nested structures"""
         args = []
         current_arg = ""
@@ -671,7 +672,7 @@ class PythonLintingFixer:
         if changes > 3:
             logger.info("  ... and %s more changes", changes - 3)
 
-    def process_files(self, file_paths: List[str]) -> None:
+    def process_files(self, file_paths: list[str]) -> None:
         """Process multiple files with progress reporting"""
         total_files = len(file_paths)
         logger.info("Starting to process %s files", total_files)

@@ -27,7 +27,7 @@ class TimeSeriesPoint:
 
     timestamp: datetime
     value: float
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
 
 @dataclass
@@ -63,7 +63,7 @@ class RealTimeActivity:
     activity_type: str
     description: str
     value: float
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
 
 class VisualizationAnalyticsService:
@@ -86,8 +86,8 @@ class VisualizationAnalyticsService:
     async def get_enhanced_dashboard_data(
         self,
         time_range: str = "24h",
-        metric_types: List[str] = None,
-    ) -> Dict[str, Any]:
+        metric_types: list[str] = None,
+    ) -> dict[str, Any]:
         """Get comprehensive dashboard data with enhanced visualizations.
 
         Args:
@@ -194,9 +194,9 @@ class VisualizationAnalyticsService:
 
     async def get_correlation_matrix(
         self,
-        metrics: List[str],
+        metrics: list[str],
         time_range: str = "24h",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate correlation matrix between metrics.
 
         Args:
@@ -260,7 +260,7 @@ class VisualizationAnalyticsService:
             logger.error("Error generating correlation matrix: %s", e)
             return {"error": str(e)}
 
-    async def get_real_time_stream(self, limit: int = 50) -> list[Dict[str, Any]]:
+    async def get_real_time_stream(self, limit: int = 50) -> list[dict[str, Any]]:
         """Get recent real-time activity events.
 
         Args:
@@ -313,7 +313,7 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate performance metrics data."""
         hours = (end_time - start_time).total_seconds() / 3600
 
@@ -373,7 +373,7 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate usage analytics data."""
         return {
             "total_searches": random.randint(100, 1000),
@@ -397,7 +397,7 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate ML intelligence metrics."""
         return {
             "ml_enhancement_rate": random.uniform(70, 95),
@@ -418,7 +418,7 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate correlation analysis data."""
         metrics = [
             "response_time",
@@ -456,11 +456,11 @@ class VisualizationAnalyticsService:
         self,
         start_time: datetime,
         end_time: datetime,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate real-time activity stream."""
         return await self.get_real_time_stream(limit=100)
 
-    async def _get_system_health(self) -> Dict[str, Any]:
+    async def _get_system_health(self) -> dict[str, Any]:
         """Get system health information."""
         return {
             "overall_health": "healthy",
@@ -488,7 +488,7 @@ class VisualizationAnalyticsService:
             },
         }
 
-    async def _get_top_queries(self) -> list[Dict[str, Any]]:
+    async def _get_top_queries(self) -> list[dict[str, Any]]:
         """Get top search queries."""
         queries = [
             "machine learning",
@@ -513,7 +513,7 @@ class VisualizationAnalyticsService:
             for query in random.sample(queries, 5)
         ]
 
-    async def _get_source_distribution(self) -> Dict[str, Any]:
+    async def _get_source_distribution(self) -> dict[str, Any]:
         """Get distribution of results by source."""
         return {
             "web": random.randint(30, 50),
@@ -640,7 +640,7 @@ class VisualizationAnalyticsService:
         """Calculate expected number of data points."""
         return hours * 12  # 5-minute intervals
 
-    def _get_error_response(self, error_message: str) -> Dict[str, Any]:
+    def _get_error_response(self, error_message: str) -> dict[str, Any]:
         """Generate error response."""
         return {
             "error": True,

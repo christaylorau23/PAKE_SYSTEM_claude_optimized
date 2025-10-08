@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 PAKE System - Phase 17 End-to-End Tenant Provisioning Workflow
@@ -66,13 +67,13 @@ class TenantProvisioningWorkflow:
     - Infrastructure provisioning
     """
 
-    def __init__(self) -> None:
+def __init__(self, base_url: Any = None) -> None:
         self.base_url = base_url
         self.api_prefix = "/api/v1"
 
         # Workflow state
-        self.provisioned_tenants: list[Dict[str, Any]] = []
-        self.tenant_users: dict[str, list[Dict[str, Any]]] = {}
+        self.provisioned_tenants: list[dict[str, Any]] = []
+        self.tenant_users: dict[str, list[dict[str, Any]]] = {}
         self.auth_tokens: dict[str, str] = {}
 
         # Service instances
@@ -108,7 +109,7 @@ class TenantProvisioningWorkflow:
             logger.error("❌ Failed to initialize services: %s", e)
             raise
 
-    async def run_complete_provisioning_workflow(self) -> Dict[str, Any]:
+    async def run_complete_provisioning_workflow(self) -> dict[str, Any]:
         """Execute the complete end-to-end tenant provisioning workflow"""
 
         workflow_start = datetime.now(UTC)
@@ -189,7 +190,7 @@ class TenantProvisioningWorkflow:
             # Cleanup
             await self._cleanup_provisioned_resources()
 
-    async def _phase1_infrastructure_setup(self) -> Dict[str, Any]:
+    async def _phase1_infrastructure_setup(self) -> dict[str, Any]:
         """Phase 1: Validate infrastructure and service availability"""
 
         phase_results = {
@@ -228,7 +229,7 @@ class TenantProvisioningWorkflow:
 
         return phase_results
 
-    async def _phase2_tenant_provisioning(self) -> Dict[str, Any]:
+    async def _phase2_tenant_provisioning(self) -> dict[str, Any]:
         """Phase 2: Create and provision multiple tenants"""
 
         phase_results = {
@@ -301,7 +302,7 @@ class TenantProvisioningWorkflow:
 
         return phase_results
 
-    async def _phase3_authentication_setup(self) -> Dict[str, Any]:
+    async def _phase3_authentication_setup(self) -> dict[str, Any]:
         """Phase 3: Set up users and authentication for all tenants"""
 
         phase_results = {
@@ -370,7 +371,7 @@ class TenantProvisioningWorkflow:
 
         return phase_results
 
-    async def _phase4_service_integration(self) -> Dict[str, Any]:
+    async def _phase4_service_integration(self) -> dict[str, Any]:
         """Phase 4: Validate integration between all services"""
 
         phase_results = {
@@ -411,7 +412,7 @@ class TenantProvisioningWorkflow:
 
         return phase_results
 
-    async def _phase5_security_validation(self) -> Dict[str, Any]:
+    async def _phase5_security_validation(self) -> dict[str, Any]:
         """Phase 5: Comprehensive security and isolation testing"""
 
         phase_results = {
@@ -455,7 +456,7 @@ class TenantProvisioningWorkflow:
 
         return phase_results
 
-    async def _phase6_performance_testing(self) -> Dict[str, Any]:
+    async def _phase6_performance_testing(self) -> dict[str, Any]:
         """Phase 6: Performance and scalability testing"""
 
         phase_results = {
@@ -499,7 +500,7 @@ class TenantProvisioningWorkflow:
 
         return phase_results
 
-    async def _phase7_end_to_end_validation(self) -> Dict[str, Any]:
+    async def _phase7_end_to_end_validation(self) -> dict[str, Any]:
         """Phase 7: Complete end-to-end system validation"""
 
         phase_results = {
@@ -545,7 +546,7 @@ class TenantProvisioningWorkflow:
 
     # Helper Methods - Infrastructure Testing
 
-    async def _test_database_connectivity(self) -> Dict[str, Any]:
+    async def _test_database_connectivity(self) -> dict[str, Any]:
         """Test database connectivity and basic operations"""
         try:
             if not self.db_service:
@@ -566,7 +567,7 @@ class TenantProvisioningWorkflow:
         except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             return {"test": "database_connectivity", "success": False, "error": str(e)}
 
-    async def _test_api_server_health(self) -> Dict[str, Any]:
+    async def _test_api_server_health(self) -> dict[str, Any]:
         """Test API server health and responsiveness"""
         try:
             async with httpx.AsyncClient() as client:
@@ -586,7 +587,7 @@ class TenantProvisioningWorkflow:
         except (ValueError, RuntimeError) as e:
             return {"test": "api_server_health", "success": False, "error": str(e)}
 
-    async def _test_service_dependencies(self) -> Dict[str, Any]:
+    async def _test_service_dependencies(self) -> dict[str, Any]:
         """Test all service dependencies are available"""
         try:
             dependencies = {
@@ -607,7 +608,7 @@ class TenantProvisioningWorkflow:
         except (ValueError, RuntimeError) as e:
             return {"test": "service_dependencies", "success": False, "error": str(e)}
 
-    async def _test_cache_infrastructure(self) -> Dict[str, Any]:
+    async def _test_cache_infrastructure(self) -> dict[str, Any]:
         """Test cache infrastructure availability"""
         try:
             # Test cache endpoint if available
@@ -634,8 +635,8 @@ class TenantProvisioningWorkflow:
 
     async def _create_tenant_with_validation(
         self,
-        config: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        config: dict[str, Any],
+    ) -> dict[str, Any]:
         """Create tenant and validate the creation"""
         try:
             if not self.tenant_service:
@@ -678,7 +679,7 @@ class TenantProvisioningWorkflow:
                 "error": str(e),
             }
 
-    async def _validate_tenant_provisioning(self, tenant_id: str) -> Dict[str, Any]:
+async def _validate_tenant_provisioning(self, tenant_id: str, pydantic: Any = None) -> dict[str, Any]:
         """Validate that tenant was properly provisioned"""
         try:
             if not self.tenant_service:
@@ -735,8 +736,8 @@ class TenantProvisioningWorkflow:
     async def _create_user_with_validation(
         self,
         tenant_id: str,
-        user_config: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        user_config: dict[str, Any],
+    ) -> dict[str, Any]:
         """Create user and validate creation"""
         # Placeholder implementation
         return {
@@ -753,8 +754,8 @@ class TenantProvisioningWorkflow:
     async def _test_tenant_authentication(
         self,
         tenant_id: str,
-        users: list[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        users: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """Test authentication for tenant users"""
         return {
             "test": f"tenant_auth_{tenant_id}",
@@ -762,82 +763,82 @@ class TenantProvisioningWorkflow:
             "users_tested": len(users),
         }
 
-    async def _test_tenant_search_integration(self, tenant_id: str) -> Dict[str, Any]:
+    async def _test_tenant_search_integration(self, tenant_id: str) -> dict[str, Any]:
         """Test search functionality integration"""
         return {"test": f"search_integration_{tenant_id}", "success": True}
 
     async def _test_tenant_analytics_integration(
         self,
         tenant_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Test analytics integration"""
         return {"test": f"analytics_integration_{tenant_id}", "success": True}
 
-    async def _test_tenant_cache_integration(self, tenant_id: str) -> Dict[str, Any]:
+    async def _test_tenant_cache_integration(self, tenant_id: str) -> dict[str, Any]:
         """Test cache integration"""
         return {"test": f"cache_integration_{tenant_id}", "success": True}
 
-    async def _test_tenant_database_isolation(self, tenant_id: str) -> Dict[str, Any]:
+    async def _test_tenant_database_isolation(self, tenant_id: str) -> dict[str, Any]:
         """Test database isolation"""
         return {"test": f"db_isolation_{tenant_id}", "success": True}
 
-    async def _test_cross_tenant_access_prevention(self) -> Dict[str, Any]:
+    async def _test_cross_tenant_access_prevention(self) -> dict[str, Any]:
         """Test cross-tenant access prevention"""
         return {"test": "cross_tenant_access_prevention", "success": True}
 
-    async def _test_jwt_security(self) -> Dict[str, Any]:
+    async def _test_jwt_security(self) -> dict[str, Any]:
         """Test JWT security"""
         return {"test": "jwt_security", "success": True}
 
-    async def _test_input_validation_security(self) -> Dict[str, Any]:
+    async def _test_input_validation_security(self) -> dict[str, Any]:
         """Test input validation security"""
         return {"test": "input_validation_security", "success": True}
 
-    async def _test_rate_limiting_security(self) -> Dict[str, Any]:
+    async def _test_rate_limiting_security(self) -> dict[str, Any]:
         """Test rate limiting security"""
         return {"test": "rate_limiting_security", "success": True}
 
-    async def _test_data_encryption(self) -> Dict[str, Any]:
+    async def _test_data_encryption(self) -> dict[str, Any]:
         """Test data encryption"""
         return {"test": "data_encryption", "success": True}
 
-    async def _test_single_tenant_performance(self) -> Dict[str, Any]:
+    async def _test_single_tenant_performance(self) -> dict[str, Any]:
         """Test single tenant performance"""
         return {"test": "single_tenant_performance", "success": True}
 
-    async def _test_multi_tenant_concurrency(self) -> Dict[str, Any]:
+    async def _test_multi_tenant_concurrency(self) -> dict[str, Any]:
         """Test multi-tenant concurrency"""
         return {"test": "multi_tenant_concurrency", "success": True}
 
-    async def _test_database_performance(self) -> Dict[str, Any]:
+    async def _test_database_performance(self) -> dict[str, Any]:
         """Test database performance"""
         return {"test": "database_performance", "success": True}
 
-    async def _test_cache_performance(self) -> Dict[str, Any]:
+    async def _test_cache_performance(self) -> dict[str, Any]:
         """Test cache performance"""
         return {"test": "cache_performance", "success": True}
 
-    async def _test_resource_usage(self) -> Dict[str, Any]:
+    async def _test_resource_usage(self) -> dict[str, Any]:
         """Test resource usage"""
         return {"test": "resource_usage", "success": True}
 
-    async def _test_complete_user_journeys(self) -> Dict[str, Any]:
+    async def _test_complete_user_journeys(self) -> dict[str, Any]:
         """Test complete user journeys"""
         return {"test": "complete_user_journeys", "success": True}
 
-    async def _test_workflow_orchestration(self) -> Dict[str, Any]:
+    async def _test_workflow_orchestration(self) -> dict[str, Any]:
         """Test workflow orchestration"""
         return {"test": "workflow_orchestration", "success": True}
 
-    async def _test_system_resilience(self) -> Dict[str, Any]:
+    async def _test_system_resilience(self) -> dict[str, Any]:
         """Test system resilience"""
         return {"test": "system_resilience", "success": True}
 
-    async def _test_compliance_features(self) -> Dict[str, Any]:
+    async def _test_compliance_features(self) -> dict[str, Any]:
         """Test compliance features"""
         return {"test": "compliance_features", "success": True}
 
-    async def _test_production_readiness(self) -> Dict[str, Any]:
+    async def _test_production_readiness(self) -> dict[str, Any]:
         """Test production readiness"""
         return {"test": "production_readiness", "success": True}
 
@@ -867,7 +868,7 @@ class TenantProvisioningWorkflow:
         except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("❌ Cleanup error: %s", e)
 
-    def _generate_workflow_summary(self, results: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_workflow_summary(self, results: dict[str, Any]) -> dict[str, Any]:
         """Generate comprehensive workflow summary"""
 
         total_phases = len(results["phases"])

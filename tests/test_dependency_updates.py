@@ -1,4 +1,7 @@
 from typing import List
+
+import aiohttp
+
 #!/usr/bin/env python3
 """
 Test script for dependency updates and package management
@@ -215,7 +218,7 @@ class DependencyUpdateTester:
             print(f"   Error running npm audit: {e}")
             return {"error": str(e)}
 
-    async def _extract_docker_base_images(self, dockerfile_path: Path) -> List[str]:
+    async def _extract_docker_base_images(self, dockerfile_path: Path) -> list[str]:
         """Extract base images from Dockerfile"""
         try:
             with open(dockerfile_path) as f:

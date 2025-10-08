@@ -49,21 +49,21 @@ class RSSFeedItem:
     published: datetime
     guid: str
     author: str | None = None
-    categories: List[str] = field(default_factory=list)
+    categories: list[str] = field(default_factory=list)
     full_content: str | None = None
-    cognitive_metadata: Dict[str, Any] | None = None
+    cognitive_metadata: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
 class RSSFeedQuery:
     """Query configuration for RSS feed fetching."""
 
-    feed_urls: List[str]
+    feed_urls: list[str]
     max_items_per_feed: int = 10
     fetch_full_content: bool = False
     date_from: datetime | None = None
     date_to: datetime | None = None
-    keywords: List[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
     keyword_match_mode: str = "any"  # "any" or "all"
     enable_cognitive_assessment: bool = False
 
@@ -94,7 +94,7 @@ class RSSFeedService:
     def __init__(self) -> None:
         """Initialize RSS feed service."""
         self.session: aiohttp.ClientSession | None = None
-        self.cache: dict[str, Dict[str, Any]] = {}
+        self.cache: dict[str, dict[str, Any]] = {}
         self.cache_ttl = timedelta(minutes=30)  # 30 minute cache TTL
 
         # Rate limiting
@@ -708,7 +708,7 @@ class RSSFeedService:
         self.cache.clear()
         logger.info("RSS feed cache cleared")
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform RSS service health check."""
         return {
             "status": "healthy",

@@ -1,0 +1,95 @@
+# Resilient GraphQL Schema Template
+# World-Class Finish Guide - "Errors as Data" pattern
+
+type Query {
+  user(id: ID!): UserResult!
+  users(filter: UserFilter): UsersResult!
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): CreateUserResult!
+  updateUser(id: ID!, input: UpdateUserInput!): UpdateUserResult!
+  deleteUser(id: ID!): DeleteUserResult!
+}
+
+# Input Types
+input CreateUserInput {
+  email: String!
+  name: String!
+  password: String!
+}
+
+input UpdateUserInput {
+  email: String
+  name: String
+}
+
+input UserFilter {
+  email: String
+  name: String
+}
+
+# Success Types
+type User {
+  id: ID!
+  email: String!
+  name: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type UserCreated {
+  user: User!
+  message: String!
+}
+
+type UserUpdated {
+  user: User!
+  message: String!
+}
+
+type UserDeleted {
+  id: ID!
+  message: String!
+}
+
+type UsersFound {
+  users: [User!]!
+  totalCount: Int!
+}
+
+# Error Types
+type ValidationError {
+  message: String!
+  field: String!
+  code: String!
+}
+
+type AuthorizationError {
+  message: String!
+  requiredPermission: String!
+  userRole: String!
+}
+
+type NotFoundError {
+  message: String!
+  resource: String!
+}
+
+type ConflictError {
+  message: String!
+  conflictingField: String!
+  suggestedValue: String
+}
+
+type InternalError {
+  message: String!
+  code: String!
+}
+
+# Union Types for Resilient Error Handling
+union UserResult = User | NotFoundError | AuthorizationError | InternalError
+union UsersResult = UsersFound | AuthorizationError | InternalError
+union CreateUserResult = UserCreated | ValidationError | ConflictError | AuthorizationError | InternalError
+union UpdateUserResult = UserUpdated | ValidationError | NotFoundError | AuthorizationError | InternalError
+union DeleteUserResult = UserDeleted | NotFoundError | AuthorizationError | InternalError

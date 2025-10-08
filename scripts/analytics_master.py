@@ -729,8 +729,8 @@ class AnalyticsMasterController:
                     else None
                 ),
                 "health_score": (
-                    85.0 if self.is_running else 0.0
-                ),  # Simplified health score
+                    85.0 if self.is_running else 0.0  # Simplified health score
+                ),
             }
 
         except (ValueError, RuntimeError) as e:

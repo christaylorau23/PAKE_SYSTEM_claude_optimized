@@ -1,6 +1,6 @@
-from typing import List
 from datetime import UTC
-from typing import Dict
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 Comprehensive Security Testing Script for PAKE System
@@ -41,7 +41,7 @@ class SecurityIssue:
     message: str
     file_path: str = ""
     line_number: int = 0
-    details: Dict[str, Any] = None
+    details: dict[str, Any] = None
     passed: bool = False
 
 
@@ -53,7 +53,7 @@ class SecurityTestResult:
     passed: bool
     severity: SecuritySeverity
     message: str
-    details: Dict[str, Any] = None
+    details: dict[str, Any] = None
 
 
 class SecurityTester:
@@ -64,7 +64,7 @@ class SecurityTester:
         self.results: list[SecurityTestResult] = []
         self.project_root = Path(__file__).parent.parent
 
-    def run_all_tests(self) -> Dict[str, Any]:
+    def run_all_tests(self) -> dict[str, Any]:
         """Run all security tests and return comprehensive report"""
         logger.info("🔒 Starting comprehensive security testing...")
 
@@ -579,7 +579,7 @@ class SecurityTester:
                 )
             )
 
-    def generate_report(self) -> Dict[str, Any]:
+    def generate_report(self) -> dict[str, Any]:
         """Generate comprehensive security report"""
         total_tests = len(self.results)
         passed_tests = sum(1 for r in self.results if r.passed)
@@ -640,7 +640,7 @@ class SecurityTester:
             "recommendations": self._generate_recommendations(),
         }
 
-    def _generate_recommendations(self) -> List[str]:
+    def _generate_recommendations(self) -> list[str]:
         """Generate security recommendations based on test results"""
         recommendations = []
 
@@ -677,7 +677,7 @@ class SecurityTester:
 
         return recommendations
 
-    def print_report(self, report: Dict[str, Any]) -> None:
+    def print_report(self, report: dict[str, Any]) -> None:
         """Print formatted security report"""
         print("=" * 60)
         print("🔒 PAKE SYSTEM SECURITY TEST REPORT")

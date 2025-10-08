@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Security Validation Script for PAKE System
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 class SecurityValidator:
     """Validate security fixes implementation."""
 
-    def __init__(self) -> None:
+def __init__(self, repo_path: Any = None) -> None:
         """
         Initialize security validator.
 
@@ -43,7 +44,7 @@ class SecurityValidator:
         self.repo_path = Path(repo_path).resolve()
         self.validation_results = {}
 
-    def check_hardcoded_secrets(self) -> tuple[bool, List[str]]:
+    def check_hardcoded_secrets(self) -> tuple[bool, list[str]]:
         """
         Check for hardcoded secrets in the codebase.
 

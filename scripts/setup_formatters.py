@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Setup and Validation Script for Code Formatters
@@ -19,7 +20,7 @@ class FormatterSetup:
         self.js_ts_patterns = ["**/*.js", "**/*.ts", "**/*.tsx", "**/*.json"]
 
     def run_command(
-        self, command: List[str], description: str, check: bool = True
+        self, command: list[str], description: str, check: bool = True
     ) -> tuple[bool, str]:
         """Run a command and return success status and output"""
         print(f"\n🔄 {description}")

@@ -13,11 +13,11 @@ from enum import Enum
 import logging
 from typing import Any, Dict, List
 
-import numpy as np
-import sqlalchemy
-import psycopg2
 import asyncpg
+import numpy as np
+import psycopg2
 from sklearn.preprocessing import StandardScaler
+import sqlalchemy
 
 from ..models.content_item import ContentItem
 from ..models.user_feedback import FeedbackType, LearningSignal, UserFeedback
@@ -43,7 +43,7 @@ class FeedbackPattern:
     user_id: str
     pattern_type: str  # e.g., "consistent_rater", "harsh_critic", "easy_pleaser"
     confidence: float  # 0.0 to 1.0
-    evidence: Dict[str, Any]  # Supporting evidence for the pattern
+    evidence: dict[str, Any]  # Supporting evidence for the pattern
     detected_at: datetime = field(default_factory=datetime.now)
 
 
@@ -58,7 +58,7 @@ class FeedbackInsight:
     quality_indicators: dict[str, float]
     user_sentiment: str  # "positive", "negative", "mixed", "neutral"
     confidence: float
-    recommendations: List[str]  # Actionable recommendations
+    recommendations: list[str]  # Actionable recommendations
 
 
 @dataclass(frozen=True)
@@ -82,7 +82,12 @@ class FeedbackProcessingService:
     provides quality assessment, and generates actionable insights.
     """
 
-    def __init__(self, feedback_quality_threshold: float = 0.7, batch_processing_size: int = 100, anomaly_detection_enabled: bool = True) -> None:
+    def __init__(
+        self,
+        feedback_quality_threshold: float = 0.7,
+        batch_processing_size: int = 100,
+        anomaly_detection_enabled: bool = True,
+    ) -> None:
         """Initialize feedback processing service.
 
         Args:
@@ -183,7 +188,7 @@ class FeedbackProcessingService:
         self,
         interaction: UserInteraction,
         content_item: ContentItem,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] = None,
     ) -> LearningSignal:
         """Process implicit feedback from user interactions.
 
@@ -503,11 +508,11 @@ class FeedbackProcessingService:
             )
 
             # User engagement (percentage of users providing feedback)
-            unique_feedback_users = len(set(str(fb.user_id) for fb in all_feedback))
+            unique_feedback_users = len({str(fb.user_id) for fb in all_feedback})
             user_engagement = unique_feedback_users / max(1, active_users)
 
             # Content coverage (percentage of content with feedback)
-            content_with_feedback = len(set(str(fb.content_id) for fb in all_feedback))
+            content_with_feedback = len({str(fb.content_id) for fb in all_feedback})
             content_coverage = content_with_feedback / max(1, len(all_content))
 
             # Trending sentiment analysis
@@ -543,7 +548,7 @@ class FeedbackProcessingService:
         self,
         recent_feedback: list[UserFeedback],
         historical_baseline: SystemFeedbackMetrics | None = None,
-    ) -> List[str]:
+    ) -> list[str]:
         """Detect anomalies in feedback patterns that might indicate issues.
 
         Args:
@@ -602,7 +607,7 @@ class FeedbackProcessingService:
                 avg_gap = sum(time_gaps) / len(time_gaps)
 
                 # Check for suspiciously regular patterns
-                if len(set(int(gap) for gap in time_gaps)) == 1:
+                if len({int(gap) for gap in time_gaps}) == 1:
                     anomalies.append("Suspiciously regular feedback timing pattern")
 
             logger.debug("Detected %s feedback anomalies", len(anomalies))
@@ -702,7 +707,7 @@ class FeedbackProcessingService:
         self,
         interaction: UserInteraction,
         content_item: ContentItem,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> float:
         """Calculate signal strength from implicit interaction."""
         base_strength = {
@@ -736,7 +741,7 @@ class FeedbackProcessingService:
         self,
         interaction: UserInteraction,
         content_item: ContentItem,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> str:
         """Determine signal type from implicit interaction."""
         positive_interactions = {
@@ -761,7 +766,7 @@ class FeedbackProcessingService:
     async def _calculate_implicit_confidence(
         self,
         interaction: UserInteraction,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> float:
         """Calculate confidence for implicit feedback signal."""
         base_confidence = {
@@ -1045,15 +1050,14 @@ class FeedbackProcessingService:
         # Lower variance = higher confidence
         consistency_factor = max(0.2, 1.0 - rating_variance / 2.0)
 
-        confidence = (sample_size_factor + consistency_factor) / 2.0
-        return confidence
+        return (sample_size_factor + consistency_factor) / 2.0
 
     async def _generate_content_recommendations(
         self,
         feedback_list: list[UserFeedback],
         content_item: ContentItem,
         quality_indicators: dict[str, float],
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate actionable recommendations for content."""
         recommendations = []
 

@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Social Media Listening System
@@ -46,9 +47,9 @@ class SocialMention:
     engagement_metrics: dict  # likes, shares, comments, etc.
     sentiment_score: float
     sentiment_label: str  # positive, negative, neutral
-    keywords: List[str]
-    hashtags: List[str]
-    mentions: List[str]
+    keywords: list[str]
+    hashtags: list[str]
+    mentions: list[str]
     language: str
     location: str = None
     influence_score: float = 0.0  # author's influence score
@@ -66,8 +67,8 @@ class TrendingTopic:
     growth_rate: float
     sentiment_distribution: dict[str, int]
     avg_engagement: float
-    top_keywords: List[str]
-    sample_posts: List[str]
+    top_keywords: list[str]
+    sample_posts: list[str]
     trend_score: float
     category: str = None
 
@@ -82,17 +83,17 @@ class InfluencerProfile:
     engagement_rate: float
     avg_likes: float
     avg_comments: float
-    content_categories: List[str]
+    content_categories: list[str]
     posting_frequency: float
     verified: bool
     influence_score: float
-    recent_topics: List[str]
+    recent_topics: list[str]
 
 
 class SocialListeningSystem:
     """Advanced social media listening and monitoring system"""
 
-    def __init__(self) -> None:
+def __init__(self, db_path: Any = None) -> None:
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
 
@@ -288,7 +289,7 @@ class SocialListeningSystem:
             except (ValueError, RuntimeError) as e:
                 self.logger.error("Failed to initialize Reddit client: %s", e)
 
-    async def add_monitoring_keywords(self) -> None:
+async def add_monitoring_keywords(self, keywords: Any = None, category: Any = None, keywords: Any = None) -> None:
         """Add keywords to monitoring list"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -308,7 +309,7 @@ class SocialListeningSystem:
 
         self.logger.info("Added %s keywords to monitoring", len(keywords))
 
-    async def start_listening(self) -> None:
+async def start_listening(self, duration_hours: Any = None, duration_hours: Any = None) -> None:
         """Start social media listening for specified duration"""
         self.logger.info("Starting social listening for %s hours", duration_hours)
 
@@ -539,7 +540,7 @@ class SocialListeningSystem:
             self.logger.warning("Sentiment analysis failed: %s", e)
             return 0.0, "neutral"
 
-    def _extract_keywords(self, text: str) -> List[str]:
+    def _extract_keywords(self, text: str) -> list[str]:
         """Extract relevant keywords from text"""
         try:
             # Simple keyword extraction
@@ -585,7 +586,7 @@ class SocialListeningSystem:
             self.logger.warning("Keyword extraction failed: %s", e)
             return []
 
-    async def _store_mention(self) -> None:
+async def _store_mention(self, mention: Any = None) -> None:
         """Store mention in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -623,7 +624,7 @@ class SocialListeningSystem:
         conn.commit()
         conn.close()
 
-    async def _check_alert_conditions(self) -> None:
+async def _check_alert_conditions(self, mention: Any = None, mention: Any = None, mention: Any = None, mention: Any = None, mention: Any = None, mention: Any = None, mention: Any = None, mention: Any = None, mention: Any = None) -> None:
         """Check if mention triggers any alerts"""
         alerts = []
 
@@ -673,7 +674,7 @@ class SocialListeningSystem:
         for alert in alerts:
             await self._store_alert(alert, mention)
 
-    async def _store_alert(self) -> None:
+async def _store_alert(self, alert: Any = None, mention: Any = None, mention: Any = None, alert: Any = None, alert: Any = None, alert: Any = None, alert: Any = None) -> None:
         """Store alert in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -773,7 +774,7 @@ class SocialListeningSystem:
         except (ValueError, RuntimeError) as e:
             self.logger.error("Trend detection error: %s", e)
 
-    async def _store_trending_topic(self) -> None:
+async def _store_trending_topic(self, topic: Any = None) -> None:
         """Store trending topic in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()

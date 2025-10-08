@@ -10,9 +10,9 @@ import logging
 import time
 from typing import Any, Dict, List
 
-import sqlalchemy
-import psycopg2
 import asyncpg
+import psycopg2
+import sqlalchemy
 
 from ..database.postgresql_service import (
     DatabaseConfig,
@@ -235,10 +235,10 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
         user_id: str,
         name: str,
         query: str,
-        sources: List[str],
-        filters: Dict[str, Any] | None = None,
+        sources: list[str],
+        filters: dict[str, Any] | None = None,
         is_public: bool = False,
-        tags: List[str] | None = None,
+        tags: list[str] | None = None,
     ) -> str | None:
         """Save a user's search query for later use."""
         if not self.database_service:
@@ -268,7 +268,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
         user_id: str,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get user's search history."""
         if not self.database_service:
             return []
@@ -283,7 +283,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
             logger.error("Failed to get user search history: %s", e)
             return []
 
-    async def get_user_saved_searches(self, user_id: str) -> list[Dict[str, Any]]:
+    async def get_user_saved_searches(self, user_id: str) -> list[dict[str, Any]]:
         """Get user's saved searches."""
         if not self.database_service:
             return []
@@ -296,7 +296,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
 
     # Analytics methods
 
-    async def get_search_analytics(self, days: int = 30) -> Dict[str, Any]:
+    async def get_search_analytics(self, days: int = 30) -> dict[str, Any]:
         """Get comprehensive search analytics."""
         if not self.database_service:
             return {"error": "Database service not available"}
@@ -319,7 +319,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
         self,
         limit: int = 10,
         days: int = 7,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get most popular search queries."""
         if not self.database_service:
             return []
@@ -330,7 +330,7 @@ class DatabaseIngestionOrchestrator(CachedIngestionOrchestrator):
             logger.error("Failed to get popular searches: %s", e)
             return []
 
-    async def get_comprehensive_statistics(self) -> Dict[str, Any]:
+    async def get_comprehensive_statistics(self) -> dict[str, Any]:
         """Get comprehensive system statistics combining cache and database."""
         stats = {}
 

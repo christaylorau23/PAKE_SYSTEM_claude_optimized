@@ -35,7 +35,7 @@ class CurationIntegrationTest:
         self.users = []
         self.interactions = []
 
-    def log_test(self) -> None:
+def log_test(self, test_name: Any = None, passed: Any = None, details: Any = None, passed: Any = None, test_name: Any = None, details: Any = None, passed: Any = None, details: Any = None) -> None:
         """Log test result"""
         self.test_results.append(
             {

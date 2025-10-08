@@ -34,7 +34,7 @@ from src.utils.secure_serialization import deserialize_from_file, serialize_to_f
 class MemoryProfiler:
     """Memory profiling and leak detection utility"""
 
-    def __init__(self) -> None:
+def __init__(self, top_stats: Any = None) -> None:
         """
         Initialize memory profiler.
 
@@ -71,7 +71,7 @@ class MemoryProfiler:
         print(f"📸 Snapshot '{label}' taken - Memory: {self._get_memory_mb():.2f} MB")
         return snapshot
 
-    def display_top_stats(self) -> None:
+def display_top_stats(self, snapshot: Any = None) -> None:
         """
         Display top memory consumers.
 
@@ -194,7 +194,7 @@ class MemoryProfiler:
         """Get current memory usage in MB"""
         return self.process.memory_info().rss / 1024 / 1024
 
-    def save_snapshot(self) -> None:
+def save_snapshot(self, snapshot: Any = None, snapshot: Any = None, filename: Any = None, filename: Any = None) -> None:
         """
         Save snapshot to file using secure serialization.
 
@@ -235,7 +235,7 @@ class MemoryProfiler:
         print(f"📂 Snapshot loaded from {filename}")
         return snapshot_data
 
-    def generate_report(self) -> None:
+def generate_report(self, output_file: Any = None, output_file: Any = None) -> None:
         """
         Generate comprehensive memory profiling report.
 
@@ -311,7 +311,7 @@ class MemoryProfiler:
         print(f"\n📄 Memory profiling report saved to {output_file}")
 
 
-async def profile_application(self) -> None:
+async def profile_application(self, duration: Any = None, interval: Any = None, interval: Any = None) -> None:
     """
     Profile application memory usage over time.
 

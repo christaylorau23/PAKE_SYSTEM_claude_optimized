@@ -1,0 +1,464 @@
+---
+description: "Enforces PAKE System testing standards following the AAA pattern and Testing Pyramid (70% unit, 20% integration, 10% E2E). Covers pytest configuration, mocking strategies, factory usage, and test organization."
+globs: ["**/test_*.py", "**/*_test.py", "**/tests/**/*.py"]
+alwaysApply: false
+---
+
+# Testing Standards for PAKE System
+
+You are an expert in pytest, test-driven development (TDD), and enterprise-grade testing strategies. Your responses MUST produce comprehensive, isolated, and maintainable tests following the AAA pattern.
+
+## Core Testing Philosophy
+
+**MUST**: Maintain the **100% test coverage standard** for all new code.
+
+**MUST**: Follow the **Testing Pyramid**:
+- **70% Unit Tests**: Fast, isolated, comprehensive coverage of business logic
+- **20% Integration Tests**: Service-to-service interactions, real dependencies
+- **10% E2E Tests**: Complete user workflows, critical paths only
+
+**RATIONALE**: This distribution optimizes for fast feedback, maintainability, and confidence. Unit tests catch most bugs early, integration tests verify interactions, and E2E tests validate critical user journeys.
+
+## 1. The AAA Pattern (Arrange-Act-Assert)
+
+**MUST**: Structure ALL tests following the AAA pattern with clear visual separation.
+
+```python
+# ✅ CORRECT - Clear AAA structure
+import pytest
+from unittest.mock import AsyncMock, Mock
+from datetime import UTC, datetime
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_user_service_should_create_user_successfully():
+    """
+    Unit test: UserService.create_user() should create and return a new user
+    when provided with valid user data.
+    """
+    # Arrange - Set up test data and dependencies
+    user_data = {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "age": 30
+    }
+    mock_db = AsyncMock()
+    mock_db.add = Mock()
+    mock_db.commit = AsyncMock()
+    mock_db.refresh = AsyncMock()
+
+    service = UserService(db=mock_db)
+
+    # Act - Execute the code under test
+    result = await service.create_user(user_data)
+
+    # Assert - Verify the expected outcomes
+    assert result is not None
+    assert result.name == "John Doe"
+    assert result.email == "john@example.com"
+    mock_db.add.assert_called_once()
+    mock_db.commit.assert_awaited_once()
+
+# ❌ WRONG - No clear separation, unclear intent
+async def test_user_creation():
+    service = UserService(db=AsyncMock())
+    result = await service.create_user({"name": "John"})  # Arrange and Act mixed
+    assert result.name == "John"  # No comprehensive assertions
+```
+
+**RATIONALE**: AAA pattern makes tests self-documenting. Each section has a clear purpose, making tests easier to understand, debug, and maintain. Reference @tests/unit/test_aaa_pattern_examples.py for canonical patterns.
+
+## 2. Test Naming Conventions
+
+**MUST**: Use descriptive, behavior-focused test names following the pattern:
+`test_<component>_should_<expected_behavior>_when_<condition>`
+
+```python
+# ✅ CORRECT - Descriptive names
+def test_authentication_service_should_reject_invalid_token_when_token_expired():
+    ...
+
+def test_cache_service_should_return_none_when_key_not_found():
+    ...
+
+def test_ingestion_orchestrator_should_retry_failed_sources_when_retry_enabled():
+    ...
+
+# ❌ WRONG - Vague names
+def test_auth():
+    ...
+
+def test_cache():
+    ...
+
+def test_retry():
+    ...
+```
+
+**RATIONALE**: Descriptive names serve as documentation and make test failures immediately understandable. They describe the system's expected behavior, not just what the test does.
+
+## 3. Pytest Markers (Testing Pyramid)
+
+**MUST**: Tag ALL tests with appropriate pytest markers from @pyproject.toml.
+
+### Unit Tests (70%)
+**MUST**: Use `@pytest.mark.unit` for isolated tests with mocked dependencies.
+
+```python
+@pytest.mark.unit
+@pytest.mark.unit_functional
+def test_calculate_metrics_summary_should_compute_averages_correctly():
+    """Unit test: Pure function testing with no external dependencies."""
+    # Arrange
+    data = {
+        "response_time": [100, 200, 150, 180],
+        "throughput": [50, 60, 55, 58]
+    }
+    analyzer = PerformanceAnalyzer()
+
+    # Act
+    result = analyzer.calculate_metrics_summary(data)
+
+    # Assert
+    assert result["response_time"]["avg"] == 157.5
+    assert result["response_time"]["min"] == 100
+    assert result["response_time"]["max"] == 200
+```
+
+### Integration Tests (20%)
+**MUST**: Use `@pytest.mark.integration` and specific sub-markers for real dependency tests.
+
+```python
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.integration_database
+async def test_user_repository_should_persist_user_to_database(test_db_session):
+    """Integration test: Real database interaction with PostgreSQL."""
+    # Arrange
+    user_data = UserCreate(name="Jane Doe", email="jane@example.com")
+    repository = UserRepository(session=test_db_session)
+
+    # Act
+    created_user = await repository.create(user_data)
+    fetched_user = await repository.get_by_id(created_user.id)
+
+    # Assert
+    assert fetched_user is not None
+    assert fetched_user.id == created_user.id
+    assert fetched_user.email == "jane@example.com"
+```
+
+### E2E Tests (10%)
+**MUST**: Use `@pytest.mark.e2e` for complete user workflow tests.
+
+```python
+@pytest.mark.asyncio
+@pytest.mark.e2e
+@pytest.mark.e2e_user_journey
+async def test_complete_user_registration_and_login_workflow(async_client):
+    """E2E test: Complete user registration, authentication, and profile access."""
+    # Arrange
+    registration_data = {
+        "name": "Test User",
+        "email": "test@example.com",
+        "password": "SecurePassword123!"
+    }
+
+    # Act & Assert - Registration
+    register_response = await async_client.post("/auth/register", json=registration_data)
+    assert register_response.status_code == 201
+
+    # Act & Assert - Login
+    login_response = await async_client.post("/auth/login", json={
+        "email": "test@example.com",
+        "password": "SecurePassword123!"
+    })
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+
+    # Act & Assert - Access Protected Resource
+    profile_response = await async_client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert profile_response.status_code == 200
+    assert profile_response.json()["email"] == "test@example.com"
+```
+
+## 4. Mocking Strategies
+
+### Complete Isolation for Unit Tests
+**MUST**: Mock ALL external dependencies in unit tests (databases, APIs, file systems, time).
+
+**MUST**: Use `unittest.mock.AsyncMock` for async functions and `Mock` for sync functions.
+
+```python
+from unittest.mock import AsyncMock, Mock, patch
+from datetime import UTC, datetime
+
+@pytest.mark.unit
+@patch("src.services.ingestion.firecrawl_service.httpx.AsyncClient")
+async def test_firecrawl_service_should_handle_api_timeout_gracefully(mock_client_class):
+    """Unit test: External API mocked to simulate timeout."""
+    # Arrange
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(side_effect=httpx.TimeoutException("API timeout"))
+    mock_client_class.return_value.__aenter__.return_value = mock_client
+
+    service = FirecrawlService(api_key="test_key")
+
+    # Act
+    result = await service.scrape_url("https://example.com")
+
+    # Assert
+    assert result.success is False
+    assert "timeout" in result.error_message.lower()
+```
+
+### Freezing Time
+**MUST**: Use `freezegun` to control time in tests involving datetime.
+
+```python
+from freezegun import freeze_time
+
+@freeze_time("2024-01-15 10:30:00", tz_offset=0)
+@pytest.mark.unit
+def test_session_expiry_should_detect_expired_tokens():
+    # Arrange
+    token_created = datetime.now(UTC)
+    service = AuthService()
+
+    # Act - Fast-forward 2 hours
+    with freeze_time("2024-01-15 12:31:00"):
+        is_valid = service.validate_token_expiry(token_created, max_age_hours=2)
+
+    # Assert
+    assert is_valid is False
+```
+
+## 5. Test Fixtures and Factories
+
+### Use Factories from @tests/factories.py
+**MUST**: Use factory-boy factories for creating test data instead of manual object construction.
+
+```python
+# ✅ CORRECT - Use factories
+from tests.factories import UserFactory, PostFactory
+
+@pytest.mark.unit
+def test_user_service_should_associate_posts_with_user():
+    # Arrange
+    user = UserFactory.build(name="John Doe")  # In-memory, not persisted
+    posts = PostFactory.build_batch(3, author=user)
+
+    # Act & Assert
+    assert len(user.posts) == 3
+    assert all(post.author == user for post in posts)
+
+# ❌ WRONG - Manual construction
+user = User(
+    id=1,
+    name="John Doe",
+    email="john@example.com",
+    created_at=datetime.now(UTC),
+    # ... many fields, error-prone
+)
+```
+
+**RATIONALE**: Factories provide consistent, maintainable test data generation with sensible defaults. They reduce boilerplate and make tests more readable.
+
+### Pytest Fixtures for Shared Setup
+**MUST**: Use pytest fixtures for shared setup/teardown logic. Reference @tests/conftest.py.
+
+```python
+# conftest.py
+@pytest.fixture
+async def mock_redis_cache():
+    """Provides a fake Redis cache for testing."""
+    cache = FakeRedis()
+    yield cache
+    await cache.flushall()
+
+# test_cache_service.py
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_cache_service_should_store_and_retrieve_values(mock_redis_cache):
+    # Arrange
+    service = CacheService(redis=mock_redis_cache)
+    key = "test_key"
+    value = {"data": "test_value"}
+
+    # Act
+    await service.set(key, value)
+    result = await service.get(key)
+
+    # Assert
+    assert result == value
+```
+
+## 6. Async Test Patterns
+
+**MUST**: Use `@pytest.mark.asyncio` for ALL async tests.
+
+**MUST**: Use `AsyncMock` for mocking async functions.
+
+```python
+@pytest.mark.asyncio
+@pytest.mark.unit
+async def test_async_service_should_call_dependency_correctly():
+    # Arrange
+    mock_dependency = AsyncMock(return_value="mocked_result")
+    service = MyAsyncService(dependency=mock_dependency)
+
+    # Act
+    result = await service.perform_operation()
+
+    # Assert
+    mock_dependency.assert_awaited_once()
+    assert result == "mocked_result"
+```
+
+## 7. Assertion Best Practices
+
+### Comprehensive Assertions
+**MUST**: Assert ALL relevant aspects of the result, not just one field.
+
+```python
+# ✅ CORRECT - Comprehensive assertions
+@pytest.mark.unit
+async def test_create_user_should_return_complete_user_object():
+    # Arrange & Act
+    result = await user_service.create_user(user_data)
+
+    # Assert - Check all relevant fields
+    assert result.id is not None
+    assert result.name == "John Doe"
+    assert result.email == "john@example.com"
+    assert result.created_at is not None
+    assert isinstance(result.created_at, datetime)
+    assert result.created_at.tzinfo is not None  # Timezone-aware
+
+# ❌ WRONG - Incomplete assertions
+assert result is not None  # Too vague!
+```
+
+### Specific Exception Testing
+**MUST**: Use `pytest.raises` with specific exception types and message matching.
+
+```python
+# ✅ CORRECT - Specific exception testing
+@pytest.mark.unit
+def test_validation_should_raise_exception_for_invalid_email():
+    # Arrange
+    invalid_data = UserCreate(name="John", email="invalid_email")
+    service = UserService()
+
+    # Act & Assert
+    with pytest.raises(ValidationException) as exc_info:
+        service.validate_user_data(invalid_data)
+
+    assert "email" in str(exc_info.value).lower()
+    assert exc_info.value.category == ErrorCategory.VALIDATION
+
+# ❌ WRONG - Generic exception catching
+with pytest.raises(Exception):  # Too broad!
+    service.validate_user_data(invalid_data)
+```
+
+## 8. Test Organization
+
+### File Structure
+**MUST**: Mirror the source code structure in the tests directory.
+
+```
+tests/
+├── unit/                          # 70% of tests
+│   ├── services/
+│   │   ├── test_user_service.py
+│   │   └── test_cache_service.py
+│   ├── utils/
+│   │   └── test_error_handling.py
+│   └── test_aaa_pattern_examples.py  # Reference patterns
+├── integration/                   # 20% of tests
+│   ├── test_service_integration.py
+│   └── test_database_integration.py
+└── e2e/                           # 10% of tests
+    └── test_user_workflows.py
+```
+
+### One Test Class Per Component
+**MUST**: Group related tests in classes for organization (optional but recommended for complex components).
+
+```python
+class TestUserService:
+    """Test suite for UserService component."""
+
+    @pytest.mark.unit
+    def test_should_create_user_successfully(self):
+        ...
+
+    @pytest.mark.unit
+    def test_should_validate_email_format(self):
+        ...
+
+    @pytest.mark.unit
+    def test_should_reject_duplicate_email(self):
+        ...
+```
+
+## 9. Test Documentation
+
+**MUST**: Include docstrings explaining:
+1. What is being tested (component/function)
+2. Expected behavior
+3. Conditions/context
+
+```python
+@pytest.mark.unit
+def test_authentication_service_should_validate_jwt_tokens_correctly():
+    """
+    Unit test: AuthenticationService.validate_token()
+
+    Tests that the authentication service correctly validates JWT tokens
+    by verifying the signature, expiration, and required claims.
+
+    Expected behavior:
+    - Valid tokens should return True with decoded payload
+    - Expired tokens should raise TokenExpiredException
+    - Invalid signatures should raise InvalidTokenException
+    """
+    ...
+```
+
+## 10. Performance Testing
+
+**MUST**: Use `pytest-benchmark` for performance-critical functions.
+
+```python
+@pytest.mark.performance
+def test_cache_lookup_performance_should_complete_under_10ms(benchmark):
+    # Arrange
+    cache = CacheService()
+    cache.set("key", "value")
+
+    # Act & Assert
+    result = benchmark(cache.get, "key")
+
+    assert result == "value"
+    assert benchmark.stats["mean"] < 0.01  # Less than 10ms
+```
+
+## Summary: Testing Checklist
+
+- [ ] Test follows AAA pattern with clear separation
+- [ ] Test name is descriptive: `test_X_should_Y_when_Z`
+- [ ] Appropriate pytest marker applied (@pytest.mark.unit/integration/e2e)
+- [ ] All external dependencies mocked for unit tests
+- [ ] Comprehensive assertions cover all relevant fields
+- [ ] Async tests use @pytest.mark.asyncio and AsyncMock
+- [ ] Factories used for test data generation
+- [ ] Docstring explains what, why, and expected behavior
+- [ ] Test is isolated and can run independently
+- [ ] Test is deterministic (no flaky behavior)
+
+**REMEMBER**: Reference @tests/unit/test_aaa_pattern_examples.py for canonical AAA patterns!

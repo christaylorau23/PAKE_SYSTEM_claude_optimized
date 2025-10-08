@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 class CurationDeployment:
     """Handles deployment of the curation system"""
 
-    def __init__(self) -> None:
+def __init__(self, config_path: Any = None) -> None:
         self.config_path = config_path
         self.config = self._load_config()
         self.orchestrator = None
@@ -314,10 +314,9 @@ async def main(self) -> None:
                 return 1
 
         # Health check
-        if args.health_check:
-            if not await deployment.run_health_check():
-                logger.warning("Health check failed")
-                return 1
+        if args.health_check and not await deployment.run_health_check():
+            logger.warning("Health check failed")
+            return 1
 
         # Performance test
         if args.performance_test:

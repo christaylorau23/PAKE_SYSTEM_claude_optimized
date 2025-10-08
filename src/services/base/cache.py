@@ -160,7 +160,7 @@ class CacheService:
             logger.error("Cache expire error for key %s: %s", key, e)
             return False
 
-    async def get_many(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_many(self, keys: list[str]) -> dict[str, Any]:
         """Get multiple values from cache."""
         if not self._initialized:
             await self.initialize()
@@ -184,7 +184,7 @@ class CacheService:
             logger.error("Cache get_many error: %s", e)
             return {}
 
-    async def set_many(self, mapping: Dict[str, Any], ttl: int | None = None) -> bool:
+    async def set_many(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
         """Set multiple values in cache."""
         if not self._initialized:
             await self.initialize()
@@ -224,7 +224,7 @@ class CacheService:
             logger.error("Cache increment error for key %s: %s", key, e)
             return None
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         if not self._initialized:
             await self.initialize()
@@ -317,7 +317,9 @@ class CachePatterns:
             logger.error("Write-through error for key %s: %s", key, e)
             raise
 
-    async def cache_prefetch(self, keys_and_fetch_funcs: Dict[str, Any], ttl: int | None = None) -> None:
+    async def cache_prefetch(
+        self, keys_and_fetch_funcs: dict[str, Any], ttl: int | None = None
+    ) -> None:
         """Cache prefetch pattern: Proactively load data into cache.
 
         Args:

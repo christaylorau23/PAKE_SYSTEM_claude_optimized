@@ -81,7 +81,7 @@ class CacheMixin:
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._cache: dict[str, Dict[str, Any]] = {}
+        self._cache: dict[str, dict[str, Any]] = {}
         self._cache_ttl: dict[str, datetime] = {}
 
     def _generate_cache_key(self, *args, **kwargs) -> str:
@@ -126,7 +126,7 @@ class CacheMixin:
         self._cache.clear()
         self._cache_ttl.clear()
 
-    def cache_stats(self) -> Dict[str, Any]:
+    def cache_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         now = datetime.now(UTC)
         expired_keys = [key for key, ttl in self._cache_ttl.items() if now > ttl]
@@ -140,7 +140,9 @@ class CacheMixin:
             ),
         }
 
-    def cached(self, ttl_seconds: int | None = None, key_func: Callable | None = None) -> Callable:
+    def cached(
+        self, ttl_seconds: int | None = None, key_func: Callable | None = None
+    ) -> Callable:
         """Decorator for caching function results."""
 
         def decorator(func: Callable) -> Callable:
@@ -172,7 +174,7 @@ class MetricsMixin:
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._metrics: dict[str, Dict[str, Any]] = {}
+        self._metrics: dict[str, dict[str, Any]] = {}
 
     def record_metric(
         self,
@@ -224,7 +226,7 @@ class MetricsMixin:
 
         return self._metrics[name]["values"][-1]["value"]
 
-    def get_metric_stats(self, name: str) -> Dict[str, Any] | None:
+    def get_metric_stats(self, name: str) -> dict[str, Any] | None:
         """Get statistical summary of a metric."""
         if name not in self._metrics or not self._metrics[name]["values"]:
             return None
@@ -241,7 +243,7 @@ class MetricsMixin:
             "tags": self._metrics[name]["tags"],
         }
 
-    def get_all_metrics(self) -> dict[str, Dict[str, Any]]:
+    def get_all_metrics(self) -> dict[str, dict[str, Any]]:
         """Get all metrics with statistics."""
         return {name: self.get_metric_stats(name) for name in self._metrics}
 
@@ -329,8 +331,8 @@ class ValidationMixin:
 
     def validate_required_fields(
         self,
-        data: Dict[str, Any],
-        required_fields: List[str],
+        data: dict[str, Any],
+        required_fields: list[str],
         field_name: str = "data",
     ) -> None:
         """Validate that required fields are present."""
@@ -351,7 +353,7 @@ class ValidationMixin:
 
     def validate_field_types(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         field_types: dict[str, type],
         field_name: str = "data",
     ) -> None:
@@ -374,7 +376,7 @@ class ValidationMixin:
 
     def validate_field_values(
         self,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         field_validators: dict[str, Callable[[Any], bool]],
         field_name: str = "data",
     ) -> None:
@@ -401,8 +403,8 @@ class ValidationMixin:
 
     def validate_data(
         self,
-        data: Dict[str, Any],
-        schema: Dict[str, Any],
+        data: dict[str, Any],
+        schema: dict[str, Any],
         field_name: str = "data",
     ) -> None:
         """Validate data against a schema."""
@@ -426,7 +428,7 @@ class ServiceMixin(LoggingMixin, CacheMixin, MetricsMixin, RetryMixin, Validatio
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def get_service_info(self) -> Dict[str, Any]:
+    def get_service_info(self) -> dict[str, Any]:
         """Get comprehensive service information."""
         return {
             "cache_stats": self.cache_stats(),

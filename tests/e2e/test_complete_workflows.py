@@ -86,7 +86,7 @@ class TestCompleteUserWorkflows:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_complete_knowledge_ingestion_workflow(self) -> None:
+async def test_complete_knowledge_ingestion_workflow(self, full_system_setup: Any = None, full_system_setup: Any = None, full_system_setup: Any = None) -> None:
         """
         Test: Complete knowledge ingestion workflow from user request to stored knowledge
 
@@ -303,7 +303,7 @@ class TestCompleteUserWorkflows:
                 assert len(result.cross_references) > 0
 
     @pytest.mark.asyncio
-    async def test_user_research_session_workflow(self) -> None:
+async def test_user_research_session_workflow(self, full_system_setup: Any = None, full_system_setup: Any = None, full_system_setup: Any = None) -> None:
         """
         Test: Complete user research session from login to results delivery
 
@@ -534,7 +534,7 @@ class TestCompleteUserWorkflows:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_high_volume_ingestion_performance(self) -> None:
+async def test_high_volume_ingestion_performance(self, full_system_setup: Any = None, full_system_setup: Any = None, topic: Any = None) -> None:
         """
         Test: System should handle high-volume ingestion with acceptable performance
 
@@ -578,7 +578,7 @@ class TestCompleteUserWorkflows:
             # Execute concurrent requests
             start_time = time.time()
 
-            async def process_request(self) -> None:
+async def process_request(self, topic: Any = None) -> None:
                 ingestion_plan = {
                     "topic": topic,
                     "sources": [
@@ -636,7 +636,7 @@ class TestCompleteUserWorkflows:
             )
 
     @pytest.mark.asyncio
-    async def test_system_reliability_under_failure_conditions(self) -> None:
+async def test_system_reliability_under_failure_conditions(self, full_system_setup: Any = None, full_system_setup: Any = None, url: Any = None, url: Any = None, url: Any = None, url: Any = None, url: Any = None) -> None:
         """
         Test: System should maintain reliability under partial failure conditions
 
@@ -684,7 +684,7 @@ class TestCompleteUserWorkflows:
             "services.ingestion.firecrawl_service.FirecrawlService.extract_content"
         ) as mock_firecrawl:
 
-            async def mock_extract_side_effect(self) -> None:
+async def mock_extract_side_effect(self, url: Any = None, url: Any = None, url: Any = None, url: Any = None, url: Any = None) -> None:
                 if "working-site.com" in url:
                     return {
                         "success": True,
@@ -733,7 +733,7 @@ class TestCompleteUserWorkflows:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_complete_user_onboarding_workflow(self) -> None:
+async def test_complete_user_onboarding_workflow(self, full_system_setup: Any = None, full_system_setup: Any = None, full_system_setup: Any = None) -> None:
         """
         Test: Complete user onboarding workflow from registration to first research
 

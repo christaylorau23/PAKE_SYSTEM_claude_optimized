@@ -71,7 +71,9 @@ class MetricsStore:
             return ""
         return "|".join(f"{k}={v}" for k, v in sorted(labels.items()))
 
-    def increment_counter(self, name: str, value: int = 1, labels: dict[str, str] | None = None) -> None:
+    def increment_counter(
+        self, name: str, value: int = 1, labels: dict[str, str] | None = None
+    ) -> None:
         """Increment a counter metric."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -82,7 +84,9 @@ class MetricsStore:
 
         logger.debug("Counter incremented", metric=name, value=value, labels=labels)
 
-    def set_gauge(self, name: str, value: float, labels: dict[str, str] | None = None) -> None:
+    def set_gauge(
+        self, name: str, value: float, labels: dict[str, str] | None = None
+    ) -> None:
         """Set a gauge metric value."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -93,7 +97,13 @@ class MetricsStore:
 
         logger.debug("Gauge set", metric=name, value=value, labels=labels)
 
-    def record_histogram(self, name: str, value: float, labels: dict[str, str] | None = None, buckets: list[float] | None = None) -> None:
+    def record_histogram(
+        self,
+        name: str,
+        value: float,
+        labels: dict[str, str] | None = None,
+        buckets: list[float] | None = None,
+    ) -> None:
         """Record a histogram value."""
         labels = labels or {}
         labels["service"] = self.service_name
@@ -120,7 +130,9 @@ class MetricsStore:
 
         logger.debug("Histogram recorded", metric=name, value=value, labels=labels)
 
-    def record_http_request(self, method: str, path: str, status_code: int, duration: float) -> None:
+    def record_http_request(
+        self, method: str, path: str, status_code: int, duration: float
+    ) -> None:
         """Record HTTP request metrics."""
         normalized_path = self._normalize_path(path)
         key = f"{method}:{normalized_path}:{status_code}"
@@ -339,7 +351,7 @@ class MetricsStore:
 
         return "\n".join(lines)
 
-    def get_json_metrics(self) -> Dict[str, Any]:
+    def get_json_metrics(self) -> dict[str, Any]:
         """Get metrics in JSON format."""
         self.update_system_metrics()
 
@@ -381,7 +393,9 @@ def get_metrics_store(service_name: str = "pake-system") -> MetricsStore:
 # Convenience functions
 
 
-def increment_counter(name: str, value: int = 1, labels: dict[str, str] | None = None) -> None:
+def increment_counter(
+    name: str, value: int = 1, labels: dict[str, str] | None = None
+) -> None:
     """Increment a counter metric."""
     get_metrics_store().increment_counter(name, value, labels)
 
@@ -391,12 +405,16 @@ def set_gauge(name: str, value: float, labels: dict[str, str] | None = None) -> 
     get_metrics_store().set_gauge(name, value, labels)
 
 
-def record_histogram(name: str, value: float, labels: dict[str, str] | None = None) -> None:
+def record_histogram(
+    name: str, value: float, labels: dict[str, str] | None = None
+) -> None:
     """Record a histogram value."""
     get_metrics_store().record_histogram(name, value, labels=labels)
 
 
-def record_http_request(method: str, path: str, status_code: int, duration: float) -> None:
+def record_http_request(
+    method: str, path: str, status_code: int, duration: float
+) -> None:
     """Record HTTP request metrics."""
     get_metrics_store().record_http_request(method, path, status_code, duration)
 
@@ -438,7 +456,9 @@ def timed(metric_name: str, labels: dict[str, str] | None = None) -> Any:
 # FastAPI/Starlette middleware
 
 
-def create_metrics_middleware(app: Any, metrics_store: MetricsStore | None = None) -> Any:
+def create_metrics_middleware(
+    app: Any, metrics_store: MetricsStore | None = None
+) -> Any:
     """Create metrics middleware for FastAPI/Starlette."""
     try:
         import time
@@ -493,7 +513,7 @@ def create_metrics_middleware(app: Any, metrics_store: MetricsStore | None = Non
 # Health check function
 
 
-def get_health_status() -> Dict[str, Any]:
+def get_health_status() -> dict[str, Any]:
     """Get service health status with key metrics."""
     metrics_store = get_metrics_store()
     metrics = metrics_store.get_json_metrics()

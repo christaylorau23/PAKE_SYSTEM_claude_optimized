@@ -435,7 +435,7 @@ class TestSensitiveDataHashing:
 class TestAuthenticationDependencies:
     """Test FastAPI authentication dependencies"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_current_user_valid_token(self) -> None:
         """Test get_current_user with valid token"""
         # Arrange
@@ -455,7 +455,7 @@ class TestAuthenticationDependencies:
         mock_decode_token.assert_called_once_with("valid.token.here")
         mock_get_user.assert_called_once_with(username="testuser")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_current_user_invalid_token_raises_exception(self) -> None:
         """Test get_current_user with invalid token raises HTTPException"""
         # Arrange
@@ -472,7 +472,7 @@ class TestAuthenticationDependencies:
 
         assert exc_info.value.status_code == 401
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_current_user_no_subject_raises_exception(self) -> None:
         """Test get_current_user with token missing subject raises HTTPException"""
         # Arrange
@@ -489,7 +489,7 @@ class TestAuthenticationDependencies:
 
         assert exc_info.value.status_code == 401
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_current_user_not_found_raises_exception(self) -> None:
         """Test get_current_user with user not found raises HTTPException"""
         # Arrange
@@ -509,7 +509,7 @@ class TestAuthenticationDependencies:
 
         assert exc_info.value.status_code == 401
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_current_active_user_active_user(self) -> None:
         """Test get_current_active_user with active user"""
         # Arrange
@@ -528,7 +528,7 @@ class TestAuthenticationDependencies:
         assert user.username == "testuser"
         assert user.disabled is False
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_current_active_user_disabled_user_raises_exception(self) -> None:
         """Test get_current_active_user with disabled user raises HTTPException"""
         # Arrange
@@ -548,11 +548,13 @@ class TestAuthenticationDependencies:
 class TestDatabaseOperations:
     """Test database operations with mocked dependencies"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_existing_user(self) -> None:
         """Test get_user with existing user"""
         # Arrange
-        mock_fake_users_db = self.mocker.patch("src.pake_system.auth.database.fake_users_db")
+        mock_fake_users_db = self.mocker.patch(
+            "src.pake_system.auth.database.fake_users_db"
+        )
         mock_fake_users_db.__contains__.return_value = True
         mock_fake_users_db.__getitem__.return_value = {
             "username": "testuser",
@@ -569,11 +571,13 @@ class TestDatabaseOperations:
         assert user is not None
         assert user.username == "testuser"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_nonexistent_user(self) -> None:
         """Test get_user with nonexistent user"""
         # Arrange
-        mock_fake_users_db = self.mocker.patch("src.pake_system.auth.database.fake_users_db")
+        mock_fake_users_db = self.mocker.patch(
+            "src.pake_system.auth.database.fake_users_db"
+        )
         mock_fake_users_db.__contains__.return_value = False
 
         # Act
@@ -582,7 +586,7 @@ class TestDatabaseOperations:
         # Assert
         assert user is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_authenticate_user_valid_credentials(self) -> None:
         """Test authenticate_user with valid credentials"""
         # Arrange
@@ -608,7 +612,7 @@ class TestDatabaseOperations:
         assert user.username == "testuser"
         mock_verify_password.assert_called_once_with("password123", "$2b$12$...")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_authenticate_user_invalid_password(self) -> None:
         """Test authenticate_user with invalid password"""
         # Arrange
@@ -632,7 +636,7 @@ class TestDatabaseOperations:
         # Assert
         assert user is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_authenticate_user_nonexistent_user(self) -> None:
         """Test authenticate_user with nonexistent user"""
         # Arrange
@@ -645,11 +649,13 @@ class TestDatabaseOperations:
         # Assert
         assert user is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_create_user_success(self) -> None:
         """Test create_user with valid data"""
         # Arrange
-        mock_fake_users_db = self.mocker.patch("src.pake_system.auth.database.fake_users_db")
+        mock_fake_users_db = self.mocker.patch(
+            "src.pake_system.auth.database.fake_users_db"
+        )
 
         # Act
         user = await create_user(

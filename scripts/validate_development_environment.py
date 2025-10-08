@@ -176,7 +176,7 @@ class DevelopmentEnvironmentValidator:
                     # Check critical Python settings
                     python_settings = settings.get("[python]", {})
                     if (
-                        python_settings.get("editor.insertSpaces") == True
+                        python_settings.get("editor.insertSpaces")
                         and python_settings.get("editor.tabSize") == 4
                     ):
                         self.results.append(
@@ -346,7 +346,7 @@ class DevelopmentEnvironmentValidator:
                 content = file_path.read_text()
                 lines = content.split("\n")
 
-                for i, line in enumerate(lines, 1):
+                for _i, line in enumerate(lines, 1):
                     # Check for mixed tabs and spaces
                     if "\t" in line and "    " in line:
                         indentation_issues += 1

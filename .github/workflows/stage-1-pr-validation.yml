@@ -1,0 +1,338 @@
+name: Stage 1 - Pull Request Validation
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # ===== QUALITY GATE 1: CODE STYLE AND FORMATTING =====
+  code-style:
+    runs-on: ubuntu-latest
+    name: "Quality Gate 1: Code Style & Formatting"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.set-python-version.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Run Ruff linting
+      run: |
+        echo "🔍 Running Ruff linting..."
+        poetry run ruff check --diff --exit-non-zero-on-fix
+        echo "✅ Ruff linting passed"
+
+    - name: Run Ruff formatting check
+      run: |
+        echo "🎨 Checking code formatting..."
+        poetry run ruff format --check
+        echo "✅ Code formatting is correct"
+
+  # ===== QUALITY GATE 2: TYPE CHECKING =====
+  type-checking:
+    runs-on: ubuntu-latest
+    name: "Quality Gate 2: Type Checking"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.set-python-version.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Run Mypy type checking
+      run: |
+        echo "🔍 Running Mypy type checking..."
+        poetry run mypy src/ --strict --show-error-codes --no-error-summary
+        echo "✅ Type checking passed"
+
+  # ===== QUALITY GATE 3: SECURITY SCANNING =====
+  security-scanning:
+    runs-on: ubuntu-latest
+    name: "Quality Gate 3: Security Scanning"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.set-python-version.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Run Bandit security scan
+      run: |
+        echo "🔒 Running Bandit security scan..."
+        poetry run bandit -r src/ -f json -o bandit_report.json
+        echo "✅ Security scan passed"
+
+    - name: Run Safety dependency check
+      run: |
+        echo "🔒 Running Safety dependency check..."
+        poetry run safety check --json --output safety_report.json
+        echo "✅ Dependency security check passed"
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          bandit_report.json
+          safety_report.json
+
+  # ===== QUALITY GATE 4: UNIT TESTS AND COVERAGE =====
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: "Quality Gate 4: Unit Tests & Coverage"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.set-python-version.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Run unit tests with coverage
+      run: |
+        echo "🧪 Running unit tests with coverage..."
+        poetry run pytest tests/unit/ \
+          --cov=src \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-fail-under=80 \
+          --junitxml=test-results.xml \
+          --maxfail=5
+        echo "✅ Unit tests passed with 80%+ coverage"
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: |
+          coverage.xml
+          htmlcov/
+          test-results.xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  # ===== QUALITY GATE 5: STATIC ANALYSIS (SONARQUBE) =====
+  static-analysis:
+    runs-on: ubuntu-latest
+    name: "Quality Gate 5: Static Analysis"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.set-python-version.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Run SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.projectKey=pake-system
+          -Dsonar.organization=pake-system
+          -Dsonar.python.version=3.12
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.python.bandit.reportPaths=bandit_report.json
+
+  # ===== QUALITY GATE 6: DEPENDENCY VULNERABILITY SCAN =====
+  dependency-scan:
+    runs-on: ubuntu-latest
+    name: "Quality Gate 6: Dependency Vulnerability Scan"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.set-python-version.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/python@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+
+    - name: Run Dependabot check
+      run: |
+        echo "🔍 Running Dependabot security check..."
+        poetry run safety check --json --output dependabot_report.json
+        echo "✅ Dependabot security check passed"
+
+  # ===== FINAL PR VALIDATION SUMMARY =====
+  pr-summary:
+    runs-on: ubuntu-latest
+    name: "PR Validation Summary"
+    needs: [code-style, type-checking, security-scanning, unit-tests, static-analysis, dependency-scan]
+    if: always()
+
+    steps:
+    - name: PR Validation Summary
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const allJobs = [
+            'code-style', 'type-checking', 'security-scanning',
+            'unit-tests', 'static-analysis', 'dependency-scan'
+          ];
+
+          const results = allJobs.map(job => ({
+            job: job,
+            status: '${{ needs.' + job + '.result }}'
+          }));
+
+          const failedJobs = results.filter(r => r.status === 'failure');
+          const successJobs = results.filter(r => r.status === 'success');
+
+          let comment = '## 🚀 PR Validation Results\\n\\n';
+
+          if (failedJobs.length === 0) {
+            comment += '✅ **All quality gates passed!**\\n\\n';
+            comment += '**Quality Gates:**\\n';
+            successJobs.forEach(job => {
+              comment += `- ✅ ${job.job.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}\\n`;
+            });
+            comment += '\\n**Ready for merge!** 🎉';
+          } else {
+            comment += '❌ **Quality gates failed**\\n\\n';
+            comment += '**Failed Gates:**\\n';
+            failedJobs.forEach(job => {
+              comment += `- ❌ ${job.job.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}\\n`;
+            });
+            comment += '\\n**Please fix the issues above before merging.**';
+          }
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

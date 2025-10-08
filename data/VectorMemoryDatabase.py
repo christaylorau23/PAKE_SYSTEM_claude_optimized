@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 """Vector Memory Database Integration for AI Long-Term Memory
 Uses Chroma as the vector database backend for semantic memory storage and retrieval.
@@ -22,7 +23,7 @@ class VectorMemoryDatabase:
     Provides semantic search, conversation storage, and knowledge retrieval.
     """
 
-    def __init__(self) -> None:
+def __init__(self, dal: Any = None, persist_directory: Any = None) -> None:
         self.dal = dal
         self.logger = logging.getLogger("vector-memory-db")
 

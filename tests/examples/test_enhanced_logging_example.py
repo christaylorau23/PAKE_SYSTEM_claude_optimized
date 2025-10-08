@@ -99,7 +99,7 @@ class TestEnhancedLoggingExample:
                 user_id="test_user",
             )
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_async_operation_logging(self) -> None:
         """Test logging in async operations"""
         self.structured_logger.info("Starting async operation")
@@ -336,7 +336,7 @@ class TestEnhancedLoggingExample:
 
         assert result["status"] == "success"
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_slow_operation_logging(self) -> None:
         """Test logging for slow operations (marked as slow test)"""
         self.structured_logger.info("Starting slow operation")

@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 Comprehensive tests for the PAKE System authentication module
 
@@ -34,19 +36,19 @@ settings = get_settings()
 # Fixtures
 
 
-@pytest.fixture
+@pytest.fixture()
 def client(self) -> None:
     """Create a test client for the FastAPI app"""
     return TestClient(app)
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_password(self) -> None:
     """Test password"""
     return "TestPassword123!"
 
 
-@pytest.fixture
+@pytest.fixture()
 def test_hashed_password(self) -> None:
     """Hashed test password"""
     return create_password_hash(test_password)
@@ -55,7 +57,7 @@ def test_hashed_password(self) -> None:
 # Unit Tests - Password Hashing
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestPasswordHashing:
     """Test password hashing functionality"""
 
@@ -89,7 +91,7 @@ class TestPasswordHashing:
 # Unit Tests - JWT Tokens
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestJWTTokens:
     """Test JWT token generation and validation"""
 
@@ -153,11 +155,11 @@ class TestJWTTokens:
 # Integration Tests - User Authentication
 
 
-@pytest.mark.integration_auth
+@pytest.mark.integration_auth()
 class TestUserAuthentication:
     """Test user authentication flow"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_exists(self) -> None:
         """Test retrieving an existing user"""
         user = await get_user("admin")
@@ -167,13 +169,13 @@ class TestUserAuthentication:
         assert user.email == "admin@example.com"
         assert hasattr(user, "hashed_password")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_get_user_not_exists(self) -> None:
         """Test retrieving a non-existent user"""
         user = await get_user("nonexistent")
         assert user is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_authenticate_user_success(self) -> None:
         """Test successful user authentication"""
         user = await authenticate_user("admin", "secret")
@@ -182,13 +184,13 @@ class TestUserAuthentication:
         assert user.username == "admin"
         assert user.disabled is False
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_authenticate_user_wrong_password(self) -> None:
         """Test authentication with wrong password"""
         user = await authenticate_user("admin", "wrongpassword")
         assert user is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_authenticate_user_not_exists(self) -> None:
         """Test authentication with non-existent user"""
         user = await authenticate_user("nonexistent", "password")
@@ -198,7 +200,7 @@ class TestUserAuthentication:
 # Integration Tests - API Endpoints
 
 
-@pytest.mark.integration_api
+@pytest.mark.integration_api()
 class TestAuthenticationEndpoints:
     """Test authentication API endpoints"""
 
@@ -326,7 +328,7 @@ class TestAuthenticationEndpoints:
 # End-to-End Tests
 
 
-@pytest.mark.e2e
+@pytest.mark.e2e()
 class TestAuthenticationE2E:
     """End-to-end authentication flow tests"""
 
@@ -368,27 +370,31 @@ class TestAuthenticationE2E:
 # Performance Tests
 
 
-@pytest.mark.performance
+@pytest.mark.performance()
 class TestAuthenticationPerformance:
     """Test authentication performance"""
 
-    def test_password_hashing_performance(self) -> None:
-        """Benchmark password hashing"""
-        result = benchmark(create_password_hash, "password123")
-        assert result.startswith("$2b$")
 
-    def test_password_verification_performance(self) -> None:
-        """Benchmark password verification"""
-        result = benchmark(verify_password, test_password, test_hashed_password)
-        assert result is True
+def test_password_hashing_performance(self, benchmark: Any = None) -> None:
+    """Benchmark password hashing"""
+    result = benchmark(create_password_hash, "password123")
+    assert result.startswith("$2b$")
 
-    def test_token_generation_performance(self) -> None:
-        """Benchmark token generation"""
-        result = benchmark(create_access_token, {"sub": "testuser"})
-        assert isinstance(result, str)
 
-    def test_token_decoding_performance(self) -> None:
-        """Benchmark token decoding"""
-        token = create_access_token({"sub": "testuser"})
-        result = benchmark(decode_token, token)
-        assert result["sub"] == "testuser"
+def test_password_verification_performance(self, benchmark: Any = None) -> None:
+    """Benchmark password verification"""
+    result = benchmark(verify_password, test_password, test_hashed_password)
+    assert result is True
+
+
+def test_token_generation_performance(self, benchmark: Any = None) -> None:
+    """Benchmark token generation"""
+    result = benchmark(create_access_token, {"sub": "testuser"})
+    assert isinstance(result, str)
+
+
+def test_token_decoding_performance(self, benchmark: Any = None) -> None:
+    """Benchmark token decoding"""
+    token = create_access_token({"sub": "testuser"})
+    result = benchmark(decode_token, token)
+    assert result["sub"] == "testuser"

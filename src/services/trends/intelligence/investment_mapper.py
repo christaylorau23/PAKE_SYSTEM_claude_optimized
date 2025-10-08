@@ -25,7 +25,7 @@ class InvestmentMapping:
 
     keyword_pattern: str
     investment_vehicles: list[InvestmentVehicle]
-    symbols: List[str]
+    symbols: list[str]
     sector: str
     confidence_multiplier: float = 1.0
 
@@ -144,7 +144,7 @@ class InvestmentMapper:
             ),
         ]
 
-    def _initialize_symbol_database(self) -> dict[str, Dict[str, Any]]:
+    def _initialize_symbol_database(self) -> dict[str, dict[str, Any]]:
         """Initialize symbol database with market data."""
         # This would be populated from real market data APIs
         return {
@@ -312,10 +312,10 @@ class InvestmentMapper:
 
     def _select_best_symbols(
         self,
-        candidate_symbols: List[str],
+        candidate_symbols: list[str],
         trend: TrendSignal,
         analysis: TrendAnalysisResult,
-    ) -> List[str]:
+    ) -> list[str]:
         """Select the best symbols based on trend characteristics."""
         # Score each symbol
         symbol_scores = []
@@ -657,7 +657,7 @@ class InvestmentMapper:
         )
         return selected
 
-    def get_mapping_statistics(self) -> Dict[str, Any]:
+    def get_mapping_statistics(self) -> dict[str, Any]:
         """Get statistics about investment mappings."""
         total_symbols = sum(
             len(mapping.symbols) for mapping in self.investment_mappings

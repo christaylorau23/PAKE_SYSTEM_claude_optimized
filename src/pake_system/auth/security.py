@@ -63,7 +63,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(
-    data: Dict[str, Any], expires_delta: timedelta | None = None
+    data: dict[str, Any], expires_delta: timedelta | None = None
 ) -> str:
     """Create a JWT access token with an expiration claim.
 
@@ -113,7 +113,7 @@ def create_access_token(
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def decode_token(token: str) -> Dict[str, Any]:
+def decode_token(token: str) -> dict[str, Any]:
     """Decode and validate a JWT token.
 
     This function verifies the token signature and checks expiration.
@@ -141,7 +141,7 @@ def decode_token(token: str) -> Dict[str, Any]:
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
 
 
-def validate_password_strength(password: str) -> tuple[bool, List[str]]:
+def validate_password_strength(password: str) -> tuple[bool, list[str]]:
     """Validate password strength according to enterprise security standards.
 
     Args:
@@ -251,7 +251,7 @@ def generate_secure_password(length: int = 16) -> str:
     return "".join(password)
 
 
-def create_refresh_token(data: Dict[str, Any]) -> str:
+def create_refresh_token(data: dict[str, Any]) -> str:
     """Create a JWT refresh token with longer expiration.
 
     Refresh tokens are used to obtain new access tokens without

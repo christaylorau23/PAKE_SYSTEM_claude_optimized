@@ -64,7 +64,7 @@ class VaultClient:
         self.environment = environment or os.getenv("ENVIRONMENT", "development")
         self._client: Any | None = None
         self._authenticated = False
-        self._access_log: list[Dict[str, Any]] = []
+        self._access_log: list[dict[str, Any]] = []
 
         # Validate required configuration
         if not self.vault_token:
@@ -273,7 +273,7 @@ class VaultClient:
             raise_on_error=False,
         )
 
-    def get_access_logs(self) -> list[Dict[str, Any]]:
+    def get_access_logs(self) -> list[dict[str, Any]]:
         """Get audit log of secret access.
 
         Returns:
@@ -307,7 +307,7 @@ class VaultClient:
 
         return results
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         """Check Vault connection health.
 
         Returns:

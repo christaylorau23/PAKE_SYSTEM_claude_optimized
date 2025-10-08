@@ -1,3 +1,6 @@
+import psycopg2
+import sqlalchemy
+
 #!/usr/bin/env python3
 """
 Test Database Setup Script for CI/CD Pipeline

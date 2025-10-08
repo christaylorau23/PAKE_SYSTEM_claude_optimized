@@ -8,8 +8,9 @@ in tests, ensuring they work correctly in various scenarios.
 """
 
 import asyncio
+from collections.abc import Callable
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -64,12 +65,12 @@ class TestPollingConfig:
 class TestRobustPoller:
     """Test cases for RobustPoller class"""
 
-    @pytest.fixture
+    @pytest.fixture()
     def poller(self) -> RobustPoller:
         """Create a RobustPoller instance for testing"""
         return RobustPoller()
 
-    @pytest.fixture
+    @pytest.fixture()
     def fast_poller(self) -> RobustPoller:
         """Create a fast-polling RobustPoller for testing"""
         config = PollingConfig(
@@ -77,12 +78,12 @@ class TestRobustPoller:
         )
         return RobustPoller(config)
 
-    @pytest.fixture
+    @pytest.fixture()
     def robust_poller(self) -> RobustPoller:
         """Create a robust_poller fixture (alias for poller)"""
         return RobustPoller()
 
-    @pytest.fixture
+    @pytest.fixture()
     def slow_poller(self) -> RobustPoller:
         """Create a slow-polling RobustPoller for testing"""
         config = PollingConfig(
@@ -90,7 +91,7 @@ class TestRobustPoller:
         )
         return RobustPoller(config)
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_condition_success(self, fast_poller: RobustPoller) -> None:
         """Test successful condition polling"""
         counter = 0
@@ -110,7 +111,7 @@ class TestRobustPoller:
         assert result.total_time > 0
         assert result.error is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_condition_timeout(self, fast_poller: RobustPoller) -> None:
         """Test condition polling timeout"""
 
@@ -127,7 +128,7 @@ class TestRobustPoller:
         assert result.total_time >= 2.0
         assert "Timeout" in result.error
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_condition_max_retries(self, fast_poller: RobustPoller) -> None:
         """Test condition polling with max retries"""
         config = PollingConfig(
@@ -145,7 +146,7 @@ class TestRobustPoller:
         assert result.attempts == 3
         assert "Max retries" in result.error
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_condition_exception(self, fast_poller: RobustPoller) -> None:
         """Test condition polling with exceptions"""
 
@@ -160,7 +161,7 @@ class TestRobustPoller:
         assert result.success is False
         assert "Exception during polling" in result.error
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_value_success(self, fast_poller) -> None:
         """Test successful value polling"""
         counter = 0
@@ -178,7 +179,7 @@ class TestRobustPoller:
         assert result.value == 3
         assert result.attempts == 3
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_value_timeout(self, fast_poller) -> None:
         """Test value polling timeout"""
 
@@ -192,7 +193,7 @@ class TestRobustPoller:
         assert result.success is False
         assert result.value is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_database_record_success(self, fast_poller) -> None:
         """Test successful database record polling"""
         # Mock database manager
@@ -210,7 +211,7 @@ class TestRobustPoller:
         assert result.success is True
         assert len(result.value) == 2
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_cache_value_success(self, fast_poller) -> None:
         """Test successful cache value polling"""
         # Mock cache manager
@@ -228,7 +229,7 @@ class TestRobustPoller:
         assert result.success is True
         assert result.value == "cached_value"
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_message_received_success(self, fast_poller) -> None:
         """Test successful message received polling"""
         # Mock message bus
@@ -245,7 +246,7 @@ class TestRobustPoller:
         assert result.success is True
         assert result.value == 2
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_exponential_backoff(self, poller) -> None:
         """Test exponential backoff behavior"""
         config = PollingConfig(
@@ -274,7 +275,7 @@ class TestRobustPoller:
             interval2 = attempt_times[2] - attempt_times[1]
             assert interval2 > interval1
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_circuit_breaker(self, fast_poller) -> None:
         """Test circuit breaker functionality"""
 
@@ -299,7 +300,7 @@ class TestRobustPoller:
 class TestConvenienceFunctions:
     """Test cases for convenience polling functions"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_until_true_success(self) -> None:
         """Test successful poll_until_true"""
         counter = 0
@@ -314,7 +315,7 @@ class TestConvenienceFunctions:
         )
         assert result is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_until_true_timeout(self) -> None:
         """Test poll_until_true timeout"""
 
@@ -326,7 +327,7 @@ class TestConvenienceFunctions:
         )
         assert result is False
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_until_equal_success(self) -> None:
         """Test successful poll_until_equal"""
         counter = 0
@@ -341,7 +342,7 @@ class TestConvenienceFunctions:
         )
         assert result == 2
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_until_equal_timeout(self) -> None:
         """Test poll_until_equal timeout"""
 
@@ -353,7 +354,7 @@ class TestConvenienceFunctions:
         )
         assert result is None
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_database_ready_success(self) -> None:
         """Test successful poll_database_ready"""
         db_manager = AsyncMock()
@@ -364,7 +365,7 @@ class TestConvenienceFunctions:
         )
         assert result is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_database_ready_failure(self) -> None:
         """Test poll_database_ready failure"""
         db_manager = AsyncMock()
@@ -375,7 +376,7 @@ class TestConvenienceFunctions:
         )
         assert result is False
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_cache_ready_success(self) -> None:
         """Test successful poll_cache_ready"""
         cache_manager = AsyncMock()
@@ -387,7 +388,7 @@ class TestConvenienceFunctions:
         )
         assert result is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_poll_cache_ready_failure(self) -> None:
         """Test poll_cache_ready failure"""
         cache_manager = AsyncMock()
@@ -402,7 +403,7 @@ class TestConvenienceFunctions:
 class TestPytestFixtures:
     """Test cases for pytest fixtures"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_robust_poller_fixture(self, robust_poller) -> None:
         """Test robust_poller fixture"""
         assert isinstance(robust_poller, RobustPoller)
@@ -419,14 +420,14 @@ class TestPytestFixtures:
         )
         assert result.success is True
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_fast_poller_fixture(self, fast_poller) -> None:
         """Test fast_poller fixture"""
         assert isinstance(fast_poller, RobustPoller)
         assert fast_poller.config.timeout_seconds == 2.0
         assert fast_poller.config.interval_seconds == 0.01
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_slow_poller_fixture(self, slow_poller) -> None:
         """Test slow_poller fixture"""
         assert isinstance(slow_poller, RobustPoller)
@@ -465,7 +466,7 @@ class TestPollingResult:
 class TestIntegrationScenarios:
     """Integration test scenarios for robust polling"""
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_database_workflow_polling(self, fast_poller) -> None:
         """Test polling in a database workflow scenario"""
         # Mock database manager
@@ -491,7 +492,7 @@ class TestIntegrationScenarios:
         assert result is True
         assert call_count == 3
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_cache_workflow_polling(self, fast_poller) -> None:
         """Test polling in a cache workflow scenario"""
         # Mock cache manager
@@ -518,7 +519,7 @@ class TestIntegrationScenarios:
         assert result is True
         assert call_count == 2
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_message_bus_workflow_polling(self, fast_poller) -> None:
         """Test polling in a message bus workflow scenario"""
         # Mock message bus and received messages

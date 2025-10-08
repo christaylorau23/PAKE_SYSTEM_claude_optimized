@@ -59,7 +59,7 @@ class TestRSSFeedService:
         return engine
 
     @pytest.fixture
-    def rss_service(self) -> None:
+def rss_service(self, mock_cognitive_engine: Any = None) -> None:
         """Create RSS service instance"""
         return RSSFeedService(cognitive_engine=mock_cognitive_engine)
 
@@ -128,7 +128,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_fetch_and_parse_rss_feed_successfully(self) -> None:
+async def test_should_fetch_and_parse_rss_feed_successfully(self, sample_rss_content: Any = None, rss_config: Any = None, rss_config: Any = None) -> None:
         """
         Test: Should fetch and parse RSS 2.0 feeds with proper
         item extraction and metadata preservation.
@@ -164,7 +164,7 @@ class TestRSSFeedService:
         assert item.feed_name == self.rss_config.name
 
     @pytest.mark.asyncio
-    async def test_should_parse_atom_feeds_correctly(self) -> None:
+async def test_should_parse_atom_feeds_correctly(self, sample_atom_content: Any = None, atom_config: Any = None) -> None:
         """
         Test: Should parse Atom 1.0 feeds with proper namespace handling
         and content extraction.
@@ -196,7 +196,7 @@ class TestRSSFeedService:
         )  # Should have content from both summary and content elements
 
     @pytest.mark.asyncio
-    async def test_should_handle_malformed_xml_gracefully(self) -> None:
+async def test_should_handle_malformed_xml_gracefully(self, rss_config: Any = None) -> None:
         """
         Test: Should handle malformed XML feeds with proper error reporting
         and recovery strategies.
@@ -231,7 +231,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_apply_keyword_filtering_accurately(self) -> None:
+async def test_should_apply_keyword_filtering_accurately(self, sample_rss_content: Any = None) -> None:
         """
         Test: Should filter RSS items by keywords with case-insensitive matching
         and support for multiple keyword patterns.
@@ -262,7 +262,7 @@ class TestRSSFeedService:
             assert any(keyword in content_text for keyword in keywords_lower)
 
     @pytest.mark.asyncio
-    async def test_should_exclude_content_by_exclude_keywords(self) -> None:
+async def test_should_exclude_content_by_exclude_keywords(self, sample_rss_content: Any = None) -> None:
         """
         Test: Should exclude RSS items containing specified exclude keywords
         to filter out unwanted content.
@@ -344,7 +344,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_deduplicate_items_by_url_and_title(self) -> None:
+async def test_should_deduplicate_items_by_url_and_title(self, rss_config: Any = None) -> None:
         """
         Test: Should remove duplicate items based on URL and title similarity
         to avoid processing the same content multiple times.
@@ -399,7 +399,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_integrate_cognitive_quality_assessment(self) -> None:
+async def test_should_integrate_cognitive_quality_assessment(self, sample_rss_content: Any = None, rss_config: Any = None) -> None:
         """
         Test: Should apply cognitive quality assessment to RSS feed items
         and incorporate quality scores into item metadata.
@@ -430,7 +430,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_handle_http_304_not_modified_efficiently(self) -> None:
+async def test_should_handle_http_304_not_modified_efficiently(self, rss_config: Any = None, rss_config: Any = None) -> None:
         """
         Test: Should handle HTTP 304 Not Modified responses efficiently
         using ETags and Last-Modified headers for bandwidth optimization.
@@ -467,7 +467,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_convert_feed_items_to_content_items_correctly(self) -> None:
+async def test_should_convert_feed_items_to_content_items_correctly(self, sample_rss_content: Any = None, rss_config: Any = None) -> None:
         """
         Test: Should convert RSS feed items to standardized ContentItem format
         with comprehensive metadata preservation.
@@ -514,7 +514,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_handle_http_errors_gracefully(self) -> None:
+async def test_should_handle_http_errors_gracefully(self, rss_config: Any = None) -> None:
         """
         Test: Should handle HTTP errors (404, 500, etc.) with proper
         error reporting and recovery strategies.
@@ -535,7 +535,7 @@ class TestRSSFeedService:
         assert result.execution_time > 0
 
     @pytest.mark.asyncio
-    async def test_should_handle_network_timeouts_appropriately(self) -> None:
+async def test_should_handle_network_timeouts_appropriately(self, rss_config: Any = None) -> None:
         """
         Test: Should handle network timeouts with proper error reporting
         and timeout configuration.
@@ -576,7 +576,7 @@ class TestRSSFeedService:
         assert health_status["item_cache_size"] >= 0
 
     @pytest.mark.asyncio
-    async def test_should_cleanup_resources_properly(self) -> None:
+async def test_should_cleanup_resources_properly(self, sample_rss_content: Any = None, rss_config: Any = None) -> None:
         """
         Test: Should properly close connections and clean up resources
         when service is shut down.

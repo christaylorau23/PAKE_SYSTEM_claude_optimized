@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Advanced Social Media Scheduling System
@@ -52,12 +53,12 @@ class ScheduledPost:
 
     id: str
     content: str
-    platforms: List[str]
+    platforms: list[str]
     scheduled_time: datetime
     status: PostStatus
-    media_files: List[str] = None
-    hashtags: List[str] = None
-    mentions: List[str] = None
+    media_files: list[str] = None
+    hashtags: list[str] = None
+    mentions: list[str] = None
     timezone: str = "UTC"
     recurring: bool = False
     frequency: ScheduleFrequency = ScheduleFrequency.ONCE
@@ -78,7 +79,7 @@ class PostingSchedule:
     """Platform-specific posting schedule"""
 
     platform: str
-    optimal_times: List[str]
+    optimal_times: list[str]
     timezone: str
     frequency_limits: dict[str, int]  # max posts per hour/day
     blackout_periods: list[tuple[str, str]] = None  # periods to avoid posting
@@ -87,7 +88,7 @@ class PostingSchedule:
 class SocialSchedulerSystem:
     """Advanced social media scheduling system"""
 
-    def __init__(self) -> None:
+def __init__(self, db_path: Any = None, db_path: Any = None) -> None:
         self.db_path = db_path
         self.logger = logging.getLogger(__name__)
 
@@ -422,7 +423,7 @@ class SocialSchedulerSystem:
         conn.close()
         return count
 
-    async def _store_scheduled_post(self) -> None:
+async def _store_scheduled_post(self, post: Any = None) -> None:
         """Store scheduled post in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -464,7 +465,7 @@ class SocialSchedulerSystem:
         conn.commit()
         conn.close()
 
-    async def _schedule_single_post(self) -> None:
+async def _schedule_single_post(self, post: Any = None) -> None:
         """Schedule a single post using APScheduler"""
         self.scheduler.add_job(
             func=self._execute_post,
@@ -476,7 +477,7 @@ class SocialSchedulerSystem:
             misfire_grace_time=300,  # 5 minutes grace period
         )
 
-    async def _schedule_recurring_post(self) -> None:
+async def _schedule_recurring_post(self, post: Any = None, post: Any = None, post: Any = None, post: Any = None, post: Any = None, post: Any = None, post: Any = None, post: Any = None, post: Any = None) -> None:
         """Schedule a recurring post"""
         if post.frequency == ScheduleFrequency.DAILY:
             self.scheduler.add_job(
@@ -534,7 +535,7 @@ class SocialSchedulerSystem:
             "day_of_week": parts[4] if parts[4] != "*" else None,
         }
 
-    async def _execute_post(self) -> None:
+async def _execute_post(self, post_id: Any = None, post_id: Any = None, post_id: Any = None, post_id: Any = None, post_id: Any = None, post_id: Any = None) -> None:
         """Execute a scheduled post"""
         try:
             self.logger.info("Executing scheduled post: %s", post_id)
@@ -612,7 +613,7 @@ class SocialSchedulerSystem:
                 else:
                     await self._update_post_status(post)
 
-    async def _schedule_retry(self) -> None:
+async def _schedule_retry(self, post: Any = None, post: Any = None, post: Any = None, post: Any = None, post: Any = None, post: Any = None) -> None:
         """Schedule a retry for failed post"""
         post.retry_count += 1
         # Exponential backoff, max 1 hour
@@ -680,7 +681,7 @@ class SocialSchedulerSystem:
             error_message=row[19],
         )
 
-    async def _update_post_status(self) -> None:
+async def _update_post_status(self, post: Any = None, post: Any = None) -> None:
         """Update post status in database"""
         post.updated_at = datetime.now(UTC)
 
@@ -706,7 +707,7 @@ class SocialSchedulerSystem:
         conn.commit()
         conn.close()
 
-    async def _store_posting_analytics(self) -> None:
+async def _store_posting_analytics(self, results: Any = None, post: Any = None, post: Any = None) -> None:
         """Store posting analytics"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -815,7 +816,7 @@ class SocialSchedulerSystem:
             self.logger.error("Error converting row to ScheduledPost: %s", e)
             return None
 
-    async def cancel_post(self, post_id: str) -> bool:
+async def cancel_post(self, post_id: str, logger: Any = None) -> bool:
         """Cancel a scheduled post"""
         try:
             # Remove from scheduler

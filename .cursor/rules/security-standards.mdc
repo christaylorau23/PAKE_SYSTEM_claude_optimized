@@ -1,0 +1,482 @@
+---
+description: "Comprehensive security guidelines for PAKE System including secrets management, cryptographic standards, authentication patterns, input validation, and zero-tolerance security policies. Request this rule when implementing security-sensitive features, authentication, secrets handling, or cryptographic operations."
+alwaysApply: false
+---
+
+# Security Standards for PAKE System (Zero-Tolerance Policy)
+
+You are an expert in application security, cryptography, and secure coding practices. The PAKE System has a **ZERO-TOLERANCE POLICY** for security violations. ALL code MUST adhere to these non-negotiable security standards.
+
+## Core Security Principle
+
+**Security is Non-Negotiable**: Every security rule in this document is MANDATORY. Security violations will cause builds to fail and code to be rejected.
+
+## 1. Secrets Management (CRITICAL)
+
+### HashiCorp Vault Integration
+**MUST**: Use HashiCorp Vault for ALL secrets via @src/pake_system/core/vault_client.py.
+
+**NEVER**: Hard-code secrets, API keys, passwords, or tokens in source code.
+
+**NEVER**: Commit secrets to version control.
+
+```python
+# ✅ CORRECT - Vault integration
+from src.pake_system.core.vault_client import VaultClient
+
+async def initialize_service():
+    vault = VaultClient()
+    api_key = await vault.get_secret("external_api/key")
+    db_password = await vault.get_secret("database/password")
+
+    return ExternalService(api_key=api_key)
+
+# ❌ WRONG - Hard-coded secrets (ZERO-TOLERANCE VIOLATION)
+API_KEY = "sk_live_abc123..."  # Build will fail!
+DB_PASSWORD = "mypassword123"  # Security violation!
+```
+
+**RATIONALE**: Hard-coded secrets in source code are the #1 cause of security breaches. They are easily discovered through GitHub search, leaked in logs, and impossible to rotate quickly. Vault provides centralized secrets management with access control, audit logging, and dynamic secrets.
+
+### Environment Variables (Transitional)
+**IF** Vault is not yet configured for development:
+- **MUST**: Use environment variables via `.env` files
+- **MUST**: Add `.env` to `.gitignore`
+- **NEVER**: Commit `.env` files
+- **MUST**: Use Pydantic Settings for validation
+
+```python
+# ✅ CORRECT - Environment variables with validation
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    database_url: str
+    redis_url: str
+    jwt_secret: str
+    api_key: str
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+settings = Settings()  # Loads from .env, validates types
+```
+
+### Secrets Detection
+**MUST**: ALL code passes detect-secrets check in @.pre-commit-config.yaml.
+
+**MUST**: Use secret scanning in CI/CD pipeline.
+
+```bash
+# Pre-commit hook automatically runs:
+detect-secrets scan --baseline .secrets.baseline
+```
+
+## 2. Cryptographic Standards
+
+### Random Number Generation
+**MUST**: Use Python's `secrets` module for ALL cryptographic operations.
+
+**NEVER**: Use `random` module for security-sensitive operations.
+
+```python
+# ✅ CORRECT - Cryptographically secure random
+import secrets
+
+# Generate secure tokens
+session_token = secrets.token_urlsafe(32)
+api_key = secrets.token_hex(32)
+password_salt = secrets.token_bytes(32)
+
+# Generate secure random numbers
+secure_random = secrets.randbelow(1000)  # 0-999
+secure_choice = secrets.choice(['A', 'B', 'C'])
+
+# ❌ WRONG - Pseudo-random (PREDICTABLE, INSECURE)
+import random
+
+token = ''.join(random.choices(string.ascii_letters, k=32))  # NOT SECURE!
+random_num = random.randint(0, 999)  # Predictable!
+```
+
+**RATIONALE**: The `random` module uses pseudo-random number generation (PRNG) which is deterministic and predictable. Attackers can predict future values if they know the seed. The `secrets` module uses cryptographically secure random number generators (CSRNG) suitable for security applications.
+
+### Password Hashing
+**MUST**: Use Argon2 for password hashing (configured in PAKE System).
+
+**NEVER**: Use MD5, SHA1, SHA256, or bcrypt alone for passwords.
+
+```python
+# ✅ CORRECT - Argon2 password hashing
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
+
+ph = PasswordHasher()
+
+# Hash password
+def hash_password(password: str) -> str:
+    return ph.hash(password)
+
+# Verify password
+def verify_password(hash: str, password: str) -> bool:
+    try:
+        ph.verify(hash, password)
+        # Check if rehashing is needed (parameters updated)
+        if ph.check_needs_rehash(hash):
+            # Trigger password rehash in database
+            pass
+        return True
+    except VerifyMismatchError:
+        return False
+
+# ❌ WRONG - Weak hashing algorithms
+import hashlib
+
+password_hash = hashlib.md5(password.encode()).hexdigest()  # BROKEN!
+password_hash = hashlib.sha256(password.encode()).hexdigest()  # No salt, too fast!
+```
+
+**RATIONALE**: Argon2 is the winner of the Password Hashing Competition and is resistant to GPU/ASIC attacks. It includes built-in salting, memory-hard properties, and configurable cost factors.
+
+### JWT Token Security
+**MUST**: Use strong JWT secret keys (minimum 32 bytes).
+
+**MUST**: Set appropriate token expiration times.
+
+**MUST**: Validate tokens on every request.
+
+```python
+# ✅ CORRECT - Secure JWT implementation
+from datetime import UTC, datetime, timedelta
+from jose import JWTError, jwt
+
+# Strong secret from Vault
+JWT_SECRET = await vault.get_secret("jwt/secret_key")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire, "type": "access"})
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
+
+def verify_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+        # Additional validation
+        if payload.get("type") != "access":
+            raise ValueError("Invalid token type")
+        return payload
+    except JWTError as e:
+        raise AuthenticationException(f"Invalid token: {e}")
+
+# ❌ WRONG - Weak JWT security
+JWT_SECRET = "secret"  # Too weak!
+# No expiration set
+token = jwt.encode(data, JWT_SECRET)  # Never expires!
+```
+
+## 3. Input Validation & Injection Prevention
+
+### SQL Injection Prevention
+**MUST**: Use SQLAlchemy's parameterized queries or ORM methods.
+
+**NEVER**: Use string concatenation or f-strings in SQL queries.
+
+```python
+# ✅ CORRECT - Parameterized query
+from sqlalchemy import select
+
+# ORM query (safe)
+result = await db.execute(
+    select(User).where(User.email == user_email)
+)
+
+# Parameterized query (safe)
+result = await db.execute(
+    text("SELECT * FROM users WHERE email = :email"),
+    {"email": user_email}
+)
+
+# ❌ WRONG - SQL injection vulnerability
+query = f"SELECT * FROM users WHERE email = '{user_email}'"  # INJECTION!
+result = await db.execute(text(query))  # Vulnerable!
+```
+
+### XSS Prevention
+**MUST**: Validate and sanitize all user inputs.
+
+**MUST**: Use Pydantic models for input validation.
+
+```python
+# ✅ CORRECT - Input validation with Pydantic
+from pydantic import BaseModel, EmailStr, Field, validator
+import re
+
+class UserInput(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    email: EmailStr
+    bio: str = Field(default="", max_length=500)
+
+    @validator('name')
+    def validate_name(cls, v):
+        # Allow only alphanumeric, spaces, and basic punctuation
+        if not re.match(r'^[a-zA-Z0-9\s\.,\-\']+$', v):
+            raise ValueError('Name contains invalid characters')
+        return v
+
+    @validator('bio')
+    def sanitize_bio(cls, v):
+        # Remove HTML tags
+        cleaned = re.sub(r'<[^>]+>', '', v)
+        return cleaned
+```
+
+### Command Injection Prevention
+**NEVER**: Use `os.system()` or `subprocess.run()` with unsanitized user input.
+
+**MUST**: Use `shlex.quote()` for shell escaping when necessary.
+
+```python
+# ✅ CORRECT - Safe subprocess usage
+import subprocess
+import shlex
+
+def run_command_safely(user_input: str):
+    # Validate input first
+    if not re.match(r'^[a-zA-Z0-9_\-\.]+$', user_input):
+        raise ValueError("Invalid input")
+
+    # Use list form (no shell interpretation)
+    result = subprocess.run(
+        ['command', 'arg1', user_input],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    return result.stdout
+
+# ❌ WRONG - Command injection vulnerability
+def run_command_unsafely(user_input: str):
+    os.system(f"command {user_input}")  # INJECTION!
+    subprocess.run(f"command {user_input}", shell=True)  # VULNERABLE!
+```
+
+## 4. Authentication & Authorization
+
+### Authentication Dependency
+**MUST**: Use FastAPI dependency injection for authentication.
+
+```python
+# ✅ CORRECT - Authentication dependency
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+security = HTTPBearer()
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> User:
+    try:
+        token = credentials.credentials
+        payload = verify_token(token)
+        user_id = payload.get("sub")
+
+        if not user_id:
+            raise ValueError("Token missing subject")
+
+        user = await get_user_by_id(user_id)
+        if not user:
+            raise ValueError("User not found")
+
+        return user
+
+    except (JWTError, ValueError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+# Protect endpoints
+@app.get("/protected")
+async def protected_route(current_user: User = Depends(get_current_user)):
+    return {"message": f"Hello, {current_user.name}"}
+```
+
+### Rate Limiting
+**MUST**: Implement rate limiting on authentication endpoints.
+
+```python
+# ✅ CORRECT - Rate limiting with SlowAPI
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.post("/auth/login")
+@limiter.limit("5/minute")  # 5 attempts per minute
+async def login(request: Request, credentials: LoginRequest):
+    ...
+```
+
+## 5. Security Headers
+
+**MUST**: Use security headers middleware (Helmet equivalent or custom).
+
+```python
+# ✅ CORRECT - Security headers
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+
+        # Security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+```
+
+## 6. Automated Security Checks
+
+### Pre-commit Hooks
+**MUST**: ALL code passes security checks in @.pre-commit-config.yaml:
+
+1. **Bandit**: Python security linter (detects common vulnerabilities)
+2. **Safety**: Checks dependencies for known vulnerabilities
+3. **detect-secrets**: Prevents secrets in commits
+
+### CI/CD Pipeline
+**MUST**: Security scans in CI/CD (@.github/workflows/ci.yml):
+- Bandit SAST integration
+- Dependency vulnerability scanning
+- Secret scanning
+- License compliance
+
+## 7. Secure Logging
+
+### Never Log Sensitive Data
+**NEVER**: Log passwords, tokens, API keys, or PII.
+
+**MUST**: Redact sensitive information in logs.
+
+```python
+# ✅ CORRECT - Safe logging
+import structlog
+
+logger = structlog.get_logger()
+
+def log_authentication_attempt(email: str, success: bool):
+    logger.info(
+        "authentication_attempt",
+        email=email,  # OK to log email
+        success=success,
+        timestamp=datetime.now(UTC).isoformat()
+        # NEVER log password!
+    )
+
+# ❌ WRONG - Logging sensitive data
+logger.info(f"Login attempt: {email} with password {password}")  # VIOLATION!
+logger.info(f"API key: {api_key}")  # VIOLATION!
+```
+
+## 8. Dependency Security
+
+### Regular Updates
+**MUST**: Keep dependencies updated via Poetry.
+
+**MUST**: Run `safety check` regularly.
+
+```bash
+# Check for vulnerabilities
+poetry run safety check
+
+# Update dependencies
+poetry update
+
+# Audit with pip-audit
+poetry run pip-audit
+```
+
+### Minimal Dependencies
+**MUST**: Only include necessary dependencies.
+
+**MUST**: Review dependency licenses and security advisories.
+
+## 9. Error Handling (Security Context)
+
+### Don't Leak Information
+**NEVER**: Expose internal errors or stack traces to clients in production.
+
+```python
+# ✅ CORRECT - Safe error responses
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    # Log full error internally
+    logger.error("Internal error", exc_info=exc, request_id=request.headers.get("x-request-id"))
+
+    # Return safe error to client
+    if isinstance(exc, ValidationError):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Validation failed", "details": exc.errors()}
+        )
+
+    # Generic error for unexpected exceptions
+    return JSONResponse(
+        status_code=500,
+        content={"error": "An internal error occurred"}
+    )
+
+# ❌ WRONG - Information leakage
+@app.exception_handler(Exception)
+async def unsafe_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"error": str(exc), "stack_trace": traceback.format_exc()}  # LEAKS INTERNALS!
+    )
+```
+
+## 10. Security Checklist
+
+Before deploying any code, verify:
+
+- [ ] No hard-coded secrets (run detect-secrets)
+- [ ] All secrets stored in Vault
+- [ ] `secrets` module used for crypto operations
+- [ ] Argon2 used for password hashing
+- [ ] JWT tokens have expiration
+- [ ] Input validation with Pydantic
+- [ ] Parameterized SQL queries only
+- [ ] Rate limiting on auth endpoints
+- [ ] Security headers configured
+- [ ] Sensitive data not logged
+- [ ] Dependencies scanned for vulnerabilities (safety, pip-audit)
+- [ ] Pre-commit hooks pass (Bandit, Safety, detect-secrets)
+
+## Summary: Zero-Tolerance Violations
+
+The following will cause **immediate build failure**:
+
+| Violation | Directive | Tool Enforcement |
+|-----------|-----------|------------------|
+| Hard-coded secrets | NEVER commit secrets | detect-secrets, pre-commit |
+| Pseudo-random crypto | NEVER use `random` for security | Bandit S311 |
+| Weak hashing | NEVER use MD5/SHA1/SHA256 for passwords | Bandit, code review |
+| SQL injection | NEVER concatenate SQL | Bandit S608, code review |
+| Command injection | NEVER use shell=True with user input | Bandit S602 |
+| Information leakage | NEVER expose stack traces | Code review |
+
+**REMEMBER**: When in doubt, consult @.pre-commit-config.yaml for automated security checks!

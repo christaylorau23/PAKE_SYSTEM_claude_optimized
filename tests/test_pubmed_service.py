@@ -135,7 +135,7 @@ class TestPubMedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_search_pubmed_with_advanced_query_parameters(self) -> None:
+async def test_should_search_pubmed_with_advanced_query_parameters(self, sample_search_query: Any = None) -> None:
         """
         RED TEST: Service should support advanced PubMed search beyond basic queries.
 
@@ -155,7 +155,7 @@ class TestPubMedService:
         assert "Nature" in result.query_used.journal
 
     @pytest.mark.asyncio
-    async def test_should_parse_pubmed_xml_response_correctly(self) -> None:
+async def test_should_parse_pubmed_xml_response_correctly(self, sample_pubmed_xml: Any = None) -> None:
         """
         RED TEST: Service should correctly parse PubMed XML responses.
 
@@ -280,7 +280,7 @@ class TestPubMedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_use_esearch_and_efetch_apis_correctly(self) -> None:
+async def test_should_use_esearch_and_efetch_apis_correctly(self, pubmed_service: Any = None, pubmed_service: Any = None) -> None:
         """
         RED TEST: Service should use NCBI E-utilities ESearch and EFetch APIs correctly.
 
@@ -304,7 +304,7 @@ class TestPubMedService:
             mock_efetch.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_should_respect_ncbi_api_rate_limits(self) -> None:
+async def test_should_respect_ncbi_api_rate_limits(self, pubmed_service: Any = None) -> None:
         """
         RED TEST: Service should respect NCBI API rate limits.
 
@@ -378,9 +378,7 @@ class TestPubMedService:
             assert "mesh_terms" in item.metadata
 
     @pytest.mark.asyncio
-    async def test_should_provide_enhanced_metadata_for_cognitive_analysis(
-        self,
-    ) -> None:
+async def test_should_provide_enhanced_metadata_for_cognitive_analysis(self, sample_search_query: Any = None) -> None:
         """
         RED TEST: Service should provide rich metadata for cognitive analysis.
 

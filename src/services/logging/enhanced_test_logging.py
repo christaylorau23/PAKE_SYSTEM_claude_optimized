@@ -136,7 +136,9 @@ class TestLoggingService:
             log_dir = Path(self.config.test_log_directory)
             log_dir.mkdir(parents=True, exist_ok=True)
 
-    def _add_test_context(self, event_dict: dict[str, Any], method_name: str) -> dict[str, Any]:
+    def _add_test_context(
+        self, event_dict: dict[str, Any], method_name: str
+    ) -> dict[str, Any]:
         """Add test context to log entries."""
         if self.active_tests:
             event_dict["active_test"] = self.active_tests[-1]
@@ -245,7 +247,9 @@ class TestLoggingService:
         logger = self.get_test_logger()
         logger.info("Application event: %s", event, event_type="application", **kwargs)
 
-    def log_performance_metric(self, operation: str, duration: float, **kwargs: Any) -> None:
+    def log_performance_metric(
+        self, operation: str, duration: float, **kwargs: Any
+    ) -> None:
         """Log performance metrics during tests."""
         if not self.config.capture_performance_metrics:
             return
@@ -260,7 +264,9 @@ class TestLoggingService:
             **kwargs,
         )
 
-    def log_error(self, error: Exception, context: str | None = None, **kwargs: Any) -> None:
+    def log_error(
+        self, error: Exception, context: str | None = None, **kwargs: Any
+    ) -> None:
         """Log errors with detailed context."""
         if not self.config.capture_error_details:
             return
@@ -276,7 +282,13 @@ class TestLoggingService:
             **kwargs,
         )
 
-    def log_database_operation(self, operation: str, table: str | None = None, duration: float | None = None, **kwargs: Any) -> None:
+    def log_database_operation(
+        self,
+        operation: str,
+        table: str | None = None,
+        duration: float | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log database operations during tests."""
         logger = self.get_test_logger()
         logger.database(
@@ -287,7 +299,14 @@ class TestLoggingService:
             **kwargs,
         )
 
-    def log_api_call(self, method: str, url: str, status_code: int | None = None, duration: float | None = None, **kwargs: Any) -> None:
+    def log_api_call(
+        self,
+        method: str,
+        url: str,
+        status_code: int | None = None,
+        duration: float | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log API calls during tests."""
         logger = self.get_test_logger()
         logger.http(
@@ -355,13 +374,24 @@ def log_error(error: Exception, context: str | None = None, **kwargs: Any) -> No
     service.log_error(error, context, **kwargs)
 
 
-def log_database(operation: str, table: str | None = None, duration: float | None = None, **kwargs: Any) -> None:
+def log_database(
+    operation: str,
+    table: str | None = None,
+    duration: float | None = None,
+    **kwargs: Any,
+) -> None:
     """Log database operation."""
     service = get_test_logging_service()
     service.log_database_operation(operation, table, duration, **kwargs)
 
 
-def log_api(method: str, url: str, status_code: int | None = None, duration: float | None = None, **kwargs: Any) -> None:
+def log_api(
+    method: str,
+    url: str,
+    status_code: int | None = None,
+    duration: float | None = None,
+    **kwargs: Any,
+) -> None:
     """Log API call."""
     service = get_test_logging_service()
     service.log_api_call(method, url, status_code, duration, **kwargs)

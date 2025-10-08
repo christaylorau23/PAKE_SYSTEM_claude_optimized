@@ -85,7 +85,7 @@ class User:
     last_login_at: datetime | None = None
 
     # Metadata
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate user data after initialization."""
@@ -129,7 +129,7 @@ class ContentItem:
 
     # Processing information
     processing_status: ProcessingStatus = ProcessingStatus.PENDING
-    processing_metadata: Dict[str, Any] = field(default_factory=dict)
+    processing_metadata: dict[str, Any] = field(default_factory=dict)
 
     # Timestamps
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -137,8 +137,8 @@ class ContentItem:
     processed_at: datetime | None = None
 
     # Content metadata
-    tags: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tags: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # External references
     source_url: str | None = None
@@ -199,7 +199,7 @@ class SearchHistory:
 
     # Search metadata
     results_count: int = 0
-    search_filters: Dict[str, Any] = field(default_factory=dict)
+    search_filters: dict[str, Any] = field(default_factory=dict)
 
     # Timestamps
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -231,7 +231,7 @@ class SavedSearch:
     query: str
 
     # Search configuration
-    search_filters: Dict[str, Any] = field(default_factory=dict)
+    search_filters: dict[str, Any] = field(default_factory=dict)
     is_public: bool = False
 
     # Timestamps
@@ -280,7 +280,7 @@ class Tenant:
     max_storage_mb: int = 1000
 
     # Metadata
-    settings: Dict[str, Any] = field(default_factory=dict)
+    settings: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate tenant data."""
@@ -332,7 +332,7 @@ class TenantActivity:
     user_id: str | None = None
 
     # Activity metadata
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     ip_address: str | None = None
     user_agent: str | None = None
 

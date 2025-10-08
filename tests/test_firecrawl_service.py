@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 PAKE System - Phase 2A TDD Tests for FirecrawlService
@@ -36,7 +37,7 @@ class MockFirecrawlResponse:
     """Mock response for testing Firecrawl API interactions"""
 
     success: bool
-    data: Dict[str, Any] | None = None
+    data: dict[str, Any] | None = None
     error: str | None = None
 
 
@@ -78,7 +79,7 @@ class TestFirecrawlService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_scrape_javascript_rendered_content_successfully(self) -> None:
+async def test_should_scrape_javascript_rendered_content_successfully(self, firecrawl_service: Any = None, sample_url: Any = None, sample_url: Any = None) -> None:
         """
         RED TEST: FirecrawlService should successfully scrape JavaScript-rendered content.
 
@@ -96,7 +97,7 @@ class TestFirecrawlService:
         assert result.url == sample_url
 
     @pytest.mark.asyncio
-    async def test_should_handle_rate_limiting_gracefully(self) -> None:
+async def test_should_handle_rate_limiting_gracefully(self, firecrawl_service: Any = None, firecrawl_service: Any = None) -> None:
         """
         RED TEST: Service should handle API rate limiting without crashing.
 
@@ -118,7 +119,7 @@ class TestFirecrawlService:
             assert result.retry_after is not None
 
     @pytest.mark.asyncio
-    async def test_should_extract_structured_content_with_metadata(self) -> None:
+async def test_should_extract_structured_content_with_metadata(self, firecrawl_service: Any = None, sample_url: Any = None) -> None:
         """
         RED TEST: Service should extract structured content with rich metadata.
 
@@ -143,7 +144,7 @@ class TestFirecrawlService:
         assert result.metadata["word_count"] > 0
 
     @pytest.mark.asyncio
-    async def test_should_integrate_with_existing_content_item_structure(self) -> None:
+async def test_should_integrate_with_existing_content_item_structure(self, sample_url: Any = None, firecrawl_service: Any = None) -> None:
         """
         RED TEST: Service should produce ContentItem compatible with existing pipeline.
 
@@ -170,7 +171,7 @@ class TestFirecrawlService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_handle_invalid_urls_gracefully(self) -> None:
+async def test_should_handle_invalid_urls_gracefully(self, firecrawl_service: Any = None) -> None:
         """
         RED TEST: Service should handle invalid URLs without crashing.
         """
@@ -183,7 +184,7 @@ class TestFirecrawlService:
             assert "invalid url" in result.error.message.lower()
 
     @pytest.mark.asyncio
-    async def test_should_handle_network_timeout_gracefully(self) -> None:
+async def test_should_handle_network_timeout_gracefully(self, firecrawl_service: Any = None, firecrawl_service: Any = None) -> None:
         """
         RED TEST: Service should handle network timeouts with proper error reporting.
         """
@@ -197,7 +198,7 @@ class TestFirecrawlService:
             assert "timeout" in result.error.message.lower()
 
     @pytest.mark.asyncio
-    async def test_should_handle_api_key_authentication_errors(self) -> None:
+async def test_should_handle_api_key_authentication_errors(self, firecrawl_service: Any = None, firecrawl_service: Any = None) -> None:
         """
         RED TEST: Service should handle API authentication errors appropriately.
         """
@@ -218,7 +219,7 @@ class TestFirecrawlService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_respect_scraping_options_configuration(self) -> None:
+async def test_should_respect_scraping_options_configuration(self, firecrawl_service: Any = None) -> None:
         """
         RED TEST: Service should properly handle various scraping configuration options.
         """
@@ -237,7 +238,7 @@ class TestFirecrawlService:
         assert result.metadata["followed_redirects"] is not None
 
     @pytest.mark.asyncio
-    async def test_should_support_bulk_scraping_with_rate_limiting(self) -> None:
+async def test_should_support_bulk_scraping_with_rate_limiting(self, firecrawl_service: Any = None) -> None:
         """
         RED TEST: Service should support bulk scraping while respecting rate limits.
         """
@@ -259,7 +260,7 @@ class TestFirecrawlService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_integrate_with_autonomous_cognitive_engine(self) -> None:
+async def test_should_integrate_with_autonomous_cognitive_engine(self, firecrawl_service: Any = None) -> None:
         """
         RED TEST: Service should integrate with existing cognitive system for quality assessment.
 
@@ -283,9 +284,7 @@ class TestFirecrawlService:
         mock_cognitive_engine.assess_content_quality.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_should_trigger_metacognitive_optimization_for_poor_results(
-        self,
-    ) -> None:
+async def test_should_trigger_metacognitive_optimization_for_poor_results(self, firecrawl_service: Any = None, firecrawl_service: Any = None) -> None:
         """
         RED TEST: Service should trigger metacognitive optimization when scraping quality is poor.
 

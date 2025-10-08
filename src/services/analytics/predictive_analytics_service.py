@@ -44,7 +44,7 @@ class TimeSeriesData:
     timestamps: list[datetime]
     values: list[float]
     metric_name: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 @dataclass
@@ -189,7 +189,6 @@ class PredictiveAnalyticsService:
                     if seasonal_strength > 0.3:
                         return "exponential"  # Good for seasonal data
                 except Exception as e:
-
                     logger.debug(f"Exception in predictive_analytics_service.py: {e}")
 
                     # Continue gracefully
@@ -205,7 +204,7 @@ class PredictiveAnalyticsService:
             logger.warning("Model selection failed, using default: %s", e)
             return "exponential"
 
-    async def _forecast_arima(self, series: pd.Series, horizon: int) -> Dict[str, Any]:
+    async def _forecast_arima(self, series: pd.Series, horizon: int) -> dict[str, Any]:
         """Forecast using ARIMA model."""
         try:
             # Simple ARIMA model selection (1,1,1) for demonstration
@@ -244,7 +243,7 @@ class PredictiveAnalyticsService:
         self,
         series: pd.Series,
         horizon: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Forecast using Exponential Smoothing."""
         try:
             # Try Holt-Winters if we have enough data
@@ -291,7 +290,7 @@ class PredictiveAnalyticsService:
             logger.error("Exponential smoothing failed: %s", e)
             return await self._forecast_linear_trend(series, horizon)
 
-    async def _forecast_ml(self, df: pd.DataFrame, horizon: int) -> Dict[str, Any]:
+    async def _forecast_ml(self, df: pd.DataFrame, horizon: int) -> dict[str, Any]:
         """Forecast using machine learning (Random Forest)."""
         try:
             # Create features for ML model
@@ -422,7 +421,7 @@ class PredictiveAnalyticsService:
         self,
         series: pd.Series,
         horizon: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Simple linear trend forecast as fallback."""
         try:
             x = np.arange(len(series))
@@ -537,9 +536,9 @@ class PredictiveAnalyticsService:
 
     async def generate_forecast(
         self,
-        metrics: List[str],
+        metrics: list[str],
         forecast_horizon: str = "7d",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate forecasts for multiple metrics.
 
         Args:
@@ -719,7 +718,7 @@ class PredictiveAnalyticsService:
         except Exception:
             return 7
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check the health of the predictive analytics service."""
         try:
             # Test basic functionality

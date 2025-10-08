@@ -25,7 +25,7 @@ class TestUserServiceWithFakeRepository:
         return FakeUserRepository()
 
     @pytest.fixture
-    def user_service(self) -> None:
+def user_service(self, fake_user_repository: Any = None) -> None:
         """Create user service with fake repository"""
         return UserService(fake_user_repository)
 

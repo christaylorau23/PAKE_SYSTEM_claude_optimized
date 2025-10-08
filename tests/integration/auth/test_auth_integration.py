@@ -20,10 +20,10 @@ from tests.factories import UserInDBFactory
 # ============================================================================
 
 
-@pytest.mark.integration
-@pytest.mark.integration_database
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+@pytest.mark.integration()
+@pytest.mark.integration_database()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthDatabaseIntegration:
     """Test authentication with real database operations"""
 
@@ -104,9 +104,9 @@ class TestAuthDatabaseIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+@pytest.mark.integration()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthServiceIntegration:
     """Test authentication service with mocked dependencies"""
 
@@ -151,10 +151,10 @@ class TestAuthServiceIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration
-@pytest.mark.integration_cache
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+@pytest.mark.integration()
+@pytest.mark.integration_cache()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthCacheIntegration:
     """Test authentication with caching layer"""
 
@@ -196,9 +196,9 @@ class TestAuthCacheIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+@pytest.mark.integration()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthRateLimitingIntegration:
     """Test rate limiting integration"""
 
@@ -241,10 +241,10 @@ class TestAuthRateLimitingIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
-@pytest.mark.slow
+@pytest.mark.integration()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
+@pytest.mark.slow()
 class TestAuthWorkflowIntegration:
     """Test complete multi-step authentication workflows"""
 
@@ -313,9 +313,9 @@ class TestAuthWorkflowIntegration:
 # ============================================================================
 
 
-@pytest.mark.integration
-@pytest.mark.integration_auth
-@pytest.mark.asyncio
+@pytest.mark.integration()
+@pytest.mark.integration_auth()
+@pytest.mark.asyncio()
 class TestAuthErrorHandling:
     """Test error handling in authentication integration"""
 

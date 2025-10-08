@@ -18,17 +18,19 @@ from sklearn.metrics.pairwise import cosine_similarity
 logger = logging.getLogger(__name__)
 
 
-def serialize_to_file(data: Dict[str, Any], filepath: str) -> None:
+def serialize_to_file(data: dict[str, Any], filepath: str) -> None:
     """Serialize data to file using pickle with basic security."""
     import pickle
-    with open(filepath, 'wb') as f:
+
+    with open(filepath, "wb") as f:
         pickle.dump(data, f)
 
 
-def deserialize_from_file(filepath: str) -> Dict[str, Any]:
+def deserialize_from_file(filepath: str) -> dict[str, Any]:
     """Deserialize data from file using pickle with basic security."""
     import pickle
-    with open(filepath, 'rb') as f:
+
+    with open(filepath, "rb") as f:
         return pickle.load(f)
 
 
@@ -38,7 +40,7 @@ class SemanticMatch:
 
     text: str
     score: float
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     id: str | None = None
 
 
@@ -48,7 +50,7 @@ class SemanticAnalytics:
 
     total_documents: int
     processing_time_ms: float
-    top_keywords: List[str]
+    top_keywords: list[str]
     semantic_clusters: int
     average_similarity: float
 
@@ -124,7 +126,7 @@ class LightweightSemanticService:
         except (FileNotFoundError, PermissionError, OSError) as e:
             logger.error("Could not save semantic model: %s", e)
 
-    async def add_documents(self, documents: list[Dict[str, Any]]) -> bool:
+    async def add_documents(self, documents: list[dict[str, Any]]) -> bool:
         """Add documents to the semantic index.
 
         Args:
@@ -338,19 +340,17 @@ class LightweightSemanticService:
 
             # Get top keywords
             top_indices = np.argsort(scores)[::-1][:top_k]
-            keywords = [
+            return [
                 (feature_names[idx], float(scores[idx]))
                 for idx in top_indices
                 if scores[idx] > 0
             ]
 
-            return keywords
-
         except (ValueError, RuntimeError) as e:
             logger.error("Error extracting keywords: %s", e)
             return []
 
-    async def cluster_documents(self, num_clusters: int = 5) -> Dict[str, Any]:
+    async def cluster_documents(self, num_clusters: int = 5) -> dict[str, Any]:
         """Cluster documents using K-means on semantic vectors.
 
         Args:
@@ -481,7 +481,7 @@ class LightweightSemanticService:
                 average_similarity=0.0,
             )
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check the health of the semantic search service."""
         try:
             is_healthy = (

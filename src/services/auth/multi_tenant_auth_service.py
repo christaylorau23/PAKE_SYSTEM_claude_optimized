@@ -10,13 +10,13 @@ import secrets
 import time
 from typing import Any, Dict, List
 
-import sqlalchemy
-import psycopg2
-import asyncpg
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+import asyncpg
 import jwt
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+import psycopg2
+import sqlalchemy
 
 from src.middleware.tenant_context import get_current_tenant_id
 from src.services.database.multi_tenant_schema import MultiTenantPostgreSQLService
@@ -76,8 +76,8 @@ class LoginResponse:
     access_token: str | None = None
     refresh_token: str | None = None
     expires_at: datetime | None = None
-    user_info: Dict[str, Any] | None = None
-    permissions: List[str] | None = None
+    user_info: dict[str, Any] | None = None
+    permissions: list[str] | None = None
     error: str | None = None
     requires_mfa: bool = False
 
@@ -191,15 +191,17 @@ class MultiTenantAuthService:
     - Audit logging
     """
 
-    def __init__(self, db_service: MultiTenantPostgreSQLService, config: AuthConfig | None = None) -> None:
+    def __init__(
+        self, db_service: MultiTenantPostgreSQLService, config: AuthConfig | None = None
+    ) -> None:
         self.db_service = db_service
         self.config = config or AuthConfig()
         self.REDACTED_SECRET_hasher = PasswordHasher()
 
         # In-memory session storage (would use Redis in production)
         self._active_sessions: dict[str, UserSession] = {}
-        self._failed_attempts: dict[str, Dict[str, Any]] = {}
-        self._rate_limits: dict[str, Dict[str, Any]] = {}
+        self._failed_attempts: dict[str, dict[str, Any]] = {}
+        self._rate_limits: dict[str, dict[str, Any]] = {}
 
         logger.info("Multi-tenant authentication service initialized")
 
@@ -459,7 +461,7 @@ class MultiTenantAuthService:
             logger.error("Token refresh error: %s", e)
             return LoginResponse(success=False, error="Token refresh service error")
 
-    async def logout_user(self, access_token: str) -> Dict[str, Any]:
+    async def logout_user(self, access_token: str) -> dict[str, Any]:
         """Logout user and invalidate session."""
         try:
             # Decode token to get session info
@@ -493,7 +495,7 @@ class MultiTenantAuthService:
             logger.error("Logout error: %s", e)
             return {"success": False, "error": "Logout service error"}
 
-    async def validate_token(self, token: str) -> Dict[str, Any]:
+    async def validate_token(self, token: str) -> dict[str, Any]:
         """Validate JWT token and return user info."""
         try:
             payload = jwt.decode(
@@ -544,7 +546,7 @@ class MultiTenantAuthService:
         user_id: str,
         current_REDACTED_SECRET: str,
         new_REDACTED_SECRET: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Change user REDACTED_SECRET with validation."""
         try:
             tenant_id = get_current_tenant_id()
@@ -620,7 +622,7 @@ class MultiTenantAuthService:
         user_id: str,
         username: str,
         role: str,
-        permissions: List[str],
+        permissions: list[str],
         expires_at: datetime,
         token_type: str = "access",
     ) -> str:
@@ -764,7 +766,7 @@ class MultiTenantAuthService:
         for key in keys_to_remove:
             del self._failed_attempts[key]
 
-    def _validate_REDACTED_SECRET(self, REDACTED_SECRET: str) -> Dict[str, Any]:
+    def _validate_REDACTED_SECRET(self, REDACTED_SECRET: str) -> dict[str, Any]:
         """Validate REDACTED_SECRET against policy."""
         errors = []
 
@@ -819,7 +821,7 @@ class MultiTenantAuthService:
         # For now, return True for valid format
         return len(mfa_token) == 6 and mfa_token.isdigit()
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Health check for authentication service."""
         try:
             # Test database connectivity

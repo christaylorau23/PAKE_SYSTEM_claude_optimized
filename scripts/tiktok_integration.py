@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 TikTok Business API Integration
@@ -21,7 +22,7 @@ class TikTokVideo:
     video_path: str
     title: str
     description: str = ""
-    hashtags: List[str] = None
+    hashtags: list[str] = None
     # PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, SELF_ONLY
     privacy_level: str = "PUBLIC_TO_EVERYONE"
     disable_duet: bool = False
@@ -33,7 +34,7 @@ class TikTokVideo:
 class TikTokIntegration:
     """TikTok Business API integration for content posting"""
 
-    def __init__(self) -> None:
+def __init__(self, client_key: Any = None, client_secret: Any = None, access_token: Any = None) -> None:
         self.client_key = client_key
         self.client_secret = client_secret
         self.access_token = access_token
@@ -78,7 +79,7 @@ class TikTokIntegration:
             self.logger.error("TikTok video upload failed: %s", e)
             return {"success": False, "error": str(e)}
 
-    async def _initialize_video_upload(self) -> dict:
+async def _initialize_video_upload(self, video: Any = None) -> dict:
         """Initialize video upload process"""
         try:
             endpoint = "/v2/post/publish/video/init/"
@@ -342,7 +343,7 @@ class TikTokIntegration:
         except (ValueError, RuntimeError) as e:
             return {"success": False, "error": f"Analytics request failed: {str(e)}"}
 
-    def _format_hashtags(self, hashtags: List[str]) -> str:
+    def _format_hashtags(self, hashtags: list[str]) -> str:
         """Format hashtags for TikTok"""
         if not hashtags:
             return ""
@@ -397,7 +398,7 @@ class TikTokIntegration:
 class TikTokHashtagGenerator:
     """Generate trending hashtags for TikTok content"""
 
-    def __init__(self) -> None:
+def __init__(self, client_key: Any = None, access_token: Any = None) -> None:
         self.client_key = client_key
         self.access_token = access_token
         self.open_api_url = "https://open-api.tiktok.com"
@@ -438,7 +439,7 @@ class TikTokHashtagGenerator:
                 "error": f"Trending hashtags request failed: {str(e)}",
             }
 
-    def suggest_hashtags(self, content: str, industry: str = None) -> List[str]:
+    def suggest_hashtags(self, content: str, industry: str = None) -> list[str]:
         """Suggest hashtags based on content"""
         # Basic hashtag suggestions based on content
         # In production, you'd use ML/AI for better suggestions

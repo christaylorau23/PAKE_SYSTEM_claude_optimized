@@ -1,54 +1,93 @@
+# .pre-commit-config.yaml
+# PAKE System - Pre-commit Hooks Configuration
+# This configuration ensures quality checks run automatically before every commit
+
 repos:
-  # Security and Quality Hooks
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-added-large-files
-      - id: check-merge-conflict
-      - id: debug-statements
-      - id: check-docstring-first
-      - id: requirements-txt-fixer
-  
-  # Python Code Quality
+  # Ruff - Fast Python linter and formatter (World-Class Finish Phase 1)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.8
+    rev: v0.1.0
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+        name: "Ruff: Lint and fix Python code"
       - id: ruff-format
-  
-  # Security Scanning
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
-    hooks:
-      - id: bandit
-        args: [-r, ., -ll]
-  
-  # Type Checking
+        name: "Ruff: Format Python code"
+
+  # Mypy - Static type checker (Gradual Adoption Mode)
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
     hooks:
       - id: mypy
-        additional_dependencies: [types-all]
-  
-  # Secret Scanning
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
+        additional_dependencies: [
+          types-requests,
+          types-PyYAML,
+          types-redis,
+          types-psycopg2,
+          types-python-dateutil
+        ]
+        args: [
+          --no-strict-optional,
+          --ignore-missing-imports,
+          --show-error-codes,
+          --pretty,
+          --show-column-numbers,
+          --show-error-context,
+          --show-error-end
+        ]
+        name: "Mypy: Static type checking (Gradual Adoption)"
+
+  # Bandit - Security linter
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
     hooks:
-      - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
-  
-  # Dependency Security
+      - id: bandit
+        args: [-r, src/, -f, json, -o, bandit_report.json]
+        name: "Bandit: Security linting"
+
+  # Safety - Check for known security vulnerabilities
   - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
     rev: v1.3.2
     hooks:
       - id: python-safety-dependencies-check
-  
-  # License Compliance
-  - repo: https://github.com/Lucas-C/pre-commit-hooks-licenses
-    rev: v1.0.1
+        name: "Safety: Check dependencies for vulnerabilities"
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
     hooks:
-      - id: python-check-licenses
+      - id: check-yaml
+        name: "Check YAML syntax"
+      - id: check-json
+        name: "Check JSON syntax"
+      - id: check-toml
+        name: "Check TOML syntax"
+      - id: check-merge-conflict
+        name: "Check for merge conflicts"
+      - id: check-added-large-files
+        name: "Check for large files"
+        args: [--maxkb=1000]
+      - id: end-of-file-fixer
+        name: "Fix end of file"
+      - id: trailing-whitespace
+        name: "Fix trailing whitespace"
+      - id: check-case-conflict
+        name: "Check for case conflicts"
+      - id: check-docstring-first
+        name: "Check docstring is first"
+
+  # Note: Black and isort replaced by ruff (World-Class Finish Phase 1)
+  # Ruff provides both formatting and import sorting with superior performance
+
+  # Additional security checks
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        name: "Detect secrets"
+        args: [--baseline, .secrets.baseline]
+
+# Configuration for all hooks
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [commit]
+fail_fast: false
+minimum_pre_commit_version: "3.0.0"

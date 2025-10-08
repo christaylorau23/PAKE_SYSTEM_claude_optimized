@@ -16,7 +16,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     for different endpoint types.
     """
 
-    def __init__(self, app, requests_per_minute: int = 60, burst_limit: int = 10) -> None:
+    def __init__(
+        self, app, requests_per_minute: int = 60, burst_limit: int = 10
+    ) -> None:
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.burst_limit = burst_limit

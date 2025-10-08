@@ -20,9 +20,6 @@ from typing import List
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import libcst as cst
-from libcst.codemod import CodemodContext
-
 from codemods.codemod_runner import (
     CodemodExecutionPlan,
     CodemodRunner,
@@ -33,6 +30,8 @@ from codemods.engineering_plan_codemods import (
     ContextPassingTransformer,
     UTCNowTransformer,
 )
+import libcst as cst
+from libcst.codemod import CodemodContext
 
 
 def demonstrate_utcnow_transformer():

@@ -79,7 +79,7 @@ class TestIngestionOrchestrator:
         }
 
     @pytest.fixture
-    def ingestion_orchestrator(self) -> None:
+def ingestion_orchestrator(self, orchestrator_config: Any = None, mock_cognitive_engine: Any = None, mock_n8n_manager: Any = None) -> None:
         """Create ingestion orchestrator instance"""
         if IngestionOrchestrator is None:
             pytest.skip("IngestionOrchestrator not implemented yet (RED phase)")
@@ -218,9 +218,7 @@ class TestIngestionOrchestrator:
         assert len(source_types_retrieved) >= 2  # Multiple source types
 
     @pytest.mark.asyncio
-    async def test_should_handle_parallel_source_execution_with_proper_concurrency_control(
-        self,
-    ) -> None:
+async def test_should_handle_parallel_source_execution_with_proper_concurrency_control(self, orchestrator_config: Any = None, orchestrator_config: Any = None) -> None:
         """
         Test: Should execute multiple sources in parallel while respecting
         concurrency limits and timeout constraints.

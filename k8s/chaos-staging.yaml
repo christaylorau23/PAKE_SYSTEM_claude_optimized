@@ -1,0 +1,103 @@
+# PAKE System - Staging Environment for Chaos Engineering
+# Section 3.2: Implementing Proactive Resilience
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chaos-staging
+  labels:
+    name: chaos-staging
+    environment: staging
+    purpose: chaos-engineering
+
+---
+# Chaos Engineering Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chaos-engineer
+  namespace: chaos-staging
+  labels:
+    app: chaos-engineering
+
+---
+# Chaos Engineering Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: chaos-engineer
+  namespace: chaos-staging
+rules:
+  - apiGroups: ['']
+    resources: ['pods', 'services', 'endpoints', 'configmaps', 'secrets']
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete']
+  - apiGroups: ['apps']
+    resources: ['deployments', 'statefulsets', 'replicasets']
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete']
+  - apiGroups: ['batch']
+    resources: ['jobs', 'cronjobs']
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'patch', 'delete']
+
+---
+# Chaos Engineering Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chaos-engineer
+  namespace: chaos-staging
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: chaos-engineer
+subjects:
+  - kind: ServiceAccount
+    name: chaos-engineer
+    namespace: chaos-staging
+
+---
+# Chaos Engineering ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chaos-config
+  namespace: chaos-staging
+  labels:
+    app: chaos-engineering
+data:
+  chaos_config.yaml: |
+    version: "1.0.0"
+    title: "PAKE System Chaos Engineering Configuration"
+
+    environments:
+      staging:
+        url: "https://staging.pake-system.com"
+        database_url: "postgresql://staging_user:staging_password@staging-db:5432/pake_staging"
+        redis_url: "redis://staging-redis:6379/0"
+        kubeconfig: "/var/run/secrets/kubernetes.io/serviceaccount"
+        prometheus_url: "http://staging-prometheus:9090"
+
+    experiments:
+      database_failover:
+        frequency: "monthly"
+        duration: "30m"
+        environment: "staging"
+        file: "experiments/database_failover_test.json"
+
+      api_instance_failure:
+        frequency: "weekly"
+        duration: "15m"
+        environment: "staging"
+        file: "experiments/api_instance_failure_test.json"
+
+      backup_restore:
+        frequency: "quarterly"
+        duration: "4h"
+        environment: "staging"
+        file: "experiments/backup_restore_validation.json"
+
+    thresholds:
+      rto: 300  # 5 minutes
+      rpo: 0    # 0 data loss
+      max_error_rate: 0.01  # 1%
+      max_latency_ms: 2000  # 2 seconds
+      max_restore_time: 14400  # 4 hours

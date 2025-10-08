@@ -403,7 +403,7 @@ class SourceOnlySecurityFixer:
             self.fixes_failed.append(("source_input_validation", str(e)))
             logger.error("❌ Source input validation fix failed: %s", e)
 
-    def _backup_file(self) -> None:
+def _backup_file(self, file_path: Any = None) -> None:
         """Create backup of file before modification"""
         relative_path = self.file_path.relative_to(self.project_root)
         backup_path = self.backup_dir / relative_path

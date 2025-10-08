@@ -24,7 +24,7 @@ import time
 from typing import Any, Dict, List
 
 # FastAPI and async dependencies
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import BackgroundTasks, FastAPI
 from pydantic import BaseModel
 import uvicorn
 
@@ -89,8 +89,8 @@ class SecurityAlert:
     endpoint: str | None
     message: str
     ai_confidence: float
-    raw_logs: list[Dict[str, Any]]
-    recommended_actions: List[str]
+    raw_logs: list[dict[str, Any]]
+    recommended_actions: list[str]
     risk_score: int  # 1-100
 
 
@@ -142,7 +142,7 @@ class MockLLMAnalyzer:
 
     async def analyze_log_batch(
         self,
-        logs: list[Dict[str, Any]],
+        logs: list[dict[str, Any]],
     ) -> list[SecurityAlert]:
         """Analyze a batch of logs for security patterns
         Mock implementation using pattern matching and heuristics.
@@ -189,7 +189,7 @@ class MockLLMAnalyzer:
     def _detect_security_patterns(
         self,
         message: str,
-        log_entry: Dict[str, Any],
+        log_entry: dict[str, Any],
     ) -> list[tuple[SecurityPatternType, float]]:
         """Detect security patterns in log messages."""
         detected = []
@@ -197,13 +197,15 @@ class MockLLMAnalyzer:
 
         for pattern_name, regex_patterns in self.security_patterns.items():
             confidence = self._calculate_base_confidence(message_lower, regex_patterns)
-            
+
             if confidence <= 0:
                 continue
-                
+
             # Apply context-specific adjustments
-            confidence = self._apply_context_adjustments(pattern_name, message_lower, log_entry, confidence)
-            
+            confidence = self._apply_context_adjustments(
+                pattern_name, message_lower, log_entry, confidence
+            )
+
             # Cap confidence and add to results if above threshold
             confidence = min(confidence, 1.0)
             if confidence > 0.3:  # Threshold for alert generation
@@ -213,7 +215,9 @@ class MockLLMAnalyzer:
 
         return detected
 
-    def _calculate_base_confidence(self, message_lower: str, regex_patterns: list) -> float:
+    def _calculate_base_confidence(
+        self, message_lower: str, regex_patterns: list
+    ) -> float:
         """Calculate base confidence from regex pattern matches."""
         confidence = 0.0
         matches = 0
@@ -226,63 +230,62 @@ class MockLLMAnalyzer:
         return confidence if matches > 0 else 0.0
 
     def _apply_context_adjustments(
-        self, 
-        pattern_name: str, 
-        message_lower: str, 
-        log_entry: Dict[str, Any], 
-        confidence: float
+        self,
+        pattern_name: str,
+        message_lower: str,
+        log_entry: dict[str, Any],
+        confidence: float,
     ) -> float:
         """Apply context-specific confidence adjustments."""
         if pattern_name == "failed_login":
-            return self._adjust_failed_login_confidence(message_lower, log_entry, confidence)
-        elif pattern_name == "sql_injection":
+            return self._adjust_failed_login_confidence(
+                message_lower, log_entry, confidence
+            )
+        if pattern_name == "sql_injection":
             return self._adjust_sql_injection_confidence(log_entry, confidence)
-        elif pattern_name == "slow_query":
+        if pattern_name == "slow_query":
             return self._adjust_slow_query_confidence(message_lower, confidence)
-        
+
         return confidence
 
     def _adjust_failed_login_confidence(
-        self, 
-        message_lower: str, 
-        log_entry: Dict[str, Any], 
-        confidence: float
+        self, message_lower: str, log_entry: dict[str, Any], confidence: float
     ) -> float:
         """Adjust confidence for failed login patterns."""
         if log_entry.get("status_code") == 401:
             confidence += 0.4
-        
+
         if "REDACTED_SECRET" in message_lower or "username" in message_lower:
             confidence += 0.2
-            
+
         return confidence
 
     def _adjust_sql_injection_confidence(
-        self, 
-        log_entry: Dict[str, Any], 
-        confidence: float
+        self, log_entry: dict[str, Any], confidence: float
     ) -> float:
         """Adjust confidence for SQL injection patterns."""
         if log_entry.get("endpoint", "").endswith(("/api/", "/query")):
             confidence += 0.3
-        
+
         if log_entry.get("method") == "POST":
             confidence += 0.2
-            
+
         return confidence
 
-    def _adjust_slow_query_confidence(self, message_lower: str, confidence: float) -> float:
+    def _adjust_slow_query_confidence(
+        self, message_lower: str, confidence: float
+    ) -> float:
         """Adjust confidence for slow query patterns."""
         time_match = re.search(r"(\d+\.?\d*)\s*(?:ms|seconds?)", message_lower)
         if not time_match:
             return confidence
-            
+
         exec_time = float(time_match.group(1))
         if exec_time > 1000:  # >1 second
             confidence += 0.5
         elif exec_time > 500:  # >500ms
             confidence += 0.3
-            
+
         return confidence
 
     def _get_pattern_type(self, pattern_name: str) -> SecurityPatternType | None:
@@ -294,7 +297,7 @@ class MockLLMAnalyzer:
 
     async def _analyze_user_behavior(
         self,
-        log_entry: Dict[str, Any],
+        log_entry: dict[str, Any],
     ) -> list[SecurityAlert]:
         """Analyze user behavior patterns for anomalies."""
         alerts = []
@@ -354,7 +357,7 @@ class MockLLMAnalyzer:
         user_agent: str,
         endpoint: str,
         message: str,
-        raw_log: Dict[str, Any],
+        raw_log: dict[str, Any],
     ) -> SecurityAlert:
         """Create a security alert from detected pattern."""
         # Determine severity based on pattern type and confidence
@@ -414,7 +417,7 @@ class MockLLMAnalyzer:
         self,
         pattern_type: SecurityPatternType,
         confidence: float,
-        raw_log: Dict[str, Any],
+        raw_log: dict[str, Any],
     ) -> int:
         """Calculate risk score (1-100)."""
         base_scores = {
@@ -448,8 +451,8 @@ class MockLLMAnalyzer:
     def _get_recommended_actions(
         self,
         pattern_type: SecurityPatternType,
-        raw_log: Dict[str, Any],
-    ) -> List[str]:
+        raw_log: dict[str, Any],
+    ) -> list[str]:
         """Generate recommended actions for each pattern type."""
         actions_map = {
             SecurityPatternType.SQL_INJECTION: [
@@ -510,7 +513,7 @@ class MockLLMAnalyzer:
         self,
         pattern_type: SecurityPatternType,
         original_message: str,
-        raw_log: Dict[str, Any],
+        raw_log: dict[str, Any],
     ) -> str:
         """Generate human-readable alert message."""
         source_ip = raw_log.get("source_ip", raw_log.get("client_ip", "Unknown"))
@@ -632,7 +635,9 @@ class MockLLMAnalyzer:
 class ElasticsearchLogConsumer:
     """Consumes logs from Elasticsearch for analysis."""
 
-    def __init__(self, elasticsearch_host: str = "localhost", elasticsearch_port: int = 9200) -> None:
+    def __init__(
+        self, elasticsearch_host: str = "localhost", elasticsearch_port: int = 9200
+    ) -> None:
         self.host = elasticsearch_host
         self.port = elasticsearch_port
         self.client = None
@@ -658,7 +663,7 @@ class ElasticsearchLogConsumer:
         self,
         index_pattern: str = "logs-*",
         limit: int = 1000,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Fetch recent logs from Elasticsearch."""
         if not self.client:
             return self._generate_mock_logs(limit)
@@ -695,7 +700,7 @@ class ElasticsearchLogConsumer:
             logger.error("Error fetching logs from Elasticsearch: %s", e)
             return self._generate_mock_logs(limit)
 
-    def _generate_mock_logs(self, count: int = 10) -> list[Dict[str, Any]]:
+    def _generate_mock_logs(self, count: int = 10) -> list[dict[str, Any]]:
         """Generate mock logs for testing when Elasticsearch is not available."""
         mock_logs = []
 
@@ -850,7 +855,7 @@ class MCPSecurityIntegration:
     async def _get_similar_historical_alerts(
         self,
         alert: SecurityAlert,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get similar alerts from historical data."""
         # Mock implementation - in reality this would query the MCP vault
         return []
@@ -892,7 +897,7 @@ class SecurityAlertResponse(BaseModel):
     message: str
     ai_confidence: float
     risk_score: int
-    recommended_actions: List[str]
+    recommended_actions: list[str]
 
 
 class SecurityDashboard(BaseModel):

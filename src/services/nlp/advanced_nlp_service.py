@@ -474,7 +474,7 @@ class AdvancedNLPService:
     async def _extract_key_phrases(
         self,
         text: str,
-        words: List[str],
+        words: list[str],
     ) -> list[tuple[str, float]]:
         """Extract key phrases using frequency and linguistic patterns."""
         try:
@@ -527,7 +527,7 @@ class AdvancedNLPService:
             logger.warning("Key phrase extraction failed: %s", e)
             return []
 
-    def _analyze_sentiment_indicators(self, words: List[str]) -> dict[str, int]:
+    def _analyze_sentiment_indicators(self, words: list[str]) -> dict[str, int]:
         """Analyze basic sentiment indicators."""
         positive_words = {
             "good",
@@ -604,7 +604,7 @@ class AdvancedNLPService:
             "neutral": neutral_count,
         }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check NLP service health."""
         try:
             # Test basic functionality

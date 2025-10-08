@@ -318,7 +318,7 @@ class TestCriticalUserJourneys:
 
     @pytest.mark.e2e
     @pytest.mark.asyncio
-    async def test_concurrent_user_operations_journey(self) -> None:
+async def test_concurrent_user_operations_journey(self, user_data: Any = None, user_data: Any = None, user_data: Any = None) -> None:
         """
         Test concurrent user operations journey
 
@@ -341,7 +341,7 @@ class TestCriticalUserJourneys:
         # Act: Concurrent user registration
         start_time = time.time()
 
-        async def register_user(self) -> None:
+async def register_user(self, user_data: Any = None) -> None:
             return self.test_client.post("/auth/register", json=user_data)
 
         tasks = [register_user(user_data) for user_data in users_data]
@@ -356,7 +356,7 @@ class TestCriticalUserJourneys:
         # Act: Concurrent login attempts
         start_time = time.time()
 
-        async def login_user(self) -> None:
+async def login_user(self, user_data: Any = None, user_data: Any = None) -> None:
             return self.test_client.post(
                 "/auth/token",
                 data={

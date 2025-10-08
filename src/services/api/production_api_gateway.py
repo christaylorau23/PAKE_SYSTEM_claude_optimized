@@ -4,6 +4,7 @@ Enterprise-grade API deployment with real integrations and live data sources.
 
 import asyncio
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timezone
 from enum import Enum
@@ -12,12 +13,9 @@ import json
 import logging
 import secrets
 import time
-from typing import Any, Dict, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import aiohttp
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +78,7 @@ class APIEndpoint:
     timeout_seconds: int = 30
     max_payload_size_mb: int = 10
     is_active: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -94,7 +92,7 @@ class APIRequest:
     path: str
     headers: dict[str, str] = field(default_factory=dict)
     query_params: dict[str, str] = field(default_factory=dict)
-    payload: Dict[str, Any] | None = None
+    payload: dict[str, Any] | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     ip_address: str | None = None
     user_agent: str | None = None
@@ -107,7 +105,7 @@ class APIResponse:
     request_id: str
     status: APIStatus
     status_code: int
-    data: Dict[str, Any] | None = None
+    data: dict[str, Any] | None = None
     error_message: str | None = None
     processing_time_ms: float = 0.0
     cached: bool = False
@@ -132,7 +130,7 @@ class ExternalAPIConfig:
     retry_backoff_seconds: float = 1.0
     is_active: bool = True
     health_check_interval_minutes: int = 5
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -143,7 +141,7 @@ class ProductionAPIConfig:
     port: int = 8000
     max_concurrent_requests: int = 1000
     enable_cors: bool = True
-    cors_origins: List[str] = field(default_factory=lambda: ["*"])
+    cors_origins: list[str] = field(default_factory=lambda: ["*"])
     enable_rate_limiting: bool = True
     global_rate_limit_per_minute: int = 10000
     enable_request_logging: bool = True
@@ -166,7 +164,7 @@ class RateLimiter:
     def __init__(self, config: ProductionAPIConfig | None = None) -> None:
         self.config = config or ProductionAPIConfig()
         self.client_windows: dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
-        self.client_tokens: dict[str, Dict[str, Any]] = defaultdict(
+        self.client_tokens: dict[str, dict[str, Any]] = defaultdict(
             lambda: {"tokens": 60, "last_refill": time.time(), "capacity": 60},
         )
 
@@ -298,7 +296,7 @@ class CircuitBreaker:
 
     def __init__(self, config: ProductionAPIConfig | None = None) -> None:
         self.config = config or ProductionAPIConfig()
-        self.circuit_state: dict[str, Dict[str, Any]] = defaultdict(
+        self.circuit_state: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "state": "closed",  # closed, open, half_open
                 "failure_count": 0,
@@ -349,10 +347,10 @@ class ResponseCache:
 
     def __init__(self, config: ProductionAPIConfig | None = None) -> None:
         self.config = config or ProductionAPIConfig()
-        self.cache: dict[str, tuple[Dict[str, Any], datetime]] = {}
+        self.cache: dict[str, tuple[dict[str, Any], datetime]] = {}
         self.access_times: dict[str, datetime] = {}
 
-    def get(self, cache_key: str) -> Dict[str, Any] | None:
+    def get(self, cache_key: str) -> dict[str, Any] | None:
         """Get cached response if valid."""
         if not self.config.enable_response_caching:
             return None
@@ -371,7 +369,7 @@ class ResponseCache:
 
         return None
 
-    def set(self, cache_key: str, data: Dict[str, Any]) -> None:
+    def set(self, cache_key: str, data: dict[str, Any]) -> None:
         """Cache response data."""
         if not self.config.enable_response_caching:
             return
@@ -410,7 +408,7 @@ class ExternalAPIManager:
         self.session: aiohttp.ClientSession | None = None
 
         # Health status tracking
-        self.health_status: dict[str, Dict[str, Any]] = defaultdict(
+        self.health_status: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "is_healthy": True,
                 "last_check": datetime.now(UTC),
@@ -452,7 +450,7 @@ class ExternalAPIManager:
         method: str = "GET",
         data: dict | None = None,
         params: dict | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Call external API with resilience patterns."""
         if api_name not in self.external_apis:
             msg = f"Unknown external API: {api_name}"
@@ -539,7 +537,9 @@ class ExternalAPIManager:
                 logger.error("Health check error: %s", e)
                 await asyncio.sleep(self.config.health_check_interval_seconds)
 
-    async def _check_api_health(self, api_name: str, api_config: ExternalAPIConfig) -> None:
+    async def _check_api_health(
+        self, api_name: str, api_config: ExternalAPIConfig
+    ) -> None:
         """Check health of specific external API."""
         try:
             start_time = time.time()
@@ -884,7 +884,7 @@ class ProductionAPIGateway:
         self,
         endpoint: APIEndpoint,
         request: APIRequest,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate mock response for endpoints without handlers."""
         base_response = {
             "success": True,
@@ -958,7 +958,7 @@ class ProductionAPIGateway:
             ) / total_requests
             self.metrics["average_response_time_ms"] = new_avg
 
-    def get_health_status(self) -> Dict[str, Any]:
+    def get_health_status(self) -> dict[str, Any]:
         """Get comprehensive health status."""
         uptime = datetime.now(UTC) - self.metrics["uptime_start"]
 
@@ -983,7 +983,7 @@ class ProductionAPIGateway:
             },
         }
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive metrics."""
         success_rate = 0.0
         if self.metrics["total_requests"] > 0:

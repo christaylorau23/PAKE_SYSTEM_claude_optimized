@@ -39,7 +39,7 @@ class TestVectorMemoryDatabase:
         return dal
 
     @pytest.fixture
-    async def vector_db(self) -> None:
+async def vector_db(self, mock_dal: Any = None, temp_dir: Any = None) -> None:
         """Create VectorMemoryDatabase instance for testing"""
         try:
             import chromadb
@@ -52,7 +52,7 @@ class TestVectorMemoryDatabase:
             pytest.skip("ChromaDB not available for testing")
 
     @pytest.mark.asyncio
-    async def test_vector_database_initialization(self) -> None:
+async def test_vector_database_initialization(self, mock_dal: Any = None, temp_dir: Any = None) -> None:
         """Test vector database initialization"""
         try:
             import chromadb
@@ -330,7 +330,7 @@ class TestAIMemoryQueryInterface:
         shutil.rmtree(temp_dir)
 
     @pytest.fixture
-    async def memory_interface(self) -> None:
+async def memory_interface(self, temp_dir: Any = None, temp_dir: Any = None) -> None:
         """Create AI Memory Query Interface for testing"""
         try:
             import chromadb
@@ -503,7 +503,7 @@ class TestDataAccessLayerIntegration:
         shutil.rmtree(temp_dir)
 
     @pytest.mark.asyncio
-    async def test_dal_vector_memory_integration(self) -> None:
+async def test_dal_vector_memory_integration(self, temp_dir: Any = None) -> None:
         """Test Data Access Layer integration with vector memory"""
         try:
             import chromadb
@@ -525,7 +525,7 @@ class TestDataAccessLayerIntegration:
             pytest.skip("ChromaDB not available for testing")
 
     @pytest.mark.asyncio
-    async def test_dal_remember_and_recall(self) -> None:
+async def test_dal_remember_and_recall(self, temp_dir: Any = None) -> None:
         """Test DAL remember and recall methods"""
         try:
             import chromadb
@@ -559,7 +559,7 @@ class TestDataAccessLayerIntegration:
             pytest.skip("ChromaDB not available for testing")
 
     @pytest.mark.asyncio
-    async def test_dal_learn_from_feedback(self) -> None:
+async def test_dal_learn_from_feedback(self, temp_dir: Any = None) -> None:
         """Test DAL learning from feedback"""
         try:
             import chromadb
@@ -595,7 +595,7 @@ class TestEndToEndWorkflow:
         shutil.rmtree(temp_dir)
 
     @pytest.mark.asyncio
-    async def test_complete_memory_workflow(self) -> None:
+async def test_complete_memory_workflow(self, temp_dir: Any = None) -> None:
         """Test complete memory workflow from storage to retrieval"""
         try:
             import chromadb
@@ -678,7 +678,7 @@ class TestEndToEndWorkflow:
             pytest.skip("ChromaDB not available for testing")
 
     @pytest.mark.asyncio
-    async def test_performance_with_large_dataset(self) -> None:
+async def test_performance_with_large_dataset(self, temp_dir: Any = None) -> None:
         """Test performance with larger dataset"""
         try:
             import time

@@ -1,18 +1,18 @@
-# PAKE System - Production Monitoring Stack
-# Prometheus, Grafana, and Alertmanager for comprehensive system monitoring
+# PAKE System - Unified Quality Dashboard Monitoring Stack
+# Complete monitoring stack with SonarQube, Prometheus, and Grafana integration
 
 version: '3.8'
 
 services:
   # Prometheus - Metrics Collection
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.54.1
     container_name: pake-prometheus
     ports:
       - '9090:9090'
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/rules:/etc/prometheus/rules
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -22,39 +22,97 @@ services:
       - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
+      - '--log.level=info'
     networks:
       - monitoring-network
-      - pake-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Grafana - Dashboards and Visualization
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.3.0
     container_name: pake-grafana
     ports:
       - '3001:3000'
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-pake_grafana_2024}
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel,redis-datasource,postgres-datasource
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SECURITY_DISABLE_GRAVATAR: true
+      GF_ANALYTICS_REPORTING_ENABLED: false
+      GF_ANALYTICS_CHECK_FOR_UPDATES: false
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/etc/grafana/dashboards
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
     networks:
       - monitoring-network
     depends_on:
       - prometheus
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # SonarQube - Code Quality Analysis
+  sonarqube:
+    image: sonarqube:10.3-community
+    container_name: pake-sonarqube
+    ports:
+      - '9000:9000'
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: true
+      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonarqube
+      SONAR_JDBC_USERNAME: sonarqube
+      SONAR_JDBC_PASSWORD: sonarqube_password
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - monitoring-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # PostgreSQL - Database for SonarQube
+  postgres:
+    image: postgres:15-alpine
+    container_name: pake-postgres-monitoring
+    environment:
+      POSTGRES_DB: sonarqube
+      POSTGRES_USER: sonarqube
+      POSTGRES_PASSWORD: sonarqube_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - monitoring-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonarqube -d sonarqube"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Alertmanager - Alert Management
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.26.0
     container_name: pake-alertmanager
     ports:
       - '9093:9093'
     volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
@@ -62,122 +120,91 @@ services:
       - '--web.external-url=http://localhost:9093'
     networks:
       - monitoring-network
+    depends_on:
+      - prometheus
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Node Exporter - System Metrics
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: pake-node-exporter
+  # SonarQube Exporter - Prometheus metrics for SonarQube
+  sonarqube-exporter:
+    image: prometheuscommunity/sonarqube-exporter:latest
+    container_name: pake-sonarqube-exporter
     ports:
-      - '9100:9100'
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    networks:
-      - monitoring-network
-    restart: unless-stopped
-
-  # Redis Exporter - Redis Metrics
-  redis-exporter:
-    image: oliver006/redis_exporter:latest
-    container_name: pake-redis-exporter
-    ports:
-      - '9121:9121'
+      - '9300:9300'
     environment:
-      REDIS_ADDR: redis://redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secure_REDACTED_SECRET}
-    networks:
-      - monitoring-network
-      - pake-network
-    restart: unless-stopped
-
-  # Postgres Exporter - Database Metrics
-  postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:latest
-    container_name: pake-postgres-exporter
-    ports:
-      - '9187:9187'
-    environment:
-      DATA_SOURCE_NAME: postgresql://pake_user:${POSTGRES_PASSWORD:-pake_secure_REDACTED_SECRET}@postgres:5432/pake_system?sslmode=disable
-    networks:
-      - monitoring-network
-      - pake-network
-    restart: unless-stopped
-
-  # Loki - Log Aggregation
-  loki:
-    image: grafana/loki:latest
-    container_name: pake-loki
-    ports:
-      - '3100:3100'
-    volumes:
-      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
-      - loki_data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-    networks:
-      - monitoring-network
-    restart: unless-stopped
-
-  # Promtail - Log Shipping
-  promtail:
-    image: grafana/promtail:latest
-    container_name: pake-promtail
-    volumes:
-      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
-      - /var/log:/var/log:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    command: -config.file=/etc/promtail/config.yml
+      SONAR_URL: http://sonarqube:9000
+      SONAR_TOKEN: ${SONAR_TOKEN:-}
+      SONAR_PROJECT_KEY: pake-system
     networks:
       - monitoring-network
     depends_on:
-      - loki
+      - sonarqube
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9300/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Blackbox Exporter - External Service Monitoring
-  blackbox-exporter:
-    image: prom/blackbox-exporter:latest
-    container_name: pake-blackbox-exporter
+  # GitHub Actions Exporter - Prometheus metrics for GitHub Actions
+  github-actions-exporter:
+    image: prometheuscommunity/github-actions-exporter:latest
+    container_name: pake-github-actions-exporter
     ports:
-      - '9115:9115'
-    volumes:
-      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
-    networks:
-      - monitoring-network
-      - pake-network
-    restart: unless-stopped
-
-  # Jaeger - Distributed Tracing (Optional)
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: pake-jaeger
-    ports:
-      - '16686:16686' # Jaeger UI
-      - '14268:14268' # HTTP collector
-      - '6831:6831/udp' # Agent UDP
+      - '9100:9100'
     environment:
-      COLLECTOR_OTLP_ENABLED: true
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_ORG: ${GITHUB_ORG:-pake-system-org}
+      GITHUB_REPO: ${GITHUB_REPO:-pake-system}
     networks:
       - monitoring-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Jira Exporter - Prometheus metrics for Jira
+  jira-exporter:
+    image: prometheuscommunity/jira-exporter:latest
+    container_name: pake-jira-exporter
+    ports:
+      - '9200:9200'
+    environment:
+      JIRA_URL: ${JIRA_URL:-}
+      JIRA_USERNAME: ${JIRA_USERNAME:-}
+      JIRA_TOKEN: ${JIRA_TOKEN:-}
+      JIRA_PROJECT_KEY: ${JIRA_PROJECT_KEY:-PAKE}
+    networks:
+      - monitoring-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9200/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   prometheus_data:
     driver: local
   grafana_data:
     driver: local
-  alertmanager_data:
+  sonarqube_data:
     driver: local
-  loki_data:
+  sonarqube_logs:
+    driver: local
+  sonarqube_extensions:
+    driver: local
+  postgres_data:
+    driver: local
+  alertmanager_data:
     driver: local
 
 networks:
   monitoring-network:
     driver: bridge
-  pake-network:
-    external: true

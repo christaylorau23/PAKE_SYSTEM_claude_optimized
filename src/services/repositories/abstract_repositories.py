@@ -27,7 +27,7 @@ class AbstractRepository[T](ABC):
         limit: int = 100,
         offset: int = 0,
         order_by: str | None = None,
-        filters: Dict[str, Any] | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> list[T]:
         """Get all entities with optional filtering and pagination."""
 
@@ -48,7 +48,7 @@ class AbstractRepository[T](ABC):
         """Check if entity exists."""
 
     @abstractmethod
-    async def count(self, filters: Dict[str, Any] | None = None) -> int:
+    async def count(self, filters: dict[str, Any] | None = None) -> int:
         """Count entities matching filters."""
 
 
@@ -153,7 +153,7 @@ class AbstractSavedSearchRepository(AbstractRepository):
     @abstractmethod
     async def get_by_tags(
         self,
-        tags: List[str],
+        tags: list[str],
         limit: int = 100,
         offset: int = 0,
     ) -> list[T]:
@@ -304,7 +304,7 @@ class AbstractServiceMetricsRepository(AbstractRepository):
         service_id: str,
         metric_name: str,
         hours: int = 24,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get metric trend data."""
 
 

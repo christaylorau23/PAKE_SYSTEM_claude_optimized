@@ -17,8 +17,8 @@ import time
 from typing import Any, Dict, List
 import uuid
 
-import numpy as np
 import aiohttp
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +57,8 @@ class PredictionRequest:
     """Immutable prediction request."""
 
     request_id: str
-    model_ids: List[str]
-    input_data: Dict[str, Any]
+    model_ids: list[str]
+    input_data: dict[str, Any]
     prediction_type: PredictionType = PredictionType.REAL_TIME
     ensemble_method: EnsembleMethod | None = None
     ensemble_weights: list[float] | None = None
@@ -67,9 +67,9 @@ class PredictionRequest:
     request_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "request_id": self.request_id,
@@ -92,9 +92,9 @@ class PredictionResult:
     """Immutable prediction result."""
 
     request_id: str
-    model_ids: List[str]
-    predictions: Dict[str, Any]
-    ensemble_prediction: Dict[str, Any] | None = None
+    model_ids: list[str]
+    predictions: dict[str, Any]
+    ensemble_prediction: dict[str, Any] | None = None
     confidence_scores: dict[str, float] = field(default_factory=dict)
     processing_time_ms: float = 0.0
     status: PredictionStatus = PredictionStatus.COMPLETED
@@ -102,9 +102,9 @@ class PredictionResult:
     response_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "request_id": self.request_id,
@@ -125,8 +125,8 @@ class BatchPredictionRequest:
     """Immutable batch prediction request."""
 
     batch_id: str
-    model_ids: List[str]
-    input_data_list: list[Dict[str, Any]]
+    model_ids: list[str]
+    input_data_list: list[dict[str, Any]]
     ensemble_method: EnsembleMethod | None = None
     ensemble_weights: list[float] | None = None
     batch_size: int = 100
@@ -135,9 +135,9 @@ class BatchPredictionRequest:
     request_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "batch_id": self.batch_id,
@@ -160,7 +160,7 @@ class BatchPredictionResult:
     """Immutable batch prediction result."""
 
     batch_id: str
-    model_ids: List[str]
+    model_ids: list[str]
     results: list[PredictionResult]
     total_processing_time_ms: float = 0.0
     successful_predictions: int = 0
@@ -170,9 +170,9 @@ class BatchPredictionResult:
     completed_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "batch_id": self.batch_id,
@@ -195,20 +195,20 @@ class InferenceEngine(ABC):
     async def predict(
         self,
         model_id: str,
-        input_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        input_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Run inference on a model."""
 
     @abstractmethod
     async def batch_predict(
         self,
         model_id: str,
-        input_data_list: list[Dict[str, Any]],
-    ) -> list[Dict[str, Any]]:
+        input_data_list: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """Run batch inference on a model."""
 
     @abstractmethod
-    def get_model_info(self, model_id: str) -> Dict[str, Any]:
+    def get_model_info(self, model_id: str) -> dict[str, Any]:
         """Get model information."""
 
 
@@ -221,8 +221,8 @@ class ModelServingInferenceEngine(InferenceEngine):
     async def predict(
         self,
         model_id: str,
-        input_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        input_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Run inference using model serving service."""
         try:
             from .model_serving import InferenceRequest
@@ -243,8 +243,8 @@ class ModelServingInferenceEngine(InferenceEngine):
     async def batch_predict(
         self,
         model_id: str,
-        input_data_list: list[Dict[str, Any]],
-    ) -> list[Dict[str, Any]]:
+        input_data_list: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """Run batch inference."""
         try:
             # Process in parallel
@@ -268,7 +268,7 @@ class ModelServingInferenceEngine(InferenceEngine):
             logger.error("Batch inference failed for model %s: %s", model_id, e)
             raise
 
-    def get_model_info(self, model_id: str) -> Dict[str, Any]:
+    def get_model_info(self, model_id: str) -> dict[str, Any]:
         """Get model information."""
         try:
             health = self.model_serving_service.get_model_status(model_id)
@@ -301,10 +301,10 @@ class EnsemblePredictor:
 
     async def predict_ensemble(
         self,
-        predictions: dict[str, Dict[str, Any]],
+        predictions: dict[str, dict[str, Any]],
         method: EnsembleMethod,
         weights: list[float] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create ensemble prediction from individual model predictions."""
         try:
             if method in self.ensemble_methods:
@@ -319,9 +319,9 @@ class EnsemblePredictor:
 
     async def _voting_ensemble(
         self,
-        predictions: dict[str, Dict[str, Any]],
+        predictions: dict[str, dict[str, Any]],
         weights: list[float] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Voting ensemble method."""
         try:
             # Extract prediction values
@@ -362,9 +362,9 @@ class EnsemblePredictor:
 
     async def _averaging_ensemble(
         self,
-        predictions: dict[str, Dict[str, Any]],
+        predictions: dict[str, dict[str, Any]],
         weights: list[float] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Averaging ensemble method."""
         try:
             # Extract prediction values
@@ -398,9 +398,9 @@ class EnsemblePredictor:
 
     async def _weighted_averaging_ensemble(
         self,
-        predictions: dict[str, Dict[str, Any]],
+        predictions: dict[str, dict[str, Any]],
         weights: list[float] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Weighted averaging ensemble method."""
         try:
             # Extract prediction values
@@ -443,9 +443,9 @@ class EnsemblePredictor:
 
     async def _stacking_ensemble(
         self,
-        predictions: dict[str, Dict[str, Any]],
+        predictions: dict[str, dict[str, Any]],
         weights: list[float] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Stacking ensemble method (simplified)."""
         try:
             # For simplicity, use weighted averaging as stacking
@@ -760,7 +760,7 @@ class PredictionService:
         results.sort(key=lambda x: x.completed_timestamp, reverse=True)
         return results[:limit]
 
-    def get_service_statistics(self) -> Dict[str, Any]:
+    def get_service_statistics(self) -> dict[str, Any]:
         """Get service statistics."""
         stats = self.stats.copy()
 
@@ -830,22 +830,22 @@ if __name__ == "__main__":
             async def predict(
                 self,
                 model_id: str,
-                input_data: Dict[str, Any],
-            ) -> Dict[str, Any]:
+                input_data: dict[str, Any],
+            ) -> dict[str, Any]:
                 # Mock prediction
                 return {"prediction": np.random.random(), "confidence": 0.8}
 
             async def batch_predict(
                 self,
                 model_id: str,
-                input_data_list: list[Dict[str, Any]],
-            ) -> list[Dict[str, Any]]:
+                input_data_list: list[dict[str, Any]],
+            ) -> list[dict[str, Any]]:
                 return [
                     {"prediction": np.random.random(), "confidence": 0.8}
                     for _ in input_data_list
                 ]
 
-            def get_model_info(self, model_id: str) -> Dict[str, Any]:
+            def get_model_info(self, model_id: str) -> dict[str, Any]:
                 return {"model_id": model_id, "status": "ready"}
 
         # Create prediction service

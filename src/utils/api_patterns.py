@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import logging
+
 import aiohttp
+
 logger = logging.getLogger(__name__)
 """PAKE+ Standardized API Patterns
 Enterprise-grade API patterns with foundation component integration.
@@ -23,7 +25,6 @@ from pydantic import BaseModel, Field, validator
 import redis.asyncio as redis
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
-
 from utils.async_task_queue import AsyncTaskQueue, TaskPriority
 from utils.distributed_cache import CacheConfig, DistributedCache
 from utils.error_handling import (
@@ -91,7 +92,7 @@ class APIError(BaseModel):
     type: str = Field(..., description="Error type classification")
     message: str = Field(..., description="Human-readable error message")
     code: str = Field(..., description="Error code for programmatic handling")
-    details: Dict[str, Any] | None = Field(
+    details: dict[str, Any] | None = Field(
         None,
         description="Additional error details",
     )
@@ -112,7 +113,7 @@ class APIResponse(BaseModel):
         None,
         description="Error details if status is error",
     )
-    metadata: Dict[str, Any] | None = Field(None, description="Response metadata")
+    metadata: dict[str, Any] | None = Field(None, description="Response metadata")
     trace_id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
         description="Request trace ID",
@@ -195,7 +196,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     request_data["body_size"] = len(body)
                     # Don't log full body for security, just size
             except Exception as e:
-
                 logger.debug(f"Exception in api_patterns.py: {e}")
 
                 # Continue gracefully
@@ -271,7 +271,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Rate limiting middleware with Redis backend."""
 
-    def __init__(self, app: FastAPI, config: APIConfig, redis_client: redis.Redis) -> None:
+    def __init__(
+        self, app: FastAPI, config: APIConfig, redis_client: redis.Redis
+    ) -> None:
         super().__init__(app)
         self.config = config
         self.redis_client = redis_client
@@ -482,7 +484,9 @@ class EnhancedAPIFactory:
         """Add standardized exception handlers."""
 
         @app.exception_handler(PAKEException)
-        async def pake_exception_handler(request: Request, exc: PAKEException) -> JSONResponse:
+        async def pake_exception_handler(
+            request: Request, exc: PAKEException
+        ) -> JSONResponse:
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
             return JSONResponse(
@@ -505,7 +509,9 @@ class EnhancedAPIFactory:
             )
 
         @app.exception_handler(HTTPException)
-        async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+        async def http_exception_handler(
+            request: Request, exc: HTTPException
+        ) -> JSONResponse:
             trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
 
             return JSONResponse(
@@ -683,7 +689,7 @@ class TaskItem(BaseModel):
     completed: bool = Field(default=False)
 
     @validator("title")
-    def title_must_not_be_empty(cls, v: str) -> str:
+    def title_must_not_be_empty(self, v: str) -> str:
         if not v.strip():
             msg = "Title cannot be empty"
             raise ValueError(msg)

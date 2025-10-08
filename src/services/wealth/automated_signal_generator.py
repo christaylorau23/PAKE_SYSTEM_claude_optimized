@@ -96,8 +96,8 @@ class TradingSignal:
     stop_loss: float | None = None
     position_size_pct: float | None = None
     timestamp: datetime = None
-    sources: List[str] = None
-    metadata: Dict[str, Any] = None
+    sources: list[str] = None
+    metadata: dict[str, Any] = None
 
     def __post_init__(self) -> None:
         if self.timestamp is None:
@@ -107,7 +107,7 @@ class TradingSignal:
         if self.metadata is None:
             self.metadata = {}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "signal_id": self.signal_id,
@@ -146,7 +146,7 @@ class AlertMessage:
         if self.timestamp is None:
             self.timestamp = datetime.now(UTC)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "alert_id": self.alert_id,
             "signal_id": self.signal.signal_id,
@@ -163,15 +163,15 @@ class AlertMessage:
 class TechnicalAnalysisEngine:
     """Advanced technical analysis for signal generation."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
         self.indicators_cache = {}
 
     async def analyze_technical_signals(
         self,
         symbol: str,
-        price_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        price_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Generate technical analysis signals."""
         try:
             signals = {
@@ -198,7 +198,7 @@ class TechnicalAnalysisEngine:
             logger.error("Error in technical analysis for %s: %s", symbol, e)
             return {"overall_signal": 0.0, "confidence": 0.0}
 
-    def _analyze_rsi(self, price_data: Dict[str, Any]) -> float:
+    def _analyze_rsi(self, price_data: dict[str, Any]) -> float:
         """Analyze RSI for oversold/overbought conditions."""
         rsi = price_data.get("technical_indicators", {}).get("rsi", 50)
 
@@ -212,7 +212,7 @@ class TechnicalAnalysisEngine:
             return -0.5  # Moderate sell signal
         return 0.0  # Neutral
 
-    def _analyze_macd(self, price_data: Dict[str, Any]) -> float:
+    def _analyze_macd(self, price_data: dict[str, Any]) -> float:
         """Analyze MACD for momentum signals."""
         indicators = price_data.get("technical_indicators", {})
         macd = indicators.get("macd", 0)
@@ -241,7 +241,7 @@ class TechnicalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_bollinger_bands(self, price_data: Dict[str, Any]) -> float:
+    def _analyze_bollinger_bands(self, price_data: dict[str, Any]) -> float:
         """Analyze Bollinger Bands for volatility signals."""
         price = price_data.get("price_data", {}).get("close", 0)
         indicators = price_data.get("technical_indicators", {})
@@ -259,7 +259,7 @@ class TechnicalAnalysisEngine:
             return -0.2  # Mild bearish
         return 0.0  # Neutral
 
-    def _analyze_moving_averages(self, price_data: Dict[str, Any]) -> float:
+    def _analyze_moving_averages(self, price_data: dict[str, Any]) -> float:
         """Analyze moving average crossovers and trends."""
         price = price_data.get("price_data", {}).get("close", 0)
         indicators = price_data.get("technical_indicators", {})
@@ -284,7 +284,7 @@ class TechnicalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_volume(self, price_data: Dict[str, Any]) -> float:
+    def _analyze_volume(self, price_data: dict[str, Any]) -> float:
         """Analyze volume for confirmation signals."""
         volume = price_data.get("price_data", {}).get("volume", 0)
         avg_volume = price_data.get("historical_data", {}).get("avg_volume_20", volume)
@@ -301,7 +301,7 @@ class TechnicalAnalysisEngine:
         # Normal volume
         return 0.2 if price_change > 0 else -0.2
 
-    def _analyze_momentum(self, price_data: Dict[str, Any]) -> float:
+    def _analyze_momentum(self, price_data: dict[str, Any]) -> float:
         """Analyze momentum indicators."""
         price_change = price_data.get("price_data", {}).get("price_change_pct", 0)
         volatility = price_data.get("price_data", {}).get("volatility", 0)
@@ -313,7 +313,7 @@ class TechnicalAnalysisEngine:
             return 0.4 if price_change > 0 else -0.4
         return 0.0
 
-    def _analyze_support_resistance(self, price_data: Dict[str, Any]) -> float:
+    def _analyze_support_resistance(self, price_data: dict[str, Any]) -> float:
         """Analyze support and resistance levels."""
         price = price_data.get("price_data", {}).get("close", 0)
         high = price_data.get("price_data", {}).get("high", price)
@@ -382,14 +382,14 @@ class TechnicalAnalysisEngine:
 class FundamentalAnalysisEngine:
     """Fundamental analysis for signal generation."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
 
     async def analyze_fundamental_signals(
         self,
         symbol: str,
-        fundamental_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        fundamental_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Generate fundamental analysis signals."""
         try:
             signals = {
@@ -416,7 +416,7 @@ class FundamentalAnalysisEngine:
             logger.error("Error in fundamental analysis for %s: %s", symbol, e)
             return {"overall_signal": 0.0, "confidence": 0.0}
 
-    def _analyze_valuation(self, data: Dict[str, Any]) -> float:
+    def _analyze_valuation(self, data: dict[str, Any]) -> float:
         """Analyze valuation metrics."""
         pe_ratio = data.get("pe_ratio", 20)
         pb_ratio = data.get("pb_ratio", 2)
@@ -444,7 +444,7 @@ class FundamentalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_growth(self, data: Dict[str, Any]) -> float:
+    def _analyze_growth(self, data: dict[str, Any]) -> float:
         """Analyze growth metrics."""
         revenue_growth = data.get("revenue_growth_yoy", 0)
         earnings_growth = data.get("earnings_growth_yoy", 0)
@@ -472,7 +472,7 @@ class FundamentalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_profitability(self, data: Dict[str, Any]) -> float:
+    def _analyze_profitability(self, data: dict[str, Any]) -> float:
         """Analyze profitability metrics."""
         profit_margin = data.get("profit_margin", 0)
         roe = data.get("return_on_equity", 0)
@@ -500,7 +500,7 @@ class FundamentalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_financial_health(self, data: Dict[str, Any]) -> float:
+    def _analyze_financial_health(self, data: dict[str, Any]) -> float:
         """Analyze financial health metrics."""
         debt_to_equity = data.get("debt_to_equity", 0)
         current_ratio = data.get("current_ratio", 1)
@@ -528,7 +528,7 @@ class FundamentalAnalysisEngine:
 
         return max(-1.0, min(1.0, signal_score))
 
-    def _analyze_dividend(self, data: Dict[str, Any]) -> float:
+    def _analyze_dividend(self, data: dict[str, Any]) -> float:
         """Analyze dividend metrics."""
         dividend_yield = data.get("dividend_yield", 0)
         dividend_growth = data.get("dividend_growth_5yr", 0)
@@ -604,7 +604,7 @@ class FundamentalAnalysisEngine:
 class AutomatedSignalGenerator:
     """Main automated signal generation system."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
         self.technical_engine = TechnicalAnalysisEngine(self.config)
         self.fundamental_engine = FundamentalAnalysisEngine(self.config)
@@ -624,14 +624,16 @@ class AutomatedSignalGenerator:
         self.signal_performance: dict[str, float] = {}
 
         # Alert system
-        self.notification_system = NotificationSystem(self.config.get("notifications", {}))
+        self.notification_system = NotificationSystem(
+            self.config.get("notifications", {})
+        )
 
         logger.info("Automated Signal Generator initialized")
 
     async def generate_signal(
         self,
         symbol: str,
-        market_data: Dict[str, Any],
+        market_data: dict[str, Any],
     ) -> TradingSignal | None:
         """Generate a comprehensive trading signal for a symbol."""
         try:
@@ -719,7 +721,7 @@ class AutomatedSignalGenerator:
     async def _analyze_sentiment(
         self,
         symbol: str,
-        market_data: Dict[str, Any],
+        market_data: dict[str, Any],
     ) -> float:
         """Analyze sentiment from various sources."""
         try:
@@ -752,8 +754,8 @@ class AutomatedSignalGenerator:
     async def _get_vector_intelligence(
         self,
         symbol: str,
-        market_data: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        market_data: dict[str, Any],
+    ) -> dict[str, Any]:
         """Get pattern intelligence from vector database."""
         try:
             # Generate embedding for current market state
@@ -820,11 +822,11 @@ class AutomatedSignalGenerator:
     async def _combine_all_signals(
         self,
         symbol: str,
-        market_data: Dict[str, Any],
-        technical: Dict[str, Any],
-        fundamental: Dict[str, Any],
+        market_data: dict[str, Any],
+        technical: dict[str, Any],
+        fundamental: dict[str, Any],
         sentiment: float,
-        vector_intel: Dict[str, Any],
+        vector_intel: dict[str, Any],
     ) -> TradingSignal | None:
         """Combine all signal sources into final trading signal."""
         try:
@@ -916,7 +918,7 @@ class AutomatedSignalGenerator:
                 else current_price * (1 + 0.05)
             )
 
-            signal = TradingSignal(
+            return TradingSignal(
                 signal_id=signal_id,
                 symbol=symbol,
                 signal_type=signal_type,
@@ -944,8 +946,6 @@ class AutomatedSignalGenerator:
                     },
                 },
             )
-
-            return signal
 
         except (ValueError, RuntimeError) as e:
             logger.error("Error combining signals for %s: %s", symbol, e)
@@ -988,9 +988,9 @@ class AutomatedSignalGenerator:
     def _calculate_risk_return(
         self,
         signal_value: float,
-        market_data: Dict[str, Any],
-        technical: Dict[str, Any],
-        fundamental: Dict[str, Any],
+        market_data: dict[str, Any],
+        technical: dict[str, Any],
+        fundamental: dict[str, Any],
     ) -> tuple[str, float]:
         """Calculate risk level and expected return."""
         # Base expected return from signal strength
@@ -1035,8 +1035,8 @@ class AutomatedSignalGenerator:
 
     def _determine_time_horizon(
         self,
-        technical: Dict[str, Any],
-        vector_intel: Dict[str, Any],
+        technical: dict[str, Any],
+        vector_intel: dict[str, Any],
     ) -> str:
         """Determine appropriate time horizon for the signal."""
         # Based on technical indicators
@@ -1161,7 +1161,7 @@ Generated: {signal.timestamp.strftime("%H:%M:%S")}
 class NotificationSystem:
     """Multi-channel notification system for instant alerts."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
         self.email_config = self.config.get("email", {})
         self.sms_config = self.config.get("sms", {})

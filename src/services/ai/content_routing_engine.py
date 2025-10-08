@@ -67,7 +67,7 @@ class RoutingContent:
     content_id: str
     content_type: str
     category: ContentCategory
-    topics: List[str] = field(default_factory=list)
+    topics: list[str] = field(default_factory=list)
     quality_score: float = 0.0
     urgency_score: float = 0.0
     user_relevance_scores: dict[str, float] = field(default_factory=dict)
@@ -77,7 +77,7 @@ class RoutingContent:
         default_factory=lambda: datetime.now(UTC),
     )
     expiry_timestamp: datetime | None = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -86,8 +86,8 @@ class RoutingRule:
 
     rule_id: str
     name: str
-    conditions: Dict[str, Any] = field(default_factory=dict)
-    actions: Dict[str, Any] = field(default_factory=dict)
+    conditions: dict[str, Any] = field(default_factory=dict)
+    actions: dict[str, Any] = field(default_factory=dict)
     priority: int = 0
     is_active: bool = True
     created_by: str = "system"
@@ -103,10 +103,10 @@ class RoutingDecision:
     content_id: str
     destination: ContentDestination
     routing_priority: RoutingPriority
-    reasoning: List[str] = field(default_factory=list)
+    reasoning: list[str] = field(default_factory=list)
     confidence_score: float = 0.0
     processing_delay_ms: int = 0  # Suggested delay before delivery
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     decision_timestamp: datetime = field(
         default_factory=lambda: datetime.now(UTC),
     )
@@ -266,7 +266,9 @@ class LoadBalancer:
 
         return optimal_destination
 
-    def update_destination_load(self, destination: ContentDestination, delta: int) -> None:
+    def update_destination_load(
+        self, destination: ContentDestination, delta: int
+    ) -> None:
         """Update destination load."""
         self.destination_loads[destination] += delta
 
@@ -777,7 +779,7 @@ class ContentRoutingEngine:
 
         return results
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get routing engine metrics."""
         return {
             **self.metrics,

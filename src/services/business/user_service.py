@@ -108,7 +108,7 @@ class UserService:
         self,
         user_id: str,
         full_name: str | None = None,
-        preferences: Dict[str, Any] | None = None,
+        preferences: dict[str, Any] | None = None,
     ) -> User | None:
         """Update user profile with business logic."""
         user = await self.user_repository.get_by_id(user_id)
@@ -228,7 +228,7 @@ class UserService:
 
         return matching_users[offset : offset + limit]
 
-    async def get_user_statistics(self) -> Dict[str, Any]:
+    async def get_user_statistics(self) -> dict[str, Any]:
         """Get user statistics with business logic."""
         total_users = await self.user_repository.count()
         active_users = await self.user_repository.count(filters={"is_active": True})
@@ -245,7 +245,7 @@ class UserService:
             else 0,
         }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on user service."""
         try:
             # Test repository connectivity

@@ -255,10 +255,13 @@ class CosmicCalibrationDemo:
         ] = self.optimization_cycles
 
         self.logger.info(
-            "📈 Performance Improved: %.3f → %.3f", pre_score, self.performance_score,
+            "📈 Performance Improved: %.3f → %.3f",
+            pre_score,
+            self.performance_score,
         )
         self.logger.info(
-            "⚡ Optimization Efficiency: %s", self.optimization_efficiency,
+            "⚡ Optimization Efficiency: %s",
+            self.optimization_efficiency,
         )
         self.logger.info("✅ Autonomous optimization completed successfully")
 
@@ -282,34 +285,42 @@ class CosmicCalibrationDemo:
 
         self.logger.info("🧠 Cognitive Engine Status:")
         self.logger.info(
-            "   State: %s", self.component_status["cognitive_engine"]["state"],
+            "   State: %s",
+            self.component_status["cognitive_engine"]["state"],
         )
         self.logger.info(
-            "   Performance: %s", f"{self.component_status['cognitive_engine']['performance']:.3f}",
+            "   Performance: %s",
+            f"{self.component_status['cognitive_engine']['performance']:.3f}",
         )
 
         self.logger.info("🔧 Metacognitive Optimizer Status:")
         self.logger.info(
-            "   Phase: %s", self.component_status["metacognitive_optimizer"]["optimization_phase"],
+            "   Phase: %s",
+            self.component_status["metacognitive_optimizer"]["optimization_phase"],
         )
         self.logger.info(
-            "   Cycles Completed: %s", self.component_status["metacognitive_optimizer"]["cycles"],
+            "   Cycles Completed: %s",
+            self.component_status["metacognitive_optimizer"]["cycles"],
         )
 
         self.logger.info("🧬 Prompt Evolution Status:")
         self.logger.info(
-            "   Stage: %s", self.component_status["prompt_evolution"]["evolution_stage"],
+            "   Stage: %s",
+            self.component_status["prompt_evolution"]["evolution_stage"],
         )
         self.logger.info(
-            "   Generations: %s", self.component_status["prompt_evolution"]["generations"],
+            "   Generations: %s",
+            self.component_status["prompt_evolution"]["generations"],
         )
 
         self.logger.info("🔍 Self-Critique Status:")
         self.logger.info(
-            "   Critiques Performed: %s", self.component_status["self_critique"]["critiques_performed"],
+            "   Critiques Performed: %s",
+            self.component_status["self_critique"]["critiques_performed"],
         )
         self.logger.info(
-            "   Quality Score: %.3f", self.component_status["self_critique"]["quality"],
+            "   Quality Score: %.3f",
+            self.component_status["self_critique"]["quality"],
         )
 
         self.logger.info("✅ All components coordinating successfully")
@@ -374,7 +385,9 @@ class CosmicCalibrationDemo:
         self.logger.info("🧬 Evolution Results:")
         self.logger.info("   Generation: %s", self.evolution_cycles)
         self.logger.info("   New Organisms: %s", secrets.randbelow(6) + 3)
-        self.logger.info("   Best Fitness: %.3f%%", secrets.randbelow(1000) / 10000 + 0.85)
+        self.logger.info(
+            "   Best Fitness: %.3f%%", secrets.randbelow(1000) / 10000 + 0.85
+        )
         self.logger.info("   Evolution Progress: %.3f%%", self.evolution_progress)
 
         # Simulate self-critique
@@ -385,7 +398,9 @@ class CosmicCalibrationDemo:
 
         self.logger.info("🔍 Self-Critique Results:")
         self.logger.info("   Critiques Performed: %s", self.critique_cycles)
-        self.logger.info("   Multi-Model Consensus: %.3f%%", secrets.randbelow(1500) / 10000 + 0.8)
+        self.logger.info(
+            "   Multi-Model Consensus: %.3f%%", secrets.randbelow(1500) / 10000 + 0.8
+        )
         self.logger.info("   Quality Assessment: %.3f%%", self.critique_quality)
 
         self.logger.info("✅ Cognitive evolution cycle completed")

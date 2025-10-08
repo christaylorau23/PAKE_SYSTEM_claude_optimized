@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 Secrets Migration Script for PAKE System
@@ -29,7 +30,7 @@ except ImportError:
 class VaultSecretsManager:
     """Manages migration of secrets to HashiCorp Vault."""
 
-    def __init__(self) -> None:
+def __init__(self, vault_url: Any = None, vault_token: Any = None) -> None:
         """
         Initialize Vault client.
 
@@ -62,7 +63,7 @@ class VaultSecretsManager:
             print(f"❌ Error connecting to Vault: {e}")
             return False
 
-    def create_secret(self, path: str, secret_data: Dict[str, Any]) -> bool:
+    def create_secret(self, path: str, secret_data: dict[str, Any]) -> bool:
         """
         Create or update a secret in Vault.
 

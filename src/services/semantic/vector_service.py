@@ -20,7 +20,7 @@ class VectorMatch:
     id: str
     vector: np.ndarray
     similarity: float
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 class VectorService:
@@ -44,7 +44,7 @@ class VectorService:
         self,
         id: str,
         vector: np.ndarray,
-        metadata: Dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """Store a vector with associated metadata.
 
@@ -75,7 +75,7 @@ class VectorService:
             logger.error("Error storing vector %s: %s", id, e)
             return False
 
-    async def get_vector(self, id: str) -> tuple[np.ndarray, Dict[str, Any]] | None:
+    async def get_vector(self, id: str) -> tuple[np.ndarray, dict[str, Any]] | None:
         """Retrieve a vector and its metadata by ID.
 
         Args:
@@ -166,7 +166,7 @@ class VectorService:
             return True
         return False
 
-    async def get_statistics(self) -> Dict[str, Any]:
+    async def get_statistics(self) -> dict[str, Any]:
         """Get vector database statistics.
 
         Returns:
@@ -189,7 +189,7 @@ class VectorService:
         total_bytes = len(self.vectors) * vector_size
         return total_bytes / (1024 * 1024)  # Convert to MB
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check vector service health."""
         return {
             "status": "healthy",

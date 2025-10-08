@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 class FilesystemCaseSensitivityFixer:
     """Fix case sensitivity issues in the PAKE system"""
 
-    def __init__(self) -> None:
+def __init__(self, root_path: Any = None, dry_run: Any = None) -> None:
         self.root_path = Path(root_path or os.getcwd())
         self.dry_run = dry_run
         self.fixes_applied = []

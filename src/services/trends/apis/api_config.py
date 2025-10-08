@@ -145,7 +145,7 @@ class APIConfig:
             for issue in issues:
                 self.logger.warning("Configuration issue: %s", issue)
 
-    def get_api_config(self, provider: APIProvider) -> Dict[str, Any]:
+    def get_api_config(self, provider: APIProvider) -> dict[str, Any]:
         """Get configuration for specific API provider."""
         config_map = {
             APIProvider.GOOGLE_TRENDS: self.google_trends,
@@ -220,7 +220,7 @@ class APIConfig:
 
         return f"{base_url}{endpoint_path}"
 
-    def get_rate_limit_info(self, provider: APIProvider) -> Dict[str, Any]:
+    def get_rate_limit_info(self, provider: APIProvider) -> dict[str, Any]:
         """Get rate limit information for API provider."""
         # This would typically be loaded from a configuration file or database
         rate_limits = {
@@ -283,7 +283,7 @@ class APIConfig:
 
         return False
 
-    def get_configuration_summary(self) -> Dict[str, Any]:
+    def get_configuration_summary(self) -> dict[str, Any]:
         """Get summary of all API configurations."""
         summary = {
             "enabled_providers": [],
@@ -324,7 +324,9 @@ class APIConfig:
                 "enabled" if enabled else "disabled",
             )
 
-    def update_credentials(self, provider: APIProvider, credentials: dict[str, str]) -> bool:
+    def update_credentials(
+        self, provider: APIProvider, credentials: dict[str, str]
+    ) -> bool:
         """Update credentials for an API provider."""
         config = self.get_api_config(provider)
         if not config:

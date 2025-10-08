@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Intelligent Optimization Engine
@@ -56,7 +57,7 @@ class PredictionModel:
     name: str
     model_type: str
     target_metric: str
-    features: List[str]
+    features: list[str]
     accuracy_score: float
     last_trained: datetime
     model_path: str
@@ -77,7 +78,7 @@ class OptimizationRecommendation:
 class IntelligentOptimizationEngine:
     """Main optimization and prediction engine"""
 
-    def __init__(self) -> None:
+def __init__(self, analytics_db_path: Any = None) -> None:
         self.analytics_db = analytics_db_path
         self.db_path = "optimization_engine.db"
         self.models_dir = Path("../models")
@@ -289,7 +290,7 @@ class IntelligentOptimizationEngine:
         self._store_rules(default_rules)
         return default_rules
 
-    def _store_rules(self) -> None:
+def _store_rules(self, rules: Any = None) -> None:
         """Store rules in database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -391,11 +392,11 @@ class IntelligentOptimizationEngine:
         triggered_rules.sort(key=lambda r: r.priority)
         return triggered_rules
 
-    def _flatten_metrics(self, metrics: dict) -> dict:
+def _flatten_metrics(self, metrics: dict, d: Any = None, parent_key: Any = None, parent_key: Any = None) -> dict:
         """Flatten nested metrics dictionary"""
         flat = {}
 
-        def flatten_dict(self) -> None:
+def flatten_dict(self, d: Any = None, parent_key: Any = None, parent_key: Any = None) -> None:
             for k, v in d.items():
                 new_key = f"{parent_key}_{k}" if parent_key else k
 
@@ -432,7 +433,7 @@ class IntelligentOptimizationEngine:
             self.logger.error("Error evaluating condition '%s': %s", condition, e)
             return False
 
-    async def _update_rule_trigger_count(self) -> None:
+async def _update_rule_trigger_count(self, rule_id: Any = None) -> None:
         """Update rule trigger statistics"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -513,7 +514,7 @@ class IntelligentOptimizationEngine:
 
         return action_result
 
-    async def _execute_content_boost(self, config: dict, metrics: dict) -> List[str]:
+    async def _execute_content_boost(self, config: dict, metrics: dict) -> list[str]:
         """Execute content boost optimization"""
         actions = []
 
@@ -528,7 +529,7 @@ class IntelligentOptimizationEngine:
 
         return actions
 
-    async def _execute_amplification(self, config: dict, metrics: dict) -> List[str]:
+    async def _execute_amplification(self, config: dict, metrics: dict) -> list[str]:
         """Execute content amplification"""
         actions = []
 
@@ -547,7 +548,7 @@ class IntelligentOptimizationEngine:
         self,
         config: dict,
         metrics: dict,
-    ) -> List[str]:
+    ) -> list[str]:
         """Execute conversion funnel optimization"""
         actions = []
 
@@ -566,7 +567,7 @@ class IntelligentOptimizationEngine:
         self,
         config: dict,
         metrics: dict,
-    ) -> List[str]:
+    ) -> list[str]:
         """Execute platform performance rebalancing"""
         actions = []
 
@@ -585,7 +586,7 @@ class IntelligentOptimizationEngine:
         self,
         config: dict,
         metrics: dict,
-    ) -> List[str]:
+    ) -> list[str]:
         """Execute cost efficiency optimization"""
         actions = []
 
@@ -600,7 +601,7 @@ class IntelligentOptimizationEngine:
 
         return actions
 
-    async def _log_optimization_action(self) -> None:
+async def _log_optimization_action(self, rule_id: Any = None, action_result: Any = None, metrics_before: Any = None, action_result: Any = None, action_result: Any = None) -> None:
         """Log optimization action to database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -705,9 +706,8 @@ class IntelligentOptimizationEngine:
             feature_data.append(features)
 
         df = pd.DataFrame(feature_data)
-        df = df.sort_values("date").reset_index(drop=True)
+        return df.sort_values("date").reset_index(drop=True)
 
-        return df
 
     def _get_or_train_model(
         self,
@@ -812,13 +812,12 @@ class IntelligentOptimizationEngine:
                 self.logger.info("Model MSE for %.3f%%: %.3f%%", target, mse)
 
             # Create wrapper with scaler
-            model_wrapper = {
+            return {
                 "model": model,
                 "scaler": scaler,
                 "feature_columns": feature_columns,
             }
 
-            return model_wrapper
 
         except (ValueError, RuntimeError) as e:
             self.logger.error("Model training failed for %s: %s", target, e)
@@ -1002,7 +1001,7 @@ class IntelligentOptimizationEngine:
             if df.empty:
                 return {"message": "No optimization data available"}
 
-            analysis = {
+            return {
                 "total_optimizations": len(df),
                 "success_rate": df["success"].mean() * 100,
                 "average_impact": df["impact_score"].mean(),
@@ -1015,7 +1014,6 @@ class IntelligentOptimizationEngine:
                 "impact_trend": self._calculate_impact_trend(df),
             }
 
-            return analysis
 
         except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to analyze optimization impact: %s", e)
@@ -1061,7 +1059,7 @@ class IntelligentOptimizationEngine:
 class ABTestingFramework:
     """A/B testing framework for optimization validation"""
 
-    def __init__(self) -> None:
+def __init__(self, optimization_engine: Any = None, optimization_engine: Any = None) -> None:
         self.optimization_engine = optimization_engine
         self.logger = optimization_engine.logger
 

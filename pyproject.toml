@@ -345,7 +345,7 @@ exclude = [
 
 # Same as Black.
 line-length = 88
-indent-width = 4
+# indent-width = 4  # Removed - not supported in current ruff version
 
 # Assume Python 3.12
 target-version = "py312"
@@ -473,7 +473,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Enhanced isort configuration for F821 Campaign Phase I
 known-first-party = ["src", "tests", "scripts"]
 known-third-party = [
-    "fastapi", "uvicorn", "pydantic", "sqlalchemy", "redis", "aiohttp", 
+    "fastapi", "uvicorn", "pydantic", "sqlalchemy", "redis", "aiohttp",
     "httpx", "structlog", "prometheus_client", "psutil", "opentelemetry_api",
     "sentry_sdk", "celery", "apscheduler", "dramatiq", "numpy", "pandas",
     "matplotlib", "seaborn", "plotly", "scikit_learn", "scipy", "statsmodels",

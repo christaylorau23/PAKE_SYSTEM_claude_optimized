@@ -473,7 +473,7 @@ class LoggingConfigService:
         except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Failed to save configuration: {e}")
 
-    def get_configuration_summary(self) -> Dict[str, Any]:
+    def get_configuration_summary(self) -> dict[str, Any]:
         """Get configuration summary."""
         return {
             "timestamp": datetime.now(UTC).isoformat(),
@@ -511,7 +511,7 @@ class LoggingConfigService:
             },
         }
 
-    def validate_environment(self) -> Dict[str, Any]:
+    def validate_environment(self) -> dict[str, Any]:
         """Validate current environment configuration."""
         validation_results = {
             "timestamp": datetime.now(UTC).isoformat(),

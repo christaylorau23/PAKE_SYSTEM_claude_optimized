@@ -573,7 +573,8 @@ class ProductionIngestionOrchestrator(IngestionOrchestrator):
         performance_data = {
             "plan_id": self.result.plan_id,
             "execution_time": self.result.execution_time,
-            "success_rate": self.self.result.sources_completed / max(self.self.result.sources_attempted, 1),
+            "success_rate": self.self.result.sources_completed
+            / max(self.self.result.sources_attempted, 1),
             "quality_score": self.result.average_quality_score,
             "timestamp": datetime.now(UTC).isoformat(),
         }

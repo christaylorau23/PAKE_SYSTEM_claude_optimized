@@ -25,16 +25,16 @@ logger = logging.getLogger(__name__)
 class EmailSearchQuery:
     """Immutable email search query configuration."""
 
-    folders: List[str] = field(default_factory=lambda: ["INBOX"])
-    sender_filters: List[str] = field(default_factory=list)
-    subject_keywords: List[str] = field(default_factory=list)
-    content_keywords: List[str] = field(default_factory=list)
+    folders: list[str] = field(default_factory=lambda: ["INBOX"])
+    sender_filters: list[str] = field(default_factory=list)
+    subject_keywords: list[str] = field(default_factory=list)
+    content_keywords: list[str] = field(default_factory=list)
     date_range: dict[str, datetime] | None = None
     max_results: int = 50
     exclude_spam: bool = True
     exclude_promotional: bool = True
     min_content_length: int = 100
-    attachment_types: List[str] = field(default_factory=list)  # ["pdf", "doc", "txt"]
+    attachment_types: list[str] = field(default_factory=list)  # ["pdf", "doc", "txt"]
 
 
 @dataclass(frozen=True)
@@ -57,13 +57,13 @@ class EmailMessage:
 
     message_id: str
     sender: str
-    recipients: List[str]
+    recipients: list[str]
     subject: str
     content: str
     html_content: str | None
     timestamp: datetime
     folder: str
-    attachments: list[Dict[str, Any]] = field(default_factory=list)
+    attachments: list[dict[str, Any]] = field(default_factory=list)
     headers: dict[str, str] = field(default_factory=dict)
     thread_id: str | None = None
     importance: str = "normal"  # "low", "normal", "high"
@@ -83,9 +83,9 @@ class EmailIngestionResult:
     filtered_messages: int = 0
     error_details: str | None = None
     execution_time: float = 0.0
-    folders_searched: List[str] = field(default_factory=list)
+    folders_searched: list[str] = field(default_factory=list)
     cognitive_assessments_applied: int = 0
-    intelligent_filters_applied: List[str] = field(default_factory=list)
+    intelligent_filters_applied: list[str] = field(default_factory=list)
 
 
 class EmailIngestionService:
@@ -100,11 +100,13 @@ class EmailIngestionService:
     - Advanced search and filtering capabilities
     """
 
-    def __init__(self, config: EmailConnectionConfig, cognitive_engine: Any | None = None) -> None:
+    def __init__(
+        self, config: EmailConnectionConfig, cognitive_engine: Any | None = None
+    ) -> None:
         """Initialize email service with connection configuration."""
         self.config = config
         self.cognitive_engine = cognitive_engine
-        self.connection_pool: Dict[str, Any] = {}
+        self.connection_pool: dict[str, Any] = {}
         self._message_cache: dict[str, EmailMessage] = {}
         self._filter_patterns = self._initialize_filter_patterns()
 
@@ -114,7 +116,7 @@ class EmailIngestionService:
             config.hostname,
         )
 
-    def _initialize_filter_patterns(self) -> dict[str, List[str]]:
+    def _initialize_filter_patterns(self) -> dict[str, list[str]]:
         """Initialize intelligent filtering patterns."""
         return {
             "spam_indicators": [
@@ -446,7 +448,7 @@ Send us your bank details to receive your winnings.""",
         self,
         messages: list[EmailMessage],
         query: EmailSearchQuery,
-    ) -> tuple[list[EmailMessage], List[str]]:
+    ) -> tuple[list[EmailMessage], list[str]]:
         """Apply intelligent filtering to remove spam and promotional content."""
         filtered_messages = []
         applied_filters = []
@@ -620,7 +622,7 @@ Send us your bank details to receive your winnings.""",
         logger.info("Converted %s emails to content items", len(content_items))
         return content_items
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform email service health check."""
         try:
             connection = await self._get_connection()

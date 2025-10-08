@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class PAKEDeployer:
     """PAKE+ system deployment manager"""
 
-    def __init__(self) -> None:
+def __init__(self, base_dir: Any = None) -> None:
         self.base_dir = Path(base_dir or os.getcwd())
         self.docker_dir = self.base_dir / "docker"
         self.scripts_dir = self.base_dir / "scripts"

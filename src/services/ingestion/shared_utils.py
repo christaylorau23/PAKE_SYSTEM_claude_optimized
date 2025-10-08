@@ -13,14 +13,14 @@ from typing import Any, Dict, List
 logger = logging.getLogger(__name__)
 
 
-def generate_cache_key(data: Dict[str, Any], prefix: str = "") -> str:
+def generate_cache_key(data: dict[str, Any], prefix: str = "") -> str:
     """Generate deterministic cache key from data dictionary."""
     cache_string = json.dumps(data, sort_keys=True)
     hash_digest = hashlib.sha256(cache_string.encode()).hexdigest()[:16]
     return f"{prefix}_{hash_digest}" if prefix else hash_digest
 
 
-def extract_search_terms(topic: str) -> List[str]:
+def extract_search_terms(topic: str) -> list[str]:
     """Extract relevant search terms from research topic."""
     # Simple term extraction - can be enhanced with NLP
     terms = []
@@ -133,7 +133,7 @@ def extract_research_domain(topic: str) -> str | None:
     return None  # Generic processing if no specific domain detected
 
 
-def calculate_duration_estimate(sources: list[Dict[str, Any]]) -> int:
+def calculate_duration_estimate(sources: list[dict[str, Any]]) -> int:
     """Calculate estimated total duration for all sources."""
     # Base duration per source type (seconds)
     duration_map = {
@@ -158,7 +158,7 @@ def calculate_duration_estimate(sources: list[Dict[str, Any]]) -> int:
     return total_duration
 
 
-def validate_source_config(config: Dict[str, Any]) -> bool:
+def validate_source_config(config: dict[str, Any]) -> bool:
     """Validate source configuration."""
     required_fields = ["source_type", "query_parameters"]
 
@@ -183,7 +183,7 @@ def format_execution_metrics(
     sources_completed: int,
     sources_failed: int,
     total_items: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Format execution metrics in a standardized way."""
     return {
         "execution_time_ms": execution_time * 1000,
@@ -201,7 +201,7 @@ def create_error_detail(
     source_type: str,
     error: str,
     attempt: int = 0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create standardized error detail structure."""
     return {
         "source_id": source_id,

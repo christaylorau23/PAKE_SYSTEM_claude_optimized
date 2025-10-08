@@ -11,7 +11,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-def safe_print(self) -> None:
+def safe_print(self, message: str) -> None:
     """Print without Unicode issues on Windows"""
     try:
         print(message)

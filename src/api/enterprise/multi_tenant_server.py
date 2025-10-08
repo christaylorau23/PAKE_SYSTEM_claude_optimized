@@ -3,6 +3,7 @@
 World-class multi-tenant FastAPI server with comprehensive security, monitoring, and performance optimization.
 """
 
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 import json
@@ -12,13 +13,13 @@ from pathlib import Path
 import sys
 import time
 import traceback
-from typing import Any, Dict, List, Callable
+from typing import Any, Dict, List
 import uuid
 
 import aiohttp
-import sqlalchemy
-import psycopg2
 import asyncpg
+import psycopg2
+import sqlalchemy
 import structlog
 
 # Configure logging
@@ -103,7 +104,6 @@ try:
     )
     from src.services.ml.knowledge_graph_service import get_knowledge_graph_service
 except ImportError as e:
-
     logger.debug(f"Exception in multi_tenant_server.py: {e}")
 
     # Continue gracefully
@@ -151,7 +151,7 @@ dal: TenantAwareDataAccessLayer | None = None
 security_enforcer: TenantIsolationEnforcer | None = None
 
 # Service orchestrators per tenant (cached)
-tenant_orchestrators: Dict[str, Any] = {}
+tenant_orchestrators: dict[str, Any] = {}
 
 
 class ServerConfig:
@@ -187,7 +187,7 @@ class ServerConfig:
             "Please configure this secret in your environment or Azure Key Vault."
         )
         raise ValueError(msg)
-    ALLOWED_HOSTS: List[str] = os.getenv("PAKE_ALLOWED_HOSTS", "*").split(",")
+    ALLOWED_HOSTS: list[str] = os.getenv("PAKE_ALLOWED_HOSTS", "*").split(",")
 
     # API settings
     API_PREFIX: str = "/api/v1"
@@ -228,7 +228,7 @@ class SearchRequest(TenantAwareBaseModel):
     """Multi-tenant search request."""
 
     query: str = Field(..., min_length=1, max_length=500, description="Search query")
-    sources: List[str] = Field(
+    sources: list[str] = Field(
         default=["web", "arxiv", "pubmed"],
         description="Data sources to search",
     )
@@ -246,13 +246,13 @@ class SearchRequest(TenantAwareBaseModel):
         default=False,
         description="Enable content summarization",
     )
-    filters: Dict[str, Any] | None = Field(
+    filters: dict[str, Any] | None = Field(
         default=None,
         description="Search filters",
     )
 
     @validator("sources")
-    def validate_sources(cls, v) -> List[str]:
+    def validate_sources(self, v) -> list[str]:
         allowed_sources = ["web", "arxiv", "pubmed", "github", "stackoverflow"]
         invalid_sources = [s for s in v if s not in allowed_sources]
         if invalid_sources:
@@ -456,7 +456,7 @@ app = FastAPI(
 # Middleware configuration (order matters!)
 
 # Trusted host middleware (security)
-if config.ALLOWED_HOSTS != ["*"]:
+if ["*"] != config.ALLOWED_HOSTS:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.ALLOWED_HOSTS)
 
 # Tenant context middleware (must be early in chain)

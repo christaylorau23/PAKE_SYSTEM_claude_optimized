@@ -1,5 +1,5 @@
-from typing import List
-from typing import Dict
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 Security Testing Suite for PAKE System
@@ -33,7 +33,7 @@ class SecurityTestResult:
     passed: bool
     severity: str  # "critical", "high", "medium", "low"
     message: str
-    details: Dict[str, Any] | None = None
+    details: dict[str, Any] | None = None
 
 
 class SecurityTester:
@@ -43,7 +43,7 @@ class SecurityTester:
         self.results: list[SecurityTestResult] = []
         self.project_root = Path(__file__).parent.parent
 
-    def run_all_tests(self) -> Dict[str, Any]:
+    def run_all_tests(self) -> dict[str, Any]:
         """Run all security tests"""
         logger.info("🔒 Starting comprehensive security testing...")
 
@@ -439,7 +439,7 @@ class SecurityTester:
                 ),
             )
 
-    def _generate_report(self) -> Dict[str, Any]:
+    def _generate_report(self) -> dict[str, Any]:
         """Generate comprehensive security report"""
         total_tests = len(self.results)
         passed_tests = sum(1 for r in self.results if r.passed)
@@ -482,7 +482,7 @@ class SecurityTester:
             "recommendations": self._generate_recommendations(),
         }
 
-    def _generate_recommendations(self) -> List[str]:
+    def _generate_recommendations(self) -> list[str]:
         """Generate security recommendations"""
         recommendations = []
 

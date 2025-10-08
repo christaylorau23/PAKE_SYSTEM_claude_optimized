@@ -58,7 +58,7 @@ class CorrelationResult:
     strength: str  # "weak", "moderate", "strong", "very_strong"
     sample_size: int
     method_used: str
-    additional_metrics: Dict[str, Any]
+    additional_metrics: dict[str, Any]
 
 
 @dataclass
@@ -71,19 +71,19 @@ class TimeSeriesCorrelation:
     best_lag: int
     best_correlation: float
     lead_lag_relationship: str  # "a_leads_b", "b_leads_a", "simultaneous"
-    granger_causality: Dict[str, Any] | None = None
+    granger_causality: dict[str, Any] | None = None
 
 
 @dataclass
 class CorrelationMatrix:
     """Complete correlation matrix analysis."""
 
-    metrics: List[str]
+    metrics: list[str]
     correlation_matrix: np.ndarray
     p_value_matrix: np.ndarray
     significance_matrix: np.ndarray
-    cluster_groups: list[List[str]]
-    principal_components: Dict[str, Any] | None = None
+    cluster_groups: list[list[str]]
+    principal_components: dict[str, Any] | None = None
 
 
 @dataclass
@@ -96,7 +96,7 @@ class CausalAnalysis:
     confidence: float
     lag_days: int
     causal_type: str  # "direct", "indirect", "spurious"
-    supporting_evidence: List[str]
+    supporting_evidence: list[str]
 
 
 class CorrelationEngine:
@@ -618,9 +618,9 @@ class CorrelationEngine:
     async def _cluster_correlated_metrics(
         self,
         correlation_matrix: np.ndarray,
-        metrics: List[str],
+        metrics: list[str],
         significance_matrix: np.ndarray,
-    ) -> list[List[str]]:
+    ) -> list[list[str]]:
         """Cluster metrics based on correlation patterns."""
         try:
             # Use absolute correlation values for clustering
@@ -658,7 +658,7 @@ class CorrelationEngine:
             logger.error("Metric clustering failed: %s", e)
             return [[metric] for metric in metrics]
 
-    async def _perform_pca(self, df: pd.DataFrame) -> Dict[str, Any]:
+    async def _perform_pca(self, df: pd.DataFrame) -> dict[str, Any]:
         """Perform Principal Component Analysis."""
         try:
             # Standardize the data
@@ -791,9 +791,9 @@ class CorrelationEngine:
 
     async def analyze_correlations(
         self,
-        metrics: List[str],
+        metrics: list[str],
         time_range: str = "24h",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze correlations between multiple metrics.
 
         Args:
@@ -855,12 +855,12 @@ class CorrelationEngine:
                         )
 
                         # Fill correlation matrix
-                        correlation_matrix[i, j] = (
-                            correlation_result.correlation_coefficient
-                        )
-                        correlation_matrix[j, i] = (
-                            correlation_result.correlation_coefficient
-                        )
+                        correlation_matrix[
+                            i, j
+                        ] = correlation_result.correlation_coefficient
+                        correlation_matrix[
+                            j, i
+                        ] = correlation_result.correlation_coefficient
 
                 # Diagonal is 1.0
                 correlation_matrix[i, i] = 1.0
@@ -899,7 +899,7 @@ class CorrelationEngine:
 
     async def _generate_mock_metrics_data(
         self,
-        metrics: List[str],
+        metrics: list[str],
         time_range: str,
     ) -> dict[str, list[float]]:
         """Generate mock data for multiple metrics."""
@@ -989,7 +989,7 @@ class CorrelationEngine:
         except Exception:
             return 24
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check the health of the correlation engine."""
         try:
             # Test basic functionality

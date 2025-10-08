@@ -70,7 +70,7 @@ class TestRealTimeMonitoringDashboard:
         return Mock()
 
     @pytest_asyncio.fixture
-    async def dashboard(self) -> None:
+async def dashboard(self, dashboard_config: Any = None) -> None:
         """Create dashboard instance for testing"""
         dashboard = RealTimeMonitoringDashboard(dashboard_config)
         yield dashboard
@@ -115,7 +115,7 @@ class TestRealTimeMonitoringDashboard:
         assert dashboard.health_checker is not None
 
     @pytest.mark.asyncio
-    async def test_should_collect_metrics_from_integrated_systems(self) -> None:
+async def test_should_collect_metrics_from_integrated_systems(self, mock_cache_manager: Any = None) -> None:
         """
         Test: Should collect comprehensive metrics from cache and
         ingestion systems with proper data structure.
@@ -174,7 +174,7 @@ class TestRealTimeMonitoringDashboard:
         assert latest_point.value == 149.0
 
     @pytest.mark.asyncio
-    async def test_should_perform_comprehensive_health_checks(self) -> None:
+async def test_should_perform_comprehensive_health_checks(self, mock_cache_manager: Any = None) -> None:
         """
         Test: Should perform multi-component health assessment
         with proper status calculation and alerting.
@@ -200,7 +200,7 @@ class TestRealTimeMonitoringDashboard:
             assert status in list(HealthStatus)
 
     @pytest.mark.asyncio
-    async def test_should_generate_alerts_for_unhealthy_conditions(self) -> None:
+async def test_should_generate_alerts_for_unhealthy_conditions(self, dashboard_config: Any = None) -> None:
         """
         Test: Should detect unhealthy system conditions and
         generate appropriate alerts with severity levels.
@@ -232,7 +232,7 @@ class TestRealTimeMonitoringDashboard:
         )
 
     @pytest.mark.asyncio
-    async def test_should_export_comprehensive_dashboard_data(self) -> None:
+async def test_should_export_comprehensive_dashboard_data(self, mock_cache_manager: Any = None) -> None:
         """
         Test: Should generate complete dashboard data export
         with metrics, health, and system information.
@@ -270,7 +270,7 @@ class TestRealTimeMonitoringDashboard:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_handle_concurrent_metric_collection_safely(self) -> None:
+async def test_should_handle_concurrent_metric_collection_safely(self, mock_cache_manager: Any = None) -> None:
         """
         Test: Should handle concurrent metric collection and health
         monitoring without race conditions or data corruption.
@@ -332,7 +332,7 @@ class TestRealTimeMonitoringDashboard:
             assert len(points) <= self.dashboard.config.max_data_points
 
     @pytest.mark.asyncio
-    async def test_should_export_metrics_to_file_successfully(self) -> None:
+async def test_should_export_metrics_to_file_successfully(self, mock_cache_manager: Any = None) -> None:
         """
         Test: Should export comprehensive metrics data to JSON file
         with proper formatting and completeness.

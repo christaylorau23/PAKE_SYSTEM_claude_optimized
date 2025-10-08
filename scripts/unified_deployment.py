@@ -65,7 +65,7 @@ class DeploymentConfig:
 class PAKEUnifiedDeployment:
     """Unified deployment system addressing all PAKE+ system issues"""
 
-    def __init__(self) -> None:
+def __init__(self, config: Any = None) -> None:
         self.config = config or DeploymentConfig()
         self.base_dir = Path(__file__).parent.parent
         self.logs_dir = self.base_dir / "logs"
@@ -304,7 +304,7 @@ class PAKEUnifiedDeployment:
         # Require all critical validations to pass
         return success_count == total_count
 
-    async def _validate_system_requirements(self) -> bool:
+async def _validate_system_requirements(self, logger: Any = None) -> bool:
         """Validate system requirements"""
         try:
             # Check Python version
@@ -453,7 +453,7 @@ class PAKEUnifiedDeployment:
 
         return True
 
-    async def _validate_permissions(self) -> bool:
+async def _validate_permissions(self, logger: Any = None) -> bool:
         """Validate file system permissions"""
         try:
             # Test write permission in base directory
@@ -1099,7 +1099,7 @@ Deployment verification in progress...
             self.logger.error("Integration verification failed: %s", e)
             return False
 
-    async def _phase_finalization(self) -> bool:
+async def _phase_finalization(self, logger: Any = None) -> bool:
         """Phase 6: Deployment finalization"""
         self.logger.info("🏁 Finalizing deployment...")
 
@@ -1142,7 +1142,7 @@ Deployment verification in progress...
             self.logger.error("Deployment finalization failed: %s", e)
             return False
 
-    async def _generate_deployment_report(self) -> None:
+async def _generate_deployment_report(self, success: Any = None, logger: Any = None, success: Any = None) -> None:
         """Generate comprehensive deployment report"""
         try:
             duration = (
@@ -1195,7 +1195,7 @@ Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
                     }\n"
 
                     report += "\n### Service Details\n"
-                    for service_name, info in status["services"].items():
+                    for _service_name, info in status["services"].items():
                         status_icon = {
                             "running": "🟢",
                             "stopped": "🔴",
@@ -1245,7 +1245,7 @@ Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")}
         except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Failed to generate deployment report: %s", e)
 
-    def _show_installation_instructions(self) -> None:
+def _show_installation_instructions(self, missing_prereqs: Any = None) -> None:
         """Show installation instructions for missing prerequisites"""
         instructions = {
             "docker": "Install Docker Desktop from: https://docs.docker.com/get-docker/",

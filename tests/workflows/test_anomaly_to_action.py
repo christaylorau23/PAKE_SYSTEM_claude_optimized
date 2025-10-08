@@ -41,7 +41,7 @@ except ImportError:
 class MockSecurityAlert:
     """Mock of SecurityAlert from ai-security-monitor.py"""
 
-    def __init__(self) -> None:
+def __init__(self, severity: Any = None, pattern_type: Any = None, message: str, ai_confidence: Any = None, source_ip: Any = None) -> None:
         self.id = id
         self.timestamp = datetime.now(UTC)
         self.severity = severity
@@ -239,7 +239,7 @@ class TestWorkflowRules:
             ),
         ]
 
-    def test_rule_matching(self) -> None:
+def test_rule_matching(self, workflow_rules: Any = None) -> None:
         """Test that rules correctly match security alerts"""
         critical_alert = sample_security_alerts[1]  # CRITICAL SQL injection
 
@@ -253,7 +253,7 @@ class TestWorkflowRules:
         assert matching_rule.name == "critical_immediate_response"
         assert matching_rule.priority == IncidentPriority.CRITICAL
 
-    def test_rule_execution_creates_correct_task_properties(self) -> None:
+def test_rule_execution_creates_correct_task_properties(self, workflow_rules: Any = None) -> None:
         """Test that rule execution sets correct task properties"""
         rule = workflow_rules[0]  # critical_immediate_response
         alert = MockSecurityAlert(
@@ -374,7 +374,7 @@ class TestTaskManagementIntegration:
         """Mock task management system"""
         return MagicMock(spec=TaskManagementSystem)
 
-    def test_task_creation_in_management_system(self) -> None:
+def test_task_creation_in_management_system(self, task_manager: Any = None) -> None:
         """Test that tasks are properly created in the task management system"""
         alert = MockSecurityAlert("test", "HIGH", "failed_login", "Test alert")
 
@@ -391,7 +391,7 @@ class TestTaskManagementIntegration:
         assert created_task.priority is not None
         assert created_task.assignment is not None
 
-    def test_task_assignment_logic(self) -> None:
+def test_task_assignment_logic(self, task_manager: Any = None) -> None:
         """Test that tasks are assigned to appropriate team members"""
         alerts = [
             MockSecurityAlert("test1", "CRITICAL", "sql_injection", "SQL injection"),

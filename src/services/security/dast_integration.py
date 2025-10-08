@@ -126,7 +126,12 @@ class ScanResult:
 class OWASPZAPClient:
     """OWASP ZAP API client for DAST scanning."""
 
-    def __init__(self, zap_host: str = "localhost", zap_port: int = 8080, api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        zap_host: str = "localhost",
+        zap_port: int = 8080,
+        api_key: str | None = None,
+    ) -> None:
         self.zap_host = zap_host
         self.zap_port = zap_port
         self.api_key = api_key

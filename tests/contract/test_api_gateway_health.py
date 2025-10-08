@@ -31,7 +31,7 @@ class TestAPIGatewayHealthContract:
             yield client
 
     @pytest.mark.asyncio
-    async def test_health_endpoint_exists(self) -> None:
+async def test_health_endpoint_exists(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that /health endpoint exists and is accessible
 
@@ -48,7 +48,7 @@ class TestAPIGatewayHealthContract:
         ], f"Health endpoint returned {response.status_code}, expected 200 or 503"
 
     @pytest.mark.asyncio
-    async def test_health_response_schema(self) -> None:
+async def test_health_response_schema(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that /health endpoint returns correct JSON schema
 
@@ -92,7 +92,7 @@ class TestAPIGatewayHealthContract:
         ), "Services field must be an object"
 
     @pytest.mark.asyncio
-    async def test_health_endpoint_response_time(self) -> None:
+async def test_health_endpoint_response_time(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that /health endpoint meets performance requirements
 
@@ -114,7 +114,7 @@ class TestAPIGatewayHealthContract:
         ), f"Health endpoint took {response_time:.3f}s, must be <1s"
 
     @pytest.mark.asyncio
-    async def test_health_includes_downstream_services(self) -> None:
+async def test_health_includes_downstream_services(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that health endpoint includes downstream service status
 
@@ -154,7 +154,7 @@ class TestAPIGatewayHealthContract:
             ], f"Invalid status for service {service_name}: {service_health['status']}"
 
     @pytest.mark.asyncio
-    async def test_health_endpoint_content_type(self) -> None:
+async def test_health_endpoint_content_type(self, api_gateway_base_url: Any = None) -> None:
         """
         Test that /health endpoint returns correct content type
 
@@ -171,7 +171,7 @@ class TestAPIGatewayHealthContract:
         ), f"Expected application/json content type, got: {response.headers.get('content-type')}"
 
     @pytest.mark.asyncio
-    async def test_health_endpoint_supports_query_parameters(self) -> None:
+async def test_health_endpoint_supports_query_parameters(self, api_gateway_base_url: Any = None, api_gateway_base_url: Any = None) -> None:
         """
         Test that /health endpoint supports optional query parameters
 
@@ -204,7 +204,7 @@ class TestAPIGatewayHealthPerformance:
     """Performance contract tests for API Gateway health endpoint"""
 
     @pytest.mark.asyncio
-    async def test_health_endpoint_concurrent_load(self) -> None:
+async def test_health_endpoint_concurrent_load(self, api_gateway_base_url: Any = None) -> None:
         """
         Test health endpoint under concurrent load
 
@@ -212,7 +212,7 @@ class TestAPIGatewayHealthPerformance:
         Performance Target: All requests complete within 5 seconds
         """
 
-        async def single_health_check(self) -> None:
+async def single_health_check(self, api_gateway_base_url: Any = None) -> None:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(f"{api_gateway_base_url}/health")
                 return response.status_code in [200, 503]

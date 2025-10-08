@@ -24,7 +24,11 @@ logger = logging.getLogger(__name__)
 class PAKESystemService:
     """Example PAKE System service using Repository Pattern."""
 
-    def __init__(self, repository_container: RepositoryContainer | None = None, session: AsyncSession | None = None) -> None:
+    def __init__(
+        self,
+        repository_container: RepositoryContainer | None = None,
+        session: AsyncSession | None = None,
+    ) -> None:
         """Initialize service with repository container or session."""
         if repository_container:
             # Use provided repository container
@@ -50,7 +54,7 @@ class PAKESystemService:
         email: str,
         password_hash: str,
         full_name: str | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create user account with comprehensive business logic."""
         try:
             # Use user service with repository pattern
@@ -95,7 +99,7 @@ class PAKESystemService:
         self,
         email: str,
         password_hash: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Authenticate user with comprehensive business logic."""
         try:
             # Use user service with repository pattern
@@ -131,7 +135,7 @@ class PAKESystemService:
                 "error_type": "server_error",
             }
 
-    async def get_user_profile(self, user_id: str) -> Dict[str, Any]:
+    async def get_user_profile(self, user_id: str) -> dict[str, Any]:
         """Get user profile with business logic."""
         try:
             user = await self.user_service.get_user_by_id(user_id)
@@ -167,8 +171,8 @@ class PAKESystemService:
     async def update_user_preferences(
         self,
         user_id: str,
-        preferences: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        preferences: dict[str, Any],
+    ) -> dict[str, Any]:
         """Update user preferences with business logic."""
         try:
             updated_user = await self.user_service.update_user_profile(
@@ -210,7 +214,7 @@ class PAKESystemService:
         self,
         user_id: str,
         deactivated_by: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Deactivate user account with business logic."""
         try:
             success = await self.user_service.deactivate_user(user_id, deactivated_by)
@@ -256,7 +260,7 @@ class PAKESystemService:
         query: str,
         limit: int = 100,
         offset: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Search users with business logic."""
         try:
             users = await self.user_service.search_users(
@@ -302,7 +306,7 @@ class PAKESystemService:
                 "error_type": "server_error",
             }
 
-    async def get_system_statistics(self) -> Dict[str, Any]:
+    async def get_system_statistics(self) -> dict[str, Any]:
         """Get comprehensive system statistics."""
         try:
             user_stats = await self.user_service.get_user_statistics()
@@ -329,7 +333,7 @@ class PAKESystemService:
                 "error_type": "server_error",
             }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Comprehensive health check."""
         try:
             # Check repository container health

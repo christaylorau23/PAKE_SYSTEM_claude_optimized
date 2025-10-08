@@ -18,7 +18,6 @@ async def test_pubmed_debug(self) -> None:
     """Debug PubMed service behavior"""
     try:
         from aioresponses import aioresponses
-
         from services.ingestion.pubmed_service import PubMedSearchQuery, PubMedService
 
         print("🧪 Debugging PubMedService behavior...")

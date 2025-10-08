@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE+ Async Task Queue System
@@ -19,7 +20,6 @@ from celery import Celery
 from celery.result import AsyncResult
 from kombu import Exchange, Queue
 import redis.asyncio as redis
-
 from utils.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
@@ -86,7 +86,7 @@ class TaskResult:
     completed_at: datetime | None = None
     duration: float | None = None
     retries: int = 0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class TaskQueueError(PAKEException):
@@ -101,7 +101,13 @@ class AsyncTaskQueue:
     Includes circuit breaker protection, retry mechanisms, and comprehensive monitoring.
     """
 
-    def __init__(self, redis_url: str = "redis://localhost:6379", broker_url: str | None = None, result_backend: str | None = None, app_name: str = "pake_tasks") -> None:
+    def __init__(
+        self,
+        redis_url: str = "redis://localhost:6379",
+        broker_url: str | None = None,
+        result_backend: str | None = None,
+        app_name: str = "pake_tasks",
+    ) -> None:
         self.redis_url = redis_url
         self.broker_url = broker_url or redis_url
         self.result_backend = result_backend or redis_url
@@ -234,7 +240,9 @@ class AsyncTaskQueue:
         except (ImportError, ModuleNotFoundError) as e:
             self.logger.error("Error disconnecting from task queue", error=e)
 
-    def task(self, name: str | None = None, config: TaskConfig | None = None) -> Callable:
+    def task(
+        self, name: str | None = None, config: TaskConfig | None = None
+    ) -> Callable:
         """Decorator to register async functions as Celery tasks."""
 
         def decorator(func: Callable) -> Callable:
@@ -444,14 +452,14 @@ class AsyncTaskQueue:
             self.logger.error("Failed to cancel task %s", task_id, error=e)
             return False
 
-    async def get_queue_stats(self) -> Dict[str, Any]:
+    async def get_queue_stats(self) -> dict[str, Any]:
         """Get comprehensive queue statistics."""
         try:
             active_tasks = self.celery_app.control.inspect().active()
             scheduled_tasks = self.celery_app.control.inspect().scheduled()
             reserved_tasks = self.celery_app.control.inspect().reserved()
 
-            stats = {
+            return {
                 "active_tasks": active_tasks or {},
                 "scheduled_tasks": scheduled_tasks or {},
                 "reserved_tasks": reserved_tasks or {},
@@ -465,8 +473,6 @@ class AsyncTaskQueue:
                     len(tasks) for tasks in (reserved_tasks or {}).values()
                 ),
             }
-
-            return stats
 
         except (ValueError, RuntimeError) as e:
             self.logger.error("Failed to get queue stats", error=e)
@@ -560,8 +566,8 @@ async def task_queue_context(redis_url: str = "redis://localhost:6379") -> Any:
 )
 async def process_document_task(
     document_id: str,
-    options: Dict[str, Any] = None,
-) -> Dict[str, Any]:
+    options: dict[str, Any] = None,
+) -> dict[str, Any]:
     """Example AI processing task."""
     logger.info("Processing document %s with options %s", document_id, options)
 
@@ -588,8 +594,8 @@ async def process_document_task(
 )
 async def sync_knowledge_vault_task(
     vault_path: str,
-    sync_options: Dict[str, Any] = None,
-) -> Dict[str, Any]:
+    sync_options: dict[str, Any] = None,
+) -> dict[str, Any]:
     """Example data synchronization task."""
     logger.info("Syncing knowledge vault at %s", vault_path)
 

@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 from enum import Enum
 import json
 import logging
-from typing import Any, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 import uuid
 import weakref
 
@@ -75,7 +75,7 @@ class WebSocketMessage:
     """Structured WebSocket message."""
 
     message_type: MessageType
-    data: Dict[str, Any]
+    data: dict[str, Any]
     timestamp: datetime
     user_id: str | None = None
     session_id: str | None = None
@@ -131,7 +131,13 @@ class WebSocketManager:
     - Performance metrics
     """
 
-    def __init__(self, config: WebSocketConfig, auth_service: JWTAuthenticationService, database_service: PostgreSQLService, cache_service: RedisCacheService) -> None:
+    def __init__(
+        self,
+        config: WebSocketConfig,
+        auth_service: JWTAuthenticationService,
+        database_service: PostgreSQLService,
+        cache_service: RedisCacheService,
+    ) -> None:
         self.config = config
         self.auth_service = auth_service
         self.database_service = database_service
@@ -262,7 +268,7 @@ class WebSocketManager:
         self,
         websocket: WebSocketServerProtocol,
         session_id: str,
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Authenticate WebSocket connection."""
         try:
             # Wait for auth message
@@ -357,7 +363,7 @@ class WebSocketManager:
         self,
         websocket: WebSocketServerProtocol,
         session_id: str,
-        user_data: Dict[str, Any] | None,
+        user_data: dict[str, Any] | None,
     ) -> None:
         """Register a new connection."""
         try:
@@ -577,7 +583,7 @@ class WebSocketManager:
     async def _broadcast_to_subscribed(
         self,
         subscription: str,
-        message_data: Dict[str, Any],
+        message_data: dict[str, Any],
     ) -> int:
         """Broadcast to users subscribed to a specific topic."""
         sent_count = 0
@@ -710,7 +716,9 @@ class WebSocketManager:
     def _setup_default_handlers(self) -> None:
         """Setup default message handlers."""
 
-        async def handle_ping(self, websocket: WebSocketServerProtocol, message_data: Dict[str, Any]) -> None:
+        async def handle_ping(
+            self, websocket: WebSocketServerProtocol, message_data: dict[str, Any]
+        ) -> None:
             pong_message = WebSocketMessage(
                 message_type=MessageType.PONG,
                 data={"timestamp": datetime.now(UTC).isoformat()},
@@ -718,7 +726,9 @@ class WebSocketManager:
             )
             await self._send_message(websocket, pong_message)
 
-        async def handle_subscribe(self, websocket: WebSocketServerProtocol, message_data: Dict[str, Any]) -> None:
+        async def handle_subscribe(
+            self, websocket: WebSocketServerProtocol, message_data: dict[str, Any]
+        ) -> None:
             user_info = self.websocket_to_user.get(websocket)
             if user_info and hasattr(user_info, "subscriptions"):
                 subscriptions = message_data.get("data", {}).get("subscriptions", [])
@@ -740,7 +750,7 @@ class WebSocketManager:
     async def notify_search_started(
         self,
         user_id: str,
-        search_data: Dict[str, Any],
+        search_data: dict[str, Any],
     ) -> None:
         """Notify user that search has started."""
         message = WebSocketMessage(
@@ -754,7 +764,7 @@ class WebSocketManager:
     async def notify_search_progress(
         self,
         user_id: str,
-        progress_data: Dict[str, Any],
+        progress_data: dict[str, Any],
     ) -> None:
         """Notify user of search progress."""
         message = WebSocketMessage(
@@ -768,7 +778,7 @@ class WebSocketManager:
     async def notify_search_completed(
         self,
         user_id: str,
-        results_data: Dict[str, Any],
+        results_data: dict[str, Any],
     ) -> None:
         """Notify user that search is completed."""
         message = WebSocketMessage(
@@ -781,7 +791,7 @@ class WebSocketManager:
 
     async def notify_system_alert(
         self,
-        alert_data: Dict[str, Any],
+        alert_data: dict[str, Any],
         admin_only: bool = False,
     ) -> None:
         """Send system alert notification."""
@@ -796,7 +806,7 @@ class WebSocketManager:
         else:
             await self.broadcast_to_all(message)
 
-    def get_connection_stats(self) -> Dict[str, Any]:
+    def get_connection_stats(self) -> dict[str, Any]:
         """Get current connection statistics."""
         return {
             "connected_users": len(self.connected_users),

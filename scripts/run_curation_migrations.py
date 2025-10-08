@@ -1,5 +1,5 @@
-from typing import List
-from typing import Dict
+from typing import Dict, List
+
 #!/usr/bin/env python3
 """
 Intelligent Content Curation - Database Migration Runner
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 class MigrationRunner:
     """Handles database migrations for the curation system."""
 
-    def __init__(self) -> None:
+def __init__(self, connection_config: Any = None) -> None:
         self.connection_config = connection_config
         self.migrations_dir = Path(__file__).parent / "migrations"
         self.migration_files = [
@@ -102,7 +102,7 @@ class MigrationRunner:
             logger.error("Failed to create migration table: %s", e)
             raise
 
-    async def get_applied_migrations(self, conn: asyncpg.Connection) -> List[str]:
+    async def get_applied_migrations(self, conn: asyncpg.Connection) -> list[str]:
         """Get list of already applied migrations."""
         try:
             rows = await conn.fetch(
@@ -255,7 +255,7 @@ class MigrationRunner:
             logger.error("Failed to rollback migration %s: %s", filename, e)
             return False
 
-    async def get_migration_status(self) -> Dict[str, Any]:
+    async def get_migration_status(self) -> dict[str, Any]:
         """Get current migration status."""
         try:
             conn = await self.create_connection()
@@ -298,7 +298,7 @@ class MigrationRunner:
             return {"error": str(e)}
 
 
-def get_database_config() -> Dict[str, Any]:
+def get_database_config() -> dict[str, Any]:
     """Get database connection configuration from environment variables."""
     # Check for full database URL first
     database_url = os.getenv("DATABASE_URL")

@@ -1,4 +1,5 @@
 from typing import List
+
 """PredictionEngine - Advanced trend prediction and forecasting.
 
 Uses machine learning and statistical models for trend prediction and opportunity timing.
@@ -26,7 +27,7 @@ class PredictionResult:
     confidence: float
     time_horizon_hours: int
     prediction_timestamp: datetime
-    supporting_factors: List[str]
+    supporting_factors: list[str]
 
 
 @dataclass
@@ -392,7 +393,7 @@ class PredictionEngine:
         self,
         momentum_values: list[float],
         time_intervals: list[float],
-    ) -> List[str]:
+    ) -> list[str]:
         """Analyze factors affecting momentum prediction."""
         factors = []
 
@@ -674,7 +675,7 @@ class PredictionEngine:
     async def batch_predict(
         self,
         trends_data: dict[str, list[TrendSignal]],
-        prediction_types: List[str] = None,
+        prediction_types: list[str] = None,
     ) -> dict[str, list[PredictionResult]]:
         """Run batch predictions for multiple trends."""
         if prediction_types is None:

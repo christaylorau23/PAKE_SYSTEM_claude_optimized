@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 class CurationRequestModel(BaseModel):
     user_id: str = Field(..., description="User ID for personalization")
     query: str | None = Field(None, description="Search query")
-    interests: List[str] = Field(default_factory=list, description="User interests")
-    content_types: List[str] = Field(
+    interests: list[str] = Field(default_factory=list, description="User interests")
+    content_types: list[str] = Field(
         default_factory=list,
         description="Preferred content types",
     )
@@ -59,7 +59,7 @@ class FeedbackRequestModel(BaseModel):
         ...,
         description="Type of feedback (like, dislike, share, save, etc.)",
     )
-    feedback_data: Dict[str, Any] = Field(
+    feedback_data: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional feedback data",
     )
@@ -89,7 +89,7 @@ class CurationResponseModel(BaseModel):
 class SystemHealthModel(BaseModel):
     services_healthy: dict[str, bool]
     models_loaded: dict[str, bool]
-    cache_status: Dict[str, Any]
+    cache_status: dict[str, Any]
     performance_metrics: dict[str, float]
     last_updated: datetime
 
@@ -397,7 +397,7 @@ async def get_user_profile(
 @app.put("/user/{user_id}/profile")
 async def update_user_profile(
     user_id: str,
-    interests: List[str] | None = Body(None),
+    interests: list[str] | None = Body(None),
     preference_weights: dict[str, float] | None = Body(None),
     orch: CurationOrchestrator = Depends(get_orchestrator),
 ):

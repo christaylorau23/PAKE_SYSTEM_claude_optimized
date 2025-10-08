@@ -1,4 +1,5 @@
 from typing import List
+
 #!/usr/bin/env python3
 """
 Social Media Distribution Network
@@ -32,18 +33,18 @@ class SocialPost:
     """Data class for social media posts"""
 
     content: str
-    media_paths: List[str] = None
-    platforms: List[str] = None
+    media_paths: list[str] = None
+    platforms: list[str] = None
     scheduled_time: datetime = None
-    hashtags: List[str] = None
-    mentions: List[str] = None
+    hashtags: list[str] = None
+    mentions: list[str] = None
     metadata: dict = None
 
 
 class SocialMediaDistributor:
     """Main class for multi-platform social media distribution"""
 
-    def __init__(self) -> None:
+def __init__(self, config_path: Any = None) -> None:
         """Initialize with configuration"""
         self.config = self._load_config(config_path)
         self.platforms = {}
@@ -150,7 +151,7 @@ class SocialMediaDistributor:
             }
             self.logger.info("LinkedIn client initialized")
 
-    def _generate_optimal_schedule(self) -> dict[str, List[str]]:
+    def _generate_optimal_schedule(self) -> dict[str, list[str]]:
         """Generate optimal posting times based on platform best practices"""
         return {
             "twitter": ["09:00", "12:00", "15:00", "17:00", "20:00"],
@@ -456,7 +457,7 @@ class SocialMediaDistributor:
 
         return content
 
-    def _split_into_tweets(self, content: str) -> List[str]:
+    def _split_into_tweets(self, content: str) -> list[str]:
         """Split long content into tweet-sized chunks"""
         tweets = []
         words = content.split()
@@ -480,7 +481,7 @@ class SocialMediaDistributor:
 
         return tweets
 
-    def schedule_post(self) -> None:
+def schedule_post(self, scheduled_time: Any = None, post: Any = None, scheduled_time: Any = None, scheduled_time: Any = None, post: Any = None) -> None:
         """Schedule a post for later publication"""
         if scheduled_time:
             post.scheduled_time = scheduled_time
@@ -490,7 +491,7 @@ class SocialMediaDistributor:
             post,
         ).tag(f"scheduled_post_{int(time.time())}")
 
-    def _execute_scheduled_post(self) -> None:
+def _execute_scheduled_post(self, post: Any = None) -> None:
         """Execute a scheduled post"""
         asyncio.run(self.post_to_all_platforms(post))
 

@@ -5,13 +5,14 @@ Advanced tools for detecting, monitoring, and preventing race conditions in asyn
 
 import asyncio
 from collections import defaultdict, deque
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 import functools
 import logging
 import threading
 import time
-from typing import Any, Callable
+from typing import Any
 import weakref
 
 logger = logging.getLogger("race_condition_monitor")
@@ -175,7 +176,9 @@ class RaceConditionMonitor:
                     )
                     self.metrics.concurrent_access_count += 1
 
-    def track_lock_acquisition(self, lock_name: str, task_id: str | None = None) -> None:
+    def track_lock_acquisition(
+        self, lock_name: str, task_id: str | None = None
+    ) -> None:
         """Track lock acquisition."""
         if task_id is None:
             task_id = self._get_task_id()
@@ -228,7 +231,9 @@ class RaceConditionMonitor:
         with self._lock:
             self.active_locks[lock_name].discard(task_id)
 
-    def _record_race_condition(self, event_type: str, location: str, details: dict[str, Any], severity: str) -> None:
+    def _record_race_condition(
+        self, event_type: str, location: str, details: dict[str, Any], severity: str
+    ) -> None:
         """Record a race condition event."""
         event = RaceConditionEvent(
             timestamp=time.time(),

@@ -1,237 +1,247 @@
 #!/usr/bin/env python3
-"""
-Phase 3: Error Handling Standardization
-Fixes 1,045 broad exception handlers and try-except-pass blocks
+"""Phase 3: Error Handling Standardization
+Fixes 1,045 broad exception handlers and try-except-pass blocks.
 """
 
+from collections import Counter
 import os
+from pathlib import Path
 import re
 import subprocess
-from pathlib import Path
-from typing import Dict, List, Tuple, Any, Optional
-from collections import Counter
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class Phase3ErrorHandlerStandardizer:
-    """Systematic error handling standardizer for PAKE System"""
-    
+    """Systematic error handling standardizer for PAKE System."""
+
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
         self.fixes_applied = Counter()
         self.files_processed = set()
-        
+
         # Common exception patterns and their specific replacements
         self.exception_patterns = {
             # Network-related exceptions
-            r'except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?requests\.|aiohttp\.|httpx\.': 'except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:',
-            r'except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?urllib\.|urllib3\.': 'except (ConnectionError, TimeoutError, urllib.error.URLError) as e:',
-            
+            r"except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?requests\.|aiohttp\.|httpx\.": "except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:",
+            r"except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?urllib\.|urllib3\.": "except (ConnectionError, TimeoutError, urllib.error.URLError) as e:",
             # File operations
-            r'except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?open\(|Path\(|file': 'except (FileNotFoundError, PermissionError, OSError) as e:',
-            
+            r"except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?open\(|Path\(|file": "except (FileNotFoundError, PermissionError, OSError) as e:",
             # Database operations
-            r'except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?sqlalchemy\.|psycopg2\.|asyncpg\.': 'except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:',
-            
+            r"except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?sqlalchemy\.|psycopg2\.|asyncpg\.": "except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:",
             # JSON operations
-            r'except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?json\.|orjson\.': 'except (json.JSONDecodeError, ValueError) as e:',
-            
+            r"except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?json\.|orjson\.": "except (json.JSONDecodeError, ValueError) as e:",
             # Import errors
-            r'except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?import|from.*import': 'except (ImportError, ModuleNotFoundError) as e:',
-            
+            r"except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?import|from.*import": "except (ImportError, ModuleNotFoundError) as e:",
             # Validation errors
-            r'except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?pydantic\.|validate': 'except (pydantic.ValidationError, ValueError) as e:',
+            r"except (ConnectionError, TimeoutError, aiohttp.ClientError) as e:.*?pydantic\.|validate": "except (pydantic.ValidationError, ValueError) as e:",
         }
-        
+
         # Priority files with known error handling issues
         self.priority_files = [
-            'src/services/ingestion/firecrawl_service.py',
-            'src/services/ingestion/pubmed_service.py',
-            'src/services/ingestion/arxiv_enhanced_service.py',
-            'src/services/analytics/intelligence_insight_service.py',
-            'src/services/secrets/migration_service.py',
-            'src/pake_system/core/config.py',
-            'src/pake_system/core/vault_client.py'
+            "src/services/ingestion/firecrawl_service.py",
+            "src/services/ingestion/pubmed_service.py",
+            "src/services/ingestion/arxiv_enhanced_service.py",
+            "src/services/analytics/intelligence_insight_service.py",
+            "src/services/secrets/migration_service.py",
+            "src/pake_system/core/config.py",
+            "src/pake_system/core/vault_client.py",
         ]
 
-    def get_broad_exception_errors(self) -> Dict[str, List[Tuple[int, str]]]:
+    def get_broad_exception_errors(self) -> dict[str, list[tuple[int, str]]]:
         """Get broad exception handling patterns from codebase."""
         errors_by_file = {}
-        
-        for py_file in self.project_root.rglob('*.py'):
+
+        for py_file in self.project_root.rglob("*.py"):
             try:
-                with open(py_file, 'r', encoding='utf-8') as f:
+                with open(py_file, encoding="utf-8") as f:
                     content = f.read()
-                
+
                 lines = content.splitlines()
                 file_errors = []
-                
+
                 for line_num, line in enumerate(lines, 1):
                     # Find broad exception patterns
-                    if re.search(r'except\s+Exception\s+as\s+\w+:', line):
-                        file_errors.append((line_num, 'broad_exception'))
-                    elif re.search(r'except\s*:\s*$', line):
-                        file_errors.append((line_num, 'bare_except'))
-                    elif re.search(r'except\s+.*:\s*\n\s*pass', line, re.MULTILINE):
-                        file_errors.append((line_num, 'except_pass'))
-                
+                    if re.search(r"except\s+Exception\s+as\s+\w+:", line):
+                        file_errors.append((line_num, "broad_exception"))
+                    elif re.search(r"except\s*:\s*$", line):
+                        file_errors.append((line_num, "bare_except"))
+                    elif re.search(r"except\s+.*:\s*\n\s*pass", line, re.MULTILINE):
+                        file_errors.append((line_num, "except_pass"))
+
                 if file_errors:
                     errors_by_file[str(py_file)] = file_errors
-                    
+
             except Exception:
                 continue
-        
+
         return errors_by_file
 
-    def standardize_file_error_handling(self, file_path: Path, errors: List[Tuple[int, str]]) -> Tuple[bool, int]:
+    def standardize_file_error_handling(
+        self, file_path: Path, errors: list[tuple[int, str]]
+    ) -> tuple[bool, int]:
         """Standardize error handling in a single file."""
         if not file_path.exists():
             return False, 0
-            
+
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
-            
+
             original_content = content
             fixes_applied = 0
-            
+
             # Apply error handling patterns
             content = self._replace_broad_exceptions(content, file_path)
             content = self._replace_bare_exceptions(content, file_path)
             content = self._replace_except_pass(content, file_path)
-            
+
             # Ensure proper logging is available
             if content != original_content:
                 content = self._ensure_logging_import(content)
                 fixes_applied += 1
-            
+
             # Write back if changes were made
             if content != original_content:
-                with open(file_path, 'w', encoding='utf-8') as f:
+                with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 self.files_processed.add(str(file_path))
                 return True, fixes_applied
-                
+
         except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"Error standardizing {file_path}: {e}")
-            
+
         return False, 0
 
     def _replace_broad_exceptions(self, content: str, file_path: Path) -> str:
         """Replace broad Exception handlers with specific ones."""
         lines = content.splitlines()
-        
+
         for i, line in enumerate(lines):
             # Find broad exception patterns
-            if re.search(r'except\s+Exception\s+as\s+\w+:', line):
+            if re.search(r"except\s+Exception\s+as\s+\w+:", line):
                 # Look at context to determine specific exception type
-                context_lines = lines[max(0, i-5):i+3]
-                context = '\n'.join(context_lines)
-                
+                context_lines = lines[max(0, i - 5) : i + 3]
+                context = "\n".join(context_lines)
+
                 # Determine specific exception based on context
-                specific_exception = self._determine_specific_exception(context, file_path)
-                
+                specific_exception = self._determine_specific_exception(
+                    context, file_path
+                )
+
                 # Replace broad exception with specific one
                 lines[i] = re.sub(
-                    r'except\s+Exception\s+as\s+(\w+):',
-                    f'except {specific_exception} as \\1:',
-                    line
+                    r"except\s+Exception\s+as\s+(\w+):",
+                    f"except {specific_exception} as \\1:",
+                    line,
                 )
-        
-        return '\n'.join(lines)
+
+        return "\n".join(lines)
 
     def _replace_bare_exceptions(self, content: str, file_path: Path) -> str:
         """Replace bare except: with specific exception handling."""
         lines = content.splitlines()
-        
+
         for i, line in enumerate(lines):
-            if re.search(r'except\s*:\s*$', line):
+            if re.search(r"except\s*:\s*$", line):
                 # Look at context to determine specific exception type
-                context_lines = lines[max(0, i-5):i+3]
-                context = '\n'.join(context_lines)
-                
-                specific_exception = self._determine_specific_exception(context, file_path)
-                
+                context_lines = lines[max(0, i - 5) : i + 3]
+                context = "\n".join(context_lines)
+
+                specific_exception = self._determine_specific_exception(
+                    context, file_path
+                )
+
                 # Replace bare except with specific exception
                 lines[i] = re.sub(
-                    r'except\s*:',
-                    f'except {specific_exception} as e:',
-                    line
+                    r"except\s*:", f"except {specific_exception} as e:", line
                 )
-        
-        return '\n'.join(lines)
+
+        return "\n".join(lines)
 
     def _replace_except_pass(self, content: str, file_path: Path) -> str:
         """Replace try-except-pass blocks with proper error handling."""
         # Pattern for try-except-pass
-        pattern = r'(\s+)except\s*([^:]*):\s*\n\s*pass'
-        
+        pattern = r"(\s+)except\s*([^:]*):\s*\n\s*pass"
+
         def replace_except_pass(match):
             indent = match.group(1)
             exception_type = match.group(2).strip()
-            
+
             if exception_type:
                 return f'{indent}except {exception_type} as e:\n{indent}    logger.debug(f"Exception in {file_path.name}: {{e}}")\n{indent}    # Continue gracefully'
-            else:
-                return f'{indent}except (FileNotFoundError, PermissionError, OSError) as e:\n{indent}    logger.debug(f"Exception in {file_path.name}: {{e}}")\n{indent}    # Continue gracefully'
-        
+            return f'{indent}except (FileNotFoundError, PermissionError, OSError) as e:\n{indent}    logger.debug(f"Exception in {file_path.name}: {{e}}")\n{indent}    # Continue gracefully'
+
         return re.sub(pattern, replace_except_pass, content, flags=re.MULTILINE)
 
     def _determine_specific_exception(self, context: str, file_path: Path) -> str:
         """Determine specific exception type based on context."""
         context_lower = context.lower()
-        
+
         # Network operations
-        if any(keyword in context_lower for keyword in ['requests', 'aiohttp', 'httpx', 'urllib', 'http']):
-            return '(ConnectionError, TimeoutError, aiohttp.ClientError)'
-        
+        if any(
+            keyword in context_lower
+            for keyword in ["requests", "aiohttp", "httpx", "urllib", "http"]
+        ):
+            return "(ConnectionError, TimeoutError, aiohttp.ClientError)"
+
         # File operations
-        if any(keyword in context_lower for keyword in ['open(', 'path(', 'file', 'read', 'write']):
-            return '(FileNotFoundError, PermissionError, OSError)'
-        
+        if any(
+            keyword in context_lower
+            for keyword in ["open(", "path(", "file", "read", "write"]
+        ):
+            return "(FileNotFoundError, PermissionError, OSError)"
+
         # Database operations
-        if any(keyword in context_lower for keyword in ['sqlalchemy', 'psycopg2', 'asyncpg', 'database', 'db']):
-            return '(sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error)'
-        
+        if any(
+            keyword in context_lower
+            for keyword in ["sqlalchemy", "psycopg2", "asyncpg", "database", "db"]
+        ):
+            return "(sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error)"
+
         # JSON operations
-        if any(keyword in context_lower for keyword in ['json', 'orjson', 'loads', 'dumps']):
-            return '(json.JSONDecodeError, ValueError)'
-        
+        if any(
+            keyword in context_lower for keyword in ["json", "orjson", "loads", "dumps"]
+        ):
+            return "(json.JSONDecodeError, ValueError)"
+
         # Import operations
-        if any(keyword in context_lower for keyword in ['import', 'from']):
-            return '(ImportError, ModuleNotFoundError)'
-        
+        if any(keyword in context_lower for keyword in ["import", "from"]):
+            return "(ImportError, ModuleNotFoundError)"
+
         # Validation operations
-        if any(keyword in context_lower for keyword in ['pydantic', 'validate', 'schema']):
-            return '(pydantic.ValidationError, ValueError)'
-        
+        if any(
+            keyword in context_lower for keyword in ["pydantic", "validate", "schema"]
+        ):
+            return "(pydantic.ValidationError, ValueError)"
+
         # Default to more specific than bare Exception
-        return '(ValueError, RuntimeError)'
+        return "(ValueError, RuntimeError)"
 
     def _ensure_logging_import(self, content: str) -> str:
         """Ensure logging import is available."""
-        if 'import logging' not in content and 'logger' in content:
+        if "import logging" not in content and "logger" in content:
             lines = content.splitlines()
-            
+
             # Find the best place to insert import
             insert_index = 0
             for i, line in enumerate(lines):
-                if line.strip().startswith(('import ', 'from ')):
+                if line.strip().startswith(("import ", "from ")):
                     insert_index = i + 1
-                elif line.strip() and not line.strip().startswith('#'):
+                elif line.strip() and not line.strip().startswith("#"):
                     break
-            
+
             # Insert logging import
-            lines.insert(insert_index, 'import logging')
-            lines.insert(insert_index + 1, 'logger = logging.getLogger(__name__)')
-            
-            return '\n'.join(lines)
-        
+            lines.insert(insert_index, "import logging")
+            lines.insert(insert_index + 1, "logger = logging.getLogger(__name__)")
+
+            return "\n".join(lines)
+
         return content
 
     def create_error_handling_standards(self) -> bool:
         """Create error handling standards document."""
         try:
-            standards_content = '''# PAKE System Error Handling Standards
+            standards_content = """# PAKE System Error Handling Standards
 
 ## Overview
 
@@ -441,7 +451,7 @@ logger.debug(f"Exception details: {exception_type} - {exception_message}")
 def test_api_call_connection_error():
     with pytest.raises(NetworkException) as exc_info:
         api_client.api_call("http://invalid-url")
-    
+
     assert "Failed to connect" in str(exc_info.value)
     assert exc_info.value.original_exception is not None
 
@@ -473,81 +483,91 @@ When updating existing error handling:
 - [ ] Add unit tests for error cases
 - [ ] Update documentation
 - [ ] Verify error monitoring works correctly
-'''
-            
-            standards_path = self.project_root / 'ERROR_HANDLING_STANDARDS.md'
-            with open(standards_path, 'w', encoding='utf-8') as f:
+"""
+
+            standards_path = self.project_root / "ERROR_HANDLING_STANDARDS.md"
+            with open(standards_path, "w", encoding="utf-8") as f:
                 f.write(standards_content)
-            
+
             print(f"✅ Created error handling standards at {standards_path}")
             return True
-            
+
         except (FileNotFoundError, PermissionError, OSError) as e:
             print(f"❌ Error creating standards: {e}")
             return False
 
-    def run_systematic_error_standardization(self) -> Dict[str, Any]:
+    def run_systematic_error_standardization(self) -> dict[str, Any]:
         """Run systematic error handling standardization."""
         print("🛠️ Phase 3: Error Handling Standardization")
         print("=" * 60)
-        
+
         # Create standards first
         self.create_error_handling_standards()
-        
+
         # Get broad exception patterns
         errors_by_file = self.get_broad_exception_errors()
         total_errors = sum(len(errors) for errors in errors_by_file.values())
-        
-        print(f"📊 Found {total_errors} error handling issues across {len(errors_by_file)} files")
-        
+
+        print(
+            f"📊 Found {total_errors} error handling issues across {len(errors_by_file)} files"
+        )
+
         # Process priority files first
         priority_fixed = 0
         for file_pattern in self.priority_files:
             file_path = self.project_root / file_pattern
             if file_path.exists() and str(file_path) in errors_by_file:
                 print(f"🎯 Standardizing priority file: {file_path.name}")
-                success, fixes = self.standardize_file_error_handling(file_path, errors_by_file[str(file_path)])
+                success, fixes = self.standardize_file_error_handling(
+                    file_path, errors_by_file[str(file_path)]
+                )
                 if success:
                     priority_fixed += fixes
                     print(f"   ✅ Fixed {fixes} error handling issues")
                 else:
-                    print(f"   ❌ Failed to fix error handling issues")
-        
+                    print("   ❌ Failed to fix error handling issues")
+
         # Process remaining files
         remaining_fixed = 0
         for file_path, errors in errors_by_file.items():
             if file_path not in self.files_processed:
                 path_obj = Path(file_path)
                 if path_obj.exists():
-                    success, fixes = self.standardize_file_error_handling(path_obj, errors)
+                    success, fixes = self.standardize_file_error_handling(
+                        path_obj, errors
+                    )
                     if success:
                         remaining_fixed += fixes
                         if fixes > 0:
-                            print(f"✅ Fixed {fixes} error handling issues in {path_obj.name}")
-        
+                            print(
+                                f"✅ Fixed {fixes} error handling issues in {path_obj.name}"
+                            )
+
         total_fixed = priority_fixed + remaining_fixed
-        
-        print(f"\n📈 Results:")
+
+        print("\n📈 Results:")
         print(f"   Files processed: {len(self.files_processed)}")
         print(f"   Total error handling issues fixed: {total_fixed}")
         print(f"   Remaining issues: {total_errors - total_fixed}")
-        
+
         return {
-            'files_processed': len(self.files_processed),
-            'error_issues_fixed': total_fixed,
-            'remaining_issues': total_errors - total_fixed,
-            'success_rate': (total_fixed / total_errors * 100) if total_errors > 0 else 0
+            "files_processed": len(self.files_processed),
+            "error_issues_fixed": total_fixed,
+            "remaining_issues": total_errors - total_fixed,
+            "success_rate": (total_fixed / total_errors * 100)
+            if total_errors > 0
+            else 0,
         }
 
 
 def main():
     """Main execution function."""
     project_root = "/home/chris/PAKE_SYSTEM_claude_optimized"
-    
+
     standardizer = Phase3ErrorHandlerStandardizer(project_root)
     results = standardizer.run_systematic_error_standardization()
-    
-    print(f"\n🎉 Phase 3 Error Handling Standardization Complete!")
+
+    print("\n🎉 Phase 3 Error Handling Standardization Complete!")
     print(f"Success Rate: {results['success_rate']:.1f}%")
 
 

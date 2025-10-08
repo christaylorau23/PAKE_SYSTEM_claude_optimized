@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 PAKE System - Phase 16 Tenant Provisioning Automation
@@ -132,7 +133,7 @@ class TenantProvisioner:
     - Health validation
     """
 
-    def __init__(self) -> None:
+def __init__(self, db_config: Any = None, kubeconfig_path: Any = None) -> None:
         self.db_config = db_config
         self.kubeconfig_path = kubeconfig_path
         self.db_service: MultiTenantPostgreSQLService | None = None
@@ -194,7 +195,7 @@ class TenantProvisioner:
         domain: str | None,
         plan: str,
         admin_email: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create tenant in database"""
         try:
             # Create tenant in database
@@ -238,7 +239,7 @@ class TenantProvisioner:
 
     def _generate_k8s_manifests(
         self,
-        tenant_data: Dict[str, Any],
+        tenant_data: dict[str, Any],
         credentials: dict[str, str],
     ) -> str:
         """Generate Kubernetes manifests for tenant"""
@@ -334,7 +335,7 @@ class TenantProvisioner:
 
     async def create_k8s_namespace(
         self,
-        tenant_data: Dict[str, Any],
+        tenant_data: dict[str, Any],
         credentials: dict[str, str],
     ) -> bool:
         """Create Kubernetes namespace and resources"""
@@ -375,7 +376,7 @@ class TenantProvisioner:
             self.provisioning_stats["errors"].append(error_msg)
             return False
 
-    async def validate_tenant_provisioning(self, tenant_id: str) -> Dict[str, Any]:
+    async def validate_tenant_provisioning(self, tenant_id: str) -> dict[str, Any]:
         """Validate tenant provisioning"""
         try:
             # Check database tenant
@@ -416,7 +417,7 @@ class TenantProvisioner:
         domain: str | None,
         plan: str,
         admin_email: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Complete tenant provisioning process"""
         logger.info("🚀 Starting tenant provisioning: %s", tenant_name)
 
@@ -478,7 +479,7 @@ class TenantProvisioner:
                 "provisioning_stats": self.provisioning_stats,
             }
 
-    async def list_tenants(self) -> list[Dict[str, Any]]:
+    async def list_tenants(self) -> list[dict[str, Any]]:
         """List all provisioned tenants"""
         try:
             tenants = await self.db_service.get_all_tenants()
@@ -513,7 +514,7 @@ class TenantProvisioner:
         self,
         tenant_id: str,
         force: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Delete tenant and all associated resources"""
         logger.info("🗑️ Starting tenant deletion: %s", tenant_id)
 

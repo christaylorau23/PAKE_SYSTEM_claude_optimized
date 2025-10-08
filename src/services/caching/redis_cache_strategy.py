@@ -12,6 +12,7 @@ Implements:
 
 from abc import ABC, abstractmethod
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -19,7 +20,7 @@ import logging
 
 # import pickle  # SECURITY: Replaced with secure serialization
 import time
-from typing import Any, Dict, List, Callable
+from typing import Any, Dict, List
 import zlib
 
 import redis.asyncio as redis
@@ -102,7 +103,7 @@ class CacheEntry:
     ttl: int | None = None
     size: int = 0
     compressed: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -197,7 +198,7 @@ class L1MemoryCache(CacheLayer):
     def __init__(self, config: CacheConfig) -> None:
         super().__init__(CacheLevel.L1_MEMORY, config)
         self.cache: dict[str, CacheEntry] = {}
-        self.access_order: List[str] = []  # For LRU
+        self.access_order: list[str] = []  # For LRU
         self.frequency: dict[str, int] = {}  # For LFU
 
     async def get(self, key: str) -> Any | None:
@@ -744,7 +745,7 @@ class MultiLayeredCacheStrategy:
 
         # Cache warming and prefetching
         self.warming_tasks: list[asyncio.Task] = []
-        self.prefetch_patterns: dict[str, List[str]] = {}
+        self.prefetch_patterns: dict[str, list[str]] = {}
 
         logger.info(
             "MultiLayeredCacheStrategy initialized with %s layers",
@@ -858,7 +859,9 @@ class MultiLayeredCacheStrategy:
 
         return success
 
-    async def warm_cache(self, namespace: str, keys: List[str], data_loader: Callable) -> None:
+    async def warm_cache(
+        self, namespace: str, keys: list[str], data_loader: Callable
+    ) -> None:
         """Warm cache with data from data loader."""
         if not self.config.enable_warming:
             return
@@ -869,7 +872,9 @@ class MultiLayeredCacheStrategy:
 
         self.warming_tasks.append(warming_task)
 
-    async def _warm_cache_async(self, namespace: str, keys: List[str], data_loader: Callable) -> None:
+    async def _warm_cache_async(
+        self, namespace: str, keys: list[str], data_loader: Callable
+    ) -> None:
         """Asynchronously warm cache."""
         logger.info(
             "Starting cache warming for namespace %s with %s keys",
@@ -918,7 +923,7 @@ class MultiLayeredCacheStrategy:
                 for related_key in related_keys[:5]:  # Limit prefetching
                     asyncio.create_task(self._prefetch_key(namespace, related_key))
 
-    def _generate_related_keys(self, base_key: str, pattern: str) -> List[str]:
+    def _generate_related_keys(self, base_key: str, pattern: str) -> list[str]:
         """Generate related keys based on patterns."""
         # Simplified pattern matching
         related_keys = []
@@ -963,7 +968,7 @@ class MultiLayeredCacheStrategy:
 
         return stats
 
-    async def get_health_status(self) -> Dict[str, Any]:
+    async def get_health_status(self) -> dict[str, Any]:
         """Get health status of cache system."""
         health = {
             "overall_status": "healthy",

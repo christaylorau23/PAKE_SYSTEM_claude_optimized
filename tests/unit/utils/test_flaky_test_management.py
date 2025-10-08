@@ -68,7 +68,7 @@ class TestFlakyTestTracker:
         # Cleanup
         Path(temp_path).unlink(missing_ok=True)
 
-    def test_tracker_initialization(self) -> None:
+def test_tracker_initialization(self, temp_tracker: Any = None) -> None:
         """Test tracker initialization"""
         assert isinstance(temp_tracker, FlakyTestTracker)
         assert len(self.temp_tracker.flaky_tests) == 0

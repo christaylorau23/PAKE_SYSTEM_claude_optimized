@@ -35,7 +35,7 @@ def remove_stray_pass_statements(file_path: Path) -> int:
                     and not next_line.startswith(("except", "finally", "else:", "elif"))
                 ):
                     # This pass is stray - skip it
-                    print(f"{file_path}:{i+1} - Removing stray 'pass'")
+                    print(f"{file_path}:{i + 1} - Removing stray 'pass'")
                     removed_count += 1
                     modified = True
                     i += 1
@@ -86,7 +86,7 @@ def main():
             total_removed += removed
             files_modified += 1
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(
         f"Removed {total_removed} stray 'pass' statements from {files_modified} files"
     )

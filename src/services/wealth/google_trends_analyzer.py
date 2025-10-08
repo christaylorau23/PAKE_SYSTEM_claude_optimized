@@ -33,13 +33,13 @@ from typing import Any, Dict, List
 
 import aiohttp
 import aiosqlite
+import asyncpg
 import numpy as np
 import pandas as pd
-import sqlalchemy
 import psycopg2
-import asyncpg
 from pytrends.request import TrendReq
 from scipy import stats
+import sqlalchemy
 import yfinance as yf
 
 # Configure logging
@@ -89,9 +89,9 @@ class TrendData:
     region: GeographicRegion
     timeframe: str
     timestamp: datetime
-    interest_over_time: list[Dict[str, Any]]
-    related_queries: dict[str, List[str]]
-    rising_queries: dict[str, List[str]]
+    interest_over_time: list[dict[str, Any]]
+    related_queries: dict[str, list[str]]
+    rising_queries: dict[str, list[str]]
     regional_interest: dict[str, int]
     trend_strength: TrendStrength
     trend_direction: TrendDirection
@@ -100,7 +100,7 @@ class TrendData:
     peak_interest: int
     current_interest: int
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "keyword": self.keyword,
             "region": self.region.value,
@@ -126,16 +126,16 @@ class InvestmentOpportunity:
     opportunity_id: str
     keyword: str
     trend_data: TrendData
-    related_symbols: List[str]
+    related_symbols: list[str]
     investment_thesis: str
     confidence_score: float
     expected_timeframe: str
     risk_level: str
     potential_return: float
-    supporting_evidence: List[str]
+    supporting_evidence: list[str]
     created_at: datetime
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "opportunity_id": self.opportunity_id,
             "keyword": self.keyword,
@@ -154,7 +154,7 @@ class InvestmentOpportunity:
 class GoogleTrendsClient:
     """High-performance Google Trends client with caching."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
         self.pytrends = TrendReq(
             hl="en-US",
@@ -189,7 +189,7 @@ class GoogleTrendsClient:
 
     def _get_cache_key(
         self,
-        keywords: List[str],
+        keywords: list[str],
         timeframe: str,
         region: GeographicRegion,
     ) -> str:
@@ -199,7 +199,7 @@ class GoogleTrendsClient:
 
     async def get_interest_over_time(
         self,
-        keywords: List[str],
+        keywords: list[str],
         timeframe: str = "today 12-m",
         region: GeographicRegion = GeographicRegion.US,
     ) -> pd.DataFrame | None:
@@ -242,9 +242,9 @@ class GoogleTrendsClient:
 
     async def get_related_queries(
         self,
-        keywords: List[str],
+        keywords: list[str],
         region: GeographicRegion = GeographicRegion.US,
-    ) -> dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """Get related queries for keywords."""
         try:
             await self._rate_limit_check()
@@ -280,7 +280,7 @@ class GoogleTrendsClient:
 
     async def get_regional_interest(
         self,
-        keywords: List[str],
+        keywords: list[str],
         region: GeographicRegion = GeographicRegion.US,
     ) -> dict[str, dict[str, int]]:
         """Get regional interest breakdown."""
@@ -311,20 +311,19 @@ class GoogleTrendsClient:
             logger.error("Error getting regional interest for %s: %s", keywords, e)
             return {}
 
-    def _process_query_dataframe(self, df) -> List[str]:
+    def _process_query_dataframe(self, df) -> list[str]:
         """Process related queries dataframe into list."""
         if df is None or df.empty:
             return []
 
         # Return query strings, limit to top 10
-        queries = df["query"].tolist()[:10] if "query" in df.columns else []
-        return queries
+        return df["query"].tolist()[:10] if "query" in df.columns else []
 
 
 class GoogleTrendsAnalyzer:
     """Advanced Google Trends analysis engine."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
         self.trends_client = GoogleTrendsClient(self.config.get("trends_client", {}))
 
@@ -341,7 +340,7 @@ class GoogleTrendsAnalyzer:
 
         logger.info("Google Trends Analyzer initialized")
 
-    def _load_trend_symbol_mappings(self) -> dict[str, List[str]]:
+    def _load_trend_symbol_mappings(self) -> dict[str, list[str]]:
         """Load mappings between trending topics and investment symbols."""
         return {
             # Technology trends
@@ -446,7 +445,7 @@ class GoogleTrendsAnalyzer:
             logger.error("Error analyzing trend for '%s': %s", keyword, e)
             return None
 
-    def _analyze_interest_data(self, interest_series: pd.Series) -> Dict[str, Any]:
+    def _analyze_interest_data(self, interest_series: pd.Series) -> dict[str, Any]:
         """Analyze interest time series for trend characteristics."""
         try:
             values = interest_series.values
@@ -530,7 +529,7 @@ class GoogleTrendsAnalyzer:
                 "mean": 0.0,
             }
 
-    def _convert_timeseries_to_dict(self, series: pd.Series) -> list[Dict[str, Any]]:
+    def _convert_timeseries_to_dict(self, series: pd.Series) -> list[dict[str, Any]]:
         """Convert pandas time series to list of dictionaries."""
         try:
             result = []
@@ -624,7 +623,7 @@ class GoogleTrendsAnalyzer:
             logger.error("Error finding investment opportunities: %s", e)
             return []
 
-    def _find_related_symbols(self, keyword: str) -> List[str]:
+    def _find_related_symbols(self, keyword: str) -> list[str]:
         """Find investment symbols related to a keyword."""
         related_symbols = []
         keyword_lower = keyword.lower()
@@ -661,7 +660,7 @@ class GoogleTrendsAnalyzer:
         self,
         trend_data: TrendData,
         symbol: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze correlation between Google Trends and stock performance."""
         try:
             # Get stock data for the same period
@@ -870,7 +869,7 @@ class GoogleTrendsAnalyzer:
         trend_data: TrendData,
         symbol: str,
         correlation: float,
-    ) -> List[str]:
+    ) -> list[str]:
         """Gather supporting evidence for investment thesis."""
         evidence = []
 
@@ -929,7 +928,7 @@ class GoogleTrendsAnalyzer:
     def _assess_risk_level(
         self,
         trend_data: TrendData,
-        correlation_analysis: Dict[str, Any],
+        correlation_analysis: dict[str, Any],
     ) -> str:
         """Assess risk level for investment opportunity."""
         risk_score = 0
@@ -966,7 +965,7 @@ class GoogleTrendsAnalyzer:
 class GoogleTrendsIntegrationService:
     """Main service for Google Trends integration with wealth platform."""
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
         self.analyzer = GoogleTrendsAnalyzer(self.config.get("analyzer", {}))
 
@@ -1150,7 +1149,9 @@ class GoogleTrendsIntegrationService:
         except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error storing trend analysis: %s", e)
 
-    async def _store_investment_opportunity(self, opportunity: InvestmentOpportunity) -> None:
+    async def _store_investment_opportunity(
+        self, opportunity: InvestmentOpportunity
+    ) -> None:
         """Store investment opportunity in database."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -1178,7 +1179,7 @@ class GoogleTrendsIntegrationService:
         except (sqlalchemy.exc.SQLAlchemyError, psycopg2.Error, asyncpg.Error) as e:
             logger.error("Error storing investment opportunity: %s", e)
 
-    async def get_top_opportunities(self, limit: int = 10) -> list[Dict[str, Any]]:
+    async def get_top_opportunities(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get top investment opportunities from Google Trends analysis."""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -1220,7 +1221,7 @@ class GoogleTrendsIntegrationService:
             logger.error("Error getting top opportunities: %s", e)
             return []
 
-    async def get_trend_dashboard(self) -> Dict[str, Any]:
+    async def get_trend_dashboard(self) -> dict[str, Any]:
         """Get Google Trends dashboard data."""
         try:
             async with aiosqlite.connect(self.db_path) as db:

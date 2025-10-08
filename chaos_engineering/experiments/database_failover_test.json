@@ -1,0 +1,94 @@
+{
+  "version": "1.0.0",
+  "title": "PAKE System Database Failover Test",
+  "description": "Tests automatic database failover capabilities with RTO/RPO validation as specified in Section 3.2 of the Engineering Guide",
+  "tags": ["database", "failover", "resilience", "rto", "rpo"],
+  "steady-state-hypothesis": {
+    "title": "System is healthy before database failure",
+    "probes": [
+      {
+        "type": "probe",
+        "name": "database-primary-healthy",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "probes.database_probe",
+          "func": "check_primary_database_health"
+        }
+      },
+      {
+        "type": "probe",
+        "name": "database-replica-healthy",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "probes.database_probe",
+          "func": "check_replica_database_health"
+        }
+      },
+      {
+        "type": "probe",
+        "name": "application-healthy",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "probes.application_probe",
+          "func": "check_application_health"
+        }
+      }
+    ]
+  },
+  "method": [
+    {
+      "type": "action",
+      "name": "simulate-primary-database-failure",
+      "provider": {
+        "type": "python",
+        "module": "activities.database_activities",
+        "func": "terminate_primary_database"
+      }
+    },
+    {
+      "type": "probe",
+      "name": "measure-failover-time",
+      "provider": {
+        "type": "python",
+        "module": "probes.database_probe",
+        "func": "measure_failover_time"
+      },
+      "tolerance": 300,
+      "timeout": 600
+    },
+    {
+      "type": "probe",
+      "name": "verify-data-integrity",
+      "provider": {
+        "type": "python",
+        "module": "probes.database_probe",
+        "func": "verify_data_integrity"
+      },
+      "tolerance": true
+    },
+    {
+      "type": "probe",
+      "name": "check-application-recovery",
+      "provider": {
+        "type": "python",
+        "module": "probes.application_probe",
+        "func": "check_application_recovery"
+      },
+      "tolerance": true
+    }
+  ],
+  "rollbacks": [
+    {
+      "type": "action",
+      "name": "restore-primary-database",
+      "provider": {
+        "type": "python",
+        "module": "activities.database_activities",
+        "func": "restore_primary_database"
+      }
+    }
+  ]
+}

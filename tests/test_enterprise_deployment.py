@@ -72,7 +72,7 @@ class TestEnterpriseDeploymentOrchestrator:
         ]
 
     @pytest.fixture
-    def deployment_config(self) -> None:
+def deployment_config(self, sample_services: Any = None) -> None:
         """Standard deployment configuration for testing"""
         return DeploymentConfig(
             environment=DeploymentEnvironment.TEST,
@@ -87,7 +87,7 @@ class TestEnterpriseDeploymentOrchestrator:
         )
 
     @pytest.fixture
-    def mock_service_manager(self) -> None:
+def mock_service_manager(self, service_name: Any = None) -> None:
         """Mock service manager for testing"""
         manager = AsyncMock(spec=LocalServiceManager)
 
@@ -97,7 +97,7 @@ class TestEnterpriseDeploymentOrchestrator:
         manager.get_service_status.return_value = ServiceStatus.RUNNING
 
         # Mock health check responses
-        def mock_health_check(self) -> None:
+def mock_health_check(self, service_name: Any = None) -> None:
             return ServiceHealth(
                 service_name=service_name,
                 status=HealthCheckStatus.HEALTHY,
@@ -110,7 +110,7 @@ class TestEnterpriseDeploymentOrchestrator:
         return manager
 
     @pytest_asyncio.fixture
-    async def orchestrator(self) -> None:
+async def orchestrator(self, deployment_config: Any = None, mock_service_manager: Any = None) -> None:
         """Create orchestrator instance for testing"""
         orchestrator = EnterpriseDeploymentOrchestrator(
             deployment_config,
@@ -125,7 +125,7 @@ class TestEnterpriseDeploymentOrchestrator:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_initialize_orchestrator_with_configuration(self) -> None:
+async def test_should_initialize_orchestrator_with_configuration(self, deployment_config: Any = None, deployment_config: Any = None) -> None:
         """
         Test: Should initialize deployment orchestrator with proper configuration
         and default settings.
@@ -146,7 +146,7 @@ class TestEnterpriseDeploymentOrchestrator:
         assert orchestrator.service_startup_order == []
 
     @pytest.mark.asyncio
-    async def test_should_validate_deployment_configuration_correctly(self) -> None:
+async def test_should_validate_deployment_configuration_correctly(self, orchestrator: Any = None) -> None:
         """
         Test: Should validate deployment configuration and identify
         configuration issues and production readiness.
@@ -178,9 +178,7 @@ class TestEnterpriseDeploymentOrchestrator:
         assert any("duplicate" in issue.lower() for issue in issues)
 
     @pytest.mark.asyncio
-    async def test_should_calculate_service_deployment_order_based_on_dependencies(
-        self,
-    ) -> None:
+async def test_should_calculate_service_deployment_order_based_on_dependencies(self, orchestrator: Any = None, orchestrator: Any = None) -> None:
         """
         Test: Should correctly calculate service deployment order
         based on service dependencies using topological sorting.

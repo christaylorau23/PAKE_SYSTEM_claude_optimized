@@ -57,7 +57,7 @@ class PerformanceThresholds:
 class PerformanceMonitor:
     """Monitors performance metrics and detects degradation."""
 
-    def __init__(self) -> None:
+def __init__(self, results_dir: Any = None) -> None:
         self.results_dir = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
         self.baseline_file = self.results_dir / "performance_baseline.json"
@@ -87,7 +87,7 @@ class PerformanceMonitor:
         else:
             self.save_thresholds()
 
-    def save_baseline(self) -> None:
+def save_baseline(self, metrics: Any = None, metrics: Any = None) -> None:
         """Save performance baseline."""
         with open(self.baseline_file, "w") as f:
             json.dump(asdict(metrics), f, indent=2)
@@ -201,7 +201,7 @@ class PerformanceMonitor:
 
         return degradation
 
-    def update_baseline(self) -> None:
+def update_baseline(self, metrics: Any = None) -> None:
         """Update baseline with new metrics."""
         if not self.baseline:
             self.save_baseline(metrics)
@@ -248,7 +248,7 @@ class PerformanceMonitor:
 class PerformanceReporter:
     """Generates comprehensive performance reports."""
 
-    def __init__(self) -> None:
+def __init__(self, results_dir: Any = None) -> None:
         self.results_dir = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -357,7 +357,7 @@ class PerformanceReporter:
             "degradation_severity": degradation.get("severity", "none"),
         }
 
-    def save_report(self) -> None:
+def save_report(self, filename: Any = None, report: Any = None) -> None:
         """Save performance report to file."""
         if not filename:
             timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
@@ -375,10 +375,10 @@ class PerformanceReporter:
 class PerformanceAlerting:
     """Handles performance alerting and notifications."""
 
-    def __init__(self) -> None:
+def __init__(self, slack_webhook_url: Any = None) -> None:
         self.slack_webhook_url = slack_webhook_url
 
-    def send_alert(self) -> None:
+def send_alert(self, report: Any = None, report: Any = None) -> None:
         """Send performance alert."""
         if not self.slack_webhook_url:
             print("No Slack webhook URL configured - alert not sent")

@@ -98,7 +98,7 @@ class SecretsManager:
     - Client initialization handled by dedicated method
     """
 
-    def __init__(self) -> None:
+def __init__(self, provider: Any = None) -> None:
         """Initialize the Secrets Manager.
 
         The constructor's primary responsibility is to orchestrate the setup process.
@@ -653,7 +653,7 @@ class SecretsManager:
     # Provider-Specific Implementations
     # ========================================================================
 
-    async def _store_aws_secret(self) -> None:
+async def _store_aws_secret(self, secret_id: Any = None, encrypted_value: Any = None, secret_id: Any = None, secret_id: Any = None, encrypted_value: Any = None) -> None:
         """Store secret in AWS Secrets Manager."""
         try:
             self.aws_client.create_secret(
@@ -675,13 +675,13 @@ class SecretsManager:
         except self.aws_client.exceptions.ResourceNotFoundException:
             return None
 
-    async def _delete_aws_secret(self) -> None:
+async def _delete_aws_secret(self, secret_id: Any = None) -> None:
         """Delete secret from AWS Secrets Manager."""
         self.aws_client.delete_secret(
             SecretId=secret_id, ForceDeleteWithoutRecovery=True
         )
 
-    async def _store_azure_secret(self) -> None:
+async def _store_azure_secret(self, secret_id: Any = None, encrypted_value: Any = None) -> None:
         """Store secret in Azure Key Vault."""
         self.azure_client.set_secret(secret_id, encrypted_value)
 
@@ -693,11 +693,11 @@ class SecretsManager:
         except Exception:
             return None
 
-    async def _delete_azure_secret(self) -> None:
+async def _delete_azure_secret(self, secret_id: Any = None) -> None:
         """Delete secret from Azure Key Vault."""
         self.azure_client.begin_delete_secret(secret_id)
 
-    async def _store_google_secret(self) -> None:
+async def _store_google_secret(self, secret_id: Any = None) -> None:
         """Store secret in Google Secret Manager."""
         parent = f"projects/{self.project_id}"
 
@@ -727,12 +727,12 @@ class SecretsManager:
         except Exception:
             return None
 
-    async def _delete_google_secret(self) -> None:
+async def _delete_google_secret(self, secret_id: Any = None) -> None:
         """Delete secret from Google Secret Manager."""
         name = f"projects/{self.project_id}/secrets/{secret_id}"
         self.google_client.delete_secret(request={"name": name})
 
-    async def _store_local_secret(self) -> None:
+async def _store_local_secret(self, secret_id: Any = None, encrypted_value: Any = None) -> None:
         """Store secret in local file."""
         secret_file = self.secrets_dir / f"{secret_id}.secret"
         async with aiofiles.open(secret_file, "w") as f:
@@ -746,7 +746,7 @@ class SecretsManager:
                 return await f.read()
         return None
 
-    async def _delete_local_secret(self) -> None:
+async def _delete_local_secret(self, secret_id: Any = None) -> None:
         """Delete secret from local file."""
         secret_file = self.secrets_dir / f"{secret_id}.secret"
         if secret_file.exists():
@@ -834,7 +834,7 @@ class SecretsManager:
         except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Failed to save metadata: %s", str(e))
 
-    async def _log_access(self) -> None:
+async def _log_access(self, secret_id: Any = None, accessed_by: Any = None, access_type: Any = None, source_ip: Any = None, user_agent: Any = None, success: Any = None, error_message: Any = None, success: Any = None, access_type: Any = None, secret_id: Any = None, accessed_by: Any = None, access_type: Any = None, secret_id: Any = None, accessed_by: Any = None, error_message: Any = None) -> None:
         """Log secret access."""
         log_entry = SecretAccessLog(
             log_id=f"log_{int(datetime.now(UTC).timestamp())}_{secrets.token_hex(4)}",

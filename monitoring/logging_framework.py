@@ -1,4 +1,3 @@
-request
 #!/usr/bin/env python3
 """PAKE System - Enterprise Logging & Observability Framework
 Comprehensive logging, monitoring, and observability for enterprise applications.
@@ -307,7 +306,13 @@ class LoggingFramework:
         """Get a structured logger."""
         return structlog.get_logger(name)
 
-    async def log_structured(self) -> None:
+    async def log_structured(
+        self,
+        message: str,
+        level: LogLevel = LogLevel.INFO,
+        logger_name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log structured message."""
         logger_name = logger_name or self.service_name
 
@@ -344,7 +349,13 @@ class LoggingFramework:
         if self.datadog_enabled:
             await self._send_to_datadog(log_entry)
 
-    async def log_error(self) -> None:
+    async def log_error(
+        self,
+        message: str,
+        logger_name: str | None = None,
+        exception: Exception | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Log error with exception details."""
         extra_data = kwargs.copy()
 
@@ -357,9 +368,11 @@ class LoggingFramework:
                 }
             )
 
-        await self.log_structured(LogLevel.ERROR, message, logger_name, **extra_data)
+        await self.log_structured(
+            message, level=LogLevel.ERROR, logger_name=logger_name, **extra_data
+        )
 
-    async def log_performance(self) -> None:
+async def log_performance(self, operation: str, operation: str, operation: str, duration_ms: float, operation: str, operation: str, operation: str, operation: str, logger_name: str | None = None, operation: str, duration_ms: float, kwargs: Any = None, operation: str, duration_ms: float, operation: str, **kwargs: Any) -> None:
         """Log performance metrics."""
         # Store performance metric
         if operation not in self.performance_metrics:
@@ -391,7 +404,7 @@ class LoggingFramework:
                 tags={"operation": operation},
             )
 
-    async def log_audit(self) -> None:
+async def log_audit(self, event_type: str, user_id: str, resource: str, action: str, result: str, kwargs: Any = None, event_type: str, action: str, result: str, event_type: str, action: str, result: str, user_id: str, resource: str, kwargs: Any = None, **kwargs: Any) -> None:
         """Log audit event."""
         audit_entry = AuditEntry(
             event_type=event_type,
@@ -423,7 +436,7 @@ class LoggingFramework:
     # Metrics Methods
     # ========================================================================
 
-    async def _send_metric(self) -> None:
+async def _send_metric(self, tags: dict[str, str] | None = None, metric_type: str, metric_name: str, value: float, metric_type: str, metric_name: str, value: float, metric_type: str, metric_name: str, value: float, metric_type: str, metric_name: str, value: float) -> None:
         """Send metric to external service."""
         if not self.metrics_enabled:
             return
@@ -446,19 +459,19 @@ class LoggingFramework:
         except (ValueError, RuntimeError) as e:
             print(f"Failed to send metric: {e}")
 
-    async def increment_counter(self) -> None:
+async def increment_counter(self, metric_name: str, value: float, tags: dict[str, str] | None = None) -> None:
         """Increment a counter metric."""
         await self._send_metric(metric_name, MetricType.COUNTER, value, tags)
 
-    async def set_gauge(self) -> None:
+async def set_gauge(self, metric_name: str, value: float, tags: dict[str, str] | None = None) -> None:
         """Set a gauge metric."""
         await self._send_metric(metric_name, MetricType.GAUGE, value, tags)
 
-    async def record_histogram(self) -> None:
+async def record_histogram(self, metric_name: str, value: float, tags: dict[str, str] | None = None) -> None:
         """Record a histogram metric."""
         await self._send_metric(metric_name, MetricType.HISTOGRAM, value, tags)
 
-    async def record_timing(self) -> None:
+async def record_timing(self, metric_name: str, duration_ms: float, tags: dict[str, str] | None = None) -> None:
         """Record a timing metric."""
         await self._send_metric(metric_name, MetricType.TIMER, duration_ms, tags)
 
@@ -466,18 +479,18 @@ class LoggingFramework:
     # Tracing Methods
     # ========================================================================
 
-    def start_span(self) -> None:
+def start_span(self, name: str, kwargs: Any = None, **kwargs: Any) -> None:
         """Start a new span."""
         if self.tracer:
             return self.tracer.start_span(name, **kwargs)
         return None
 
-    def add_span_attribute(self) -> None:
+def add_span_attribute(self, span: Any = None, span: Any = None, key: str, value: float) -> None:
         """Add attribute to self.span."""
         if span:
             span.set_attribute(key, value)
 
-    def add_span_event(self) -> None:
+def add_span_event(self, span: Any = None, span: Any = None, name: str, attributes: dict[str, Any]) -> None:
         """Add event to self.span."""
         if span:
             span.add_event(name, attributes or {})
@@ -486,11 +499,11 @@ class LoggingFramework:
     # Context Managers and Decorators
     # ========================================================================
 
-    def trace_operation(self) -> None:
+def trace_operation(self, operation_name: str, operation_name: str, func: Callable, func: Callable, args: tuple, kwargs: Any = None, operation_name: str, operation_name: str, **kwargs: Any) -> None:
         """Decorator to trace an operation."""
 
-        def decorator(self) -> None:
-            async def wrapper(self) -> None:
+def decorator(self, operation_name: str, operation_name: str, func: Callable, func: Callable, args: tuple, kwargs: Any = None, operation_name: str, operation_name: str, **kwargs: Any) -> None:
+async def wrapper(self, operation_name: str, operation_name: str, func: Callable, func: Callable, args: tuple, kwargs: Any = None, operation_name: str, operation_name: str, **kwargs: Any) -> None:
                 start_time = time.time()
                 span = self.start_span(operation_name)
 
@@ -533,7 +546,7 @@ class LoggingFramework:
     # External Service Integration
     # ========================================================================
 
-    async def _send_to_datadog(self) -> None:
+async def _send_to_datadog(self, log_entry: Any = None) -> None:
         """Send log entry to Datadog."""
         if not self.datadog_enabled:
             return
@@ -693,7 +706,7 @@ class FastAPILoggingMiddleware:
     def __init__(self, call_next: Any = None, logging_framework: Any = None, request: Any = None) -> None:
         self.logging_framework = logging_framework
 
-    async def __call__(self) -> None:
+async def __call__(self, request: Request, request: Request, request: Request, request: Request, request: Request, request: Request, request: Request, request: Request, call_next: Callable, request: Request, request: Request, request: Request, request: Request, request: Request, request: Request, request: Request, request: Request, request: Request, request: Request) -> None:
         start_time = time.time()
 
         # Extract request information

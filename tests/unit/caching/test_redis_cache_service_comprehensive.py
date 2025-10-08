@@ -40,7 +40,7 @@ class TestRedisCacheServiceComprehensive:
         )
 
     @pytest.fixture
-    def cache_service(self) -> None:
+def cache_service(self, mock_redis: Any = None, cache_config: Any = None, mock_redis: Any = None) -> None:
         """Create RedisCacheService instance with mocked dependencies"""
         with patch(
             "src.services.caching.redis_cache_service.redis.asyncio.from_url"

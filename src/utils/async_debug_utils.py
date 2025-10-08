@@ -4,14 +4,14 @@ Comprehensive tools for debugging asynchronous code, race conditions, and flaky 
 """
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 import functools
 import logging
 import os
 import time
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pytest
 
@@ -58,12 +58,12 @@ class AsyncOperationMetrics:
 class AsyncDebugCollector:
     """Collects and analyzes async debugging information."""
 
-    def __init__(self, config: Optional[AsyncDebugConfig] = None) -> None:
+    def __init__(self, config: AsyncDebugConfig | None = None) -> None:
         self.config = config or AsyncDebugConfig()
-        self.operations: List[AsyncOperationMetrics] = []
-        self.race_conditions: List[Dict[str, Any]] = []
-        self.unawaited_coroutines: List[str] = []
-        self.slow_operations: List[AsyncOperationMetrics] = []
+        self.operations: list[AsyncOperationMetrics] = []
+        self.race_conditions: list[dict[str, Any]] = []
+        self.unawaited_coroutines: list[str] = []
+        self.slow_operations: list[AsyncOperationMetrics] = []
         self._lock = asyncio.Lock()
 
     async def record_operation(self, operation: AsyncOperationMetrics) -> None:
@@ -84,7 +84,7 @@ class AsyncDebugCollector:
                         operation.duration,
                     )
 
-    async def record_race_condition(self, details: Dict[str, Any]) -> None:
+    async def record_race_condition(self, details: dict[str, Any]) -> None:
         """Record a potential race condition."""
         async with self._lock:
             self.race_conditions.append(details)
@@ -98,7 +98,7 @@ class AsyncDebugCollector:
             if self.config.log_unawaited_coroutines:
                 logger.warning("Unawaited coroutine detected: %s", coroutine_name)
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get a summary of async debugging information."""
         return {
             "total_operations": len(self.operations),
@@ -137,11 +137,13 @@ def get_debug_collector() -> AsyncDebugCollector:
 class AsyncDebugContext:
     """Context manager for async debugging."""
 
-    def __init__(self, operation_name: str, config: Optional[AsyncDebugConfig] = None) -> None:
+    def __init__(
+        self, operation_name: str, config: AsyncDebugConfig | None = None
+    ) -> None:
         self.operation_name = operation_name
         self.config = config or AsyncDebugConfig()
-        self.start_time: Optional[float] = None
-        self.metrics: Optional[AsyncOperationMetrics] = None
+        self.start_time: float | None = None
+        self.metrics: AsyncOperationMetrics | None = None
 
     async def __aenter__(self) -> "AsyncDebugContext":
         self.start_time = time.time()
@@ -150,7 +152,9 @@ class AsyncDebugContext:
         )
         return self
 
-    async def __aexit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> None:
+    async def __aexit__(
+        self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any | None
+    ) -> None:
         if self.metrics:
             self.metrics.end_time = time.time()
             self.metrics.duration = self.metrics.end_time - self.metrics.start_time
@@ -162,7 +166,7 @@ class AsyncDebugContext:
             await _debug_collector.record_operation(self.metrics)
 
 
-def async_debug(operation_name: Optional[str] = None) -> Callable:
+def async_debug(operation_name: str | None = None) -> Callable:
     """Decorator for async debugging."""
 
     def decorator(func: Callable) -> Callable:
@@ -181,7 +185,7 @@ class RaceConditionDetector:
     """Detects potential race conditions in async code."""
 
     def __init__(self) -> None:
-        self.shared_state_access: Dict[str, List[Dict[str, Any]]] = {}
+        self.shared_state_access: dict[str, list[dict[str, Any]]] = {}
         self.concurrent_access_count = 0
         self._lock = asyncio.Lock()
 
@@ -268,7 +272,7 @@ class AsyncSafeDict:
     """Async-safe dictionary with race condition protection."""
 
     def __init__(self) -> None:
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
         self._lock = asyncio.Lock()
 
     async def get(self, key: str, default: Any = None) -> Any:
@@ -289,19 +293,19 @@ class AsyncSafeDict:
             await _race_detector.track_shared_state_access("dict", "delete")
             return self._data.pop(key, None)
 
-    async def keys(self) -> List[str]:
+    async def keys(self) -> list[str]:
         """Get all keys safely."""
         async with self._lock:
             await _race_detector.track_shared_state_access("dict", "keys")
             return list(self._data.keys())
 
-    async def values(self) -> List[Any]:
+    async def values(self) -> list[Any]:
         """Get all values safely."""
         async with self._lock:
             await _race_detector.track_shared_state_access("dict", "values")
             return list(self._data.values())
 
-    async def items(self) -> List[tuple[str, Any]]:
+    async def items(self) -> list[tuple[str, Any]]:
         """Get all items safely."""
         async with self._lock:
             await _race_detector.track_shared_state_access("dict", "items")
@@ -309,7 +313,9 @@ class AsyncSafeDict:
 
 
 @asynccontextmanager
-async def async_timeout_context(timeout: float, operation_name: str) -> AsyncGenerator[None, None]:
+async def async_timeout_context(
+    timeout: float, operation_name: str
+) -> AsyncGenerator[None, None]:
     """Context manager for async timeout with debugging."""
     start_time = time.time()
 
@@ -335,8 +341,8 @@ class AsyncTestHelper:
 
     @staticmethod
     async def run_concurrent_tasks(
-        tasks: List[Callable], max_concurrent: int = 10, timeout: float = 30.0
-    ) -> List[Any]:
+        tasks: list[Callable], max_concurrent: int = 10, timeout: float = 30.0
+    ) -> list[Any]:
         """Run multiple async tasks concurrently with debugging."""
         semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -347,11 +353,10 @@ class AsyncTestHelper:
 
         try:
             async with async_timeout_context(timeout, "concurrent_tasks"):
-                results = await asyncio.gather(
+                return await asyncio.gather(
                     *[run_with_semaphore(task) for task in tasks],
                     return_exceptions=True,
                 )
-                return results
         except (ValueError, RuntimeError) as e:
             logger.error("Error in concurrent task execution: %s", e)
             raise
@@ -366,7 +371,10 @@ class AsyncTestHelper:
         import secrets
 
         async def competing_task(task_id: int) -> None:
-            delay = secrets.randbelow(int((delay_range[1] - delay_range[0]) * 1000)) / 1000 + delay_range[0]
+            delay = (
+                secrets.randbelow(int((delay_range[1] - delay_range[0]) * 1000)) / 1000
+                + delay_range[0]
+            )
             await asyncio.sleep(delay)
             return await shared_state_accessor(task_id)
 
@@ -410,7 +418,7 @@ class AsyncTestHelper:
 # Pytest fixtures for async debugging
 
 
-@pytest.fixture
+@pytest.fixture()
 async def async_debug_context(self) -> None:
     """Fixture providing async debug context."""
     collector = get_debug_collector()
@@ -422,7 +430,7 @@ async def async_debug_context(self) -> None:
     collector.slow_operations.clear()
 
 
-@pytest.fixture
+@pytest.fixture()
 async def race_condition_detector(self) -> None:
     """Fixture providing race condition detector."""
     detector = get_race_detector()
@@ -432,19 +440,19 @@ async def race_condition_detector(self) -> None:
     detector.concurrent_access_count = 0
 
 
-@pytest.fixture
+@pytest.fixture()
 async def async_safe_counter(self) -> None:
     """Fixture providing async-safe counter."""
     return AsyncSafeCounter()
 
 
-@pytest.fixture
+@pytest.fixture()
 async def async_safe_dict(self) -> None:
     """Fixture providing async-safe dictionary."""
     return AsyncSafeDict()
 
 
-@pytest.fixture
+@pytest.fixture()
 async def async_test_helper(self) -> None:
     """Fixture providing async test helper."""
     return AsyncTestHelper()

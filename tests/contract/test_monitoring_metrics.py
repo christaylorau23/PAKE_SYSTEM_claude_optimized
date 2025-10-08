@@ -30,7 +30,7 @@ class TestMonitoringMetricsContract:
             yield client
 
     @pytest.mark.asyncio
-    async def test_prometheus_metrics_endpoint_exists(self) -> None:
+async def test_prometheus_metrics_endpoint_exists(self, monitoring_base_url: Any = None) -> None:
         """
         Test that /metrics endpoint exists and returns Prometheus format
 
@@ -53,7 +53,7 @@ class TestMonitoringMetricsContract:
         ), f"Expected Prometheus metrics format, got: {content_type}"
 
     @pytest.mark.asyncio
-    async def test_required_pake_system_metrics(self) -> None:
+async def test_required_pake_system_metrics(self, monitoring_base_url: Any = None) -> None:
         """
         Test that required PAKE System metrics are exposed
 
@@ -81,7 +81,7 @@ class TestMonitoringMetricsContract:
             ), f"Required metric '{metric_name}' not found in metrics exposition"
 
     @pytest.mark.asyncio
-    async def test_metrics_format_compliance(self) -> None:
+async def test_metrics_format_compliance(self, monitoring_base_url: Any = None) -> None:
         """
         Test that metrics follow Prometheus format specification
 
@@ -116,7 +116,7 @@ class TestMonitoringMetricsContract:
                 ), f"Invalid metric format: {line}"
 
     @pytest.mark.asyncio
-    async def test_custom_business_metrics_endpoint(self) -> None:
+async def test_custom_business_metrics_endpoint(self, monitoring_base_url: Any = None) -> None:
         """
         Test that custom business metrics endpoint returns JSON format
 
@@ -150,7 +150,7 @@ class TestMonitoringMetricsContract:
         assert isinstance(service_metrics, dict), "Service metrics should be an object"
 
     @pytest.mark.asyncio
-    async def test_metrics_filtering_by_service(self) -> None:
+async def test_metrics_filtering_by_service(self, monitoring_base_url: Any = None) -> None:
         """
         Test that metrics can be filtered by service name
 
@@ -183,7 +183,7 @@ class TestMonitoringMetricsContract:
                         ), f"Metric {metric_key} not related to service {service}"
 
     @pytest.mark.asyncio
-    async def test_metrics_timeframe_filtering(self) -> None:
+async def test_metrics_timeframe_filtering(self, monitoring_base_url: Any = None) -> None:
         """
         Test that metrics support timeframe filtering
 
@@ -210,7 +210,7 @@ class TestMonitoringMetricsContract:
             ), f"Response should indicate timeframe {timeframe}"
 
     @pytest.mark.asyncio
-    async def test_metrics_response_time_performance(self) -> None:
+async def test_metrics_response_time_performance(self, monitoring_base_url: Any = None) -> None:
         """
         Test that metrics endpoints meet performance requirements
 
@@ -253,7 +253,7 @@ class TestHealthCheckEndpoints:
             yield client
 
     @pytest.mark.asyncio
-    async def test_system_health_endpoint(self) -> None:
+async def test_system_health_endpoint(self, monitoring_base_url: Any = None) -> None:
         """
         Test system health check with dependency validation
 
@@ -285,7 +285,7 @@ class TestHealthCheckEndpoints:
         ], f"Invalid health status: {health_data['status']}"
 
     @pytest.mark.asyncio
-    async def test_individual_service_health(self) -> None:
+async def test_individual_service_health(self, monitoring_base_url: Any = None) -> None:
         """
         Test health check for individual services
 
@@ -318,7 +318,7 @@ class TestHealthCheckEndpoints:
                 ), f"Service name mismatch: expected {service}, got {service_health['service_name']}"
 
     @pytest.mark.asyncio
-    async def test_health_check_with_metrics_inclusion(self) -> None:
+async def test_health_check_with_metrics_inclusion(self, monitoring_base_url: Any = None) -> None:
         """
         Test health check with performance metrics inclusion
 
@@ -359,7 +359,7 @@ class TestAlertingEndpoints:
             yield client
 
     @pytest.mark.asyncio
-    async def test_active_alerts_endpoint(self) -> None:
+async def test_active_alerts_endpoint(self, monitoring_base_url: Any = None) -> None:
         """
         Test active alerts query endpoint
 
@@ -399,7 +399,7 @@ class TestAlertingEndpoints:
             ], f"Invalid alert severity: {alert['severity']}"
 
     @pytest.mark.asyncio
-    async def test_alert_creation_endpoint(self) -> None:
+async def test_alert_creation_endpoint(self, monitoring_base_url: Any = None) -> None:
         """
         Test custom alert rule creation
 

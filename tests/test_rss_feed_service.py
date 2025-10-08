@@ -120,7 +120,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_fetch_and_parse_rss_feed_successfully(self) -> None:
+async def test_should_fetch_and_parse_rss_feed_successfully(self, sample_rss_xml: Any = None) -> None:
         """
         Test: Should fetch RSS feed from URL and parse it into structured items
         """
@@ -156,7 +156,7 @@ class TestRSSFeedService:
             assert "Machine Learning" in first_item.categories
 
     @pytest.mark.asyncio
-    async def test_should_fetch_and_parse_atom_feed_successfully(self) -> None:
+async def test_should_fetch_and_parse_atom_feed_successfully(self, sample_atom_xml: Any = None) -> None:
         """
         Test: Should fetch Atom feed from URL and parse it into structured items
         """
@@ -192,7 +192,7 @@ class TestRSSFeedService:
             assert "Quantum Computing" in atom_item.categories
 
     @pytest.mark.asyncio
-    async def test_should_handle_multiple_feed_urls_concurrently(self) -> None:
+async def test_should_handle_multiple_feed_urls_concurrently(self, rss_feed_service: Any = None) -> None:
         """
         Test: Should process multiple RSS/Atom feeds concurrently with proper error handling
         """
@@ -242,7 +242,7 @@ class TestRSSFeedService:
             assert result.feeds_failed == 0
 
     @pytest.mark.asyncio
-    async def test_should_filter_items_by_date_range(self) -> None:
+async def test_should_filter_items_by_date_range(self, sample_rss_xml: Any = None) -> None:
         """
         Test: Should filter RSS items based on publication date range
         """
@@ -271,7 +271,7 @@ class TestRSSFeedService:
             assert result.items[0].title == "Breakthrough in Neural Networks"
 
     @pytest.mark.asyncio
-    async def test_should_filter_items_by_keywords(self) -> None:
+async def test_should_filter_items_by_keywords(self, sample_rss_xml: Any = None) -> None:
         """
         Test: Should filter RSS items based on keyword matching in title/description
         """
@@ -306,7 +306,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_fetch_full_article_content_when_requested(self) -> None:
+async def test_should_fetch_full_article_content_when_requested(self, rss_feed_service: Any = None, rss_feed_service: Any = None) -> None:
         """
         Test: Should fetch full article content from item URLs when requested
         """
@@ -403,7 +403,7 @@ class TestRSSFeedService:
         assert "Detailed content about AI advancement" in item.content
 
     @pytest.mark.asyncio
-    async def test_should_integrate_with_cognitive_assessment(self) -> None:
+async def test_should_integrate_with_cognitive_assessment(self, rss_feed_service: Any = None, mock_cognitive_engine: Any = None) -> None:
         """
         Test: Should apply cognitive assessment to RSS feed content
         """
@@ -642,7 +642,7 @@ class TestRSSFeedService:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_should_integrate_with_orchestrator_workflow(self) -> None:
+async def test_should_integrate_with_orchestrator_workflow(self, rss_feed_service: Any = None) -> None:
         """
         Test: Should integrate seamlessly with the ingestion orchestrator
         """

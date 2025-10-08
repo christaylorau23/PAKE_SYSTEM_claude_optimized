@@ -202,7 +202,7 @@ This note should trigger the automation system to:
             self.test_results["note_creation"] = {"error": str(e)}
             return None
 
-    async def test_manual_processing(self) -> None:
+async def test_manual_processing(self, note_path: Any = None, note_path: Any = None) -> None:
         """Test manual processing using PAKE components"""
         print("\nTesting Manual Processing...")
 

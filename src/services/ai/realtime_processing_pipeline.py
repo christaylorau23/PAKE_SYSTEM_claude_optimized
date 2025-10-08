@@ -75,7 +75,7 @@ class ContentItem:
     content: str
     content_type: str = "text"
     source: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     priority: ProcessingPriority = ProcessingPriority.NORMAL
 
     # Processing context
@@ -85,7 +85,7 @@ class ContentItem:
     processing_deadline: datetime | None = None
     edge_location: EdgeLocation = EdgeLocation.LOCAL
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "content_id": self.content_id,
@@ -129,7 +129,7 @@ class ProcessingResult:
     error_details: str | None = None
     retry_count: int = 0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "content_id": self.content_id,
@@ -170,7 +170,7 @@ class PipelineMetrics:
     # Edge computing metrics
     edge_utilization: dict[str, float] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "total_processed": self.total_processed,
@@ -240,8 +240,8 @@ class ProcessingStageHandler(ABC):
     async def process(
         self,
         content: ContentItem,
-        context: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Process content through this stage."""
 
     @property
@@ -264,8 +264,8 @@ class CognitiveAnalysisStage(ProcessingStageHandler):
     async def process(
         self,
         content: ContentItem,
-        context: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Perform cognitive analysis on content."""
         try:
             cognitive_result = await self.cognitive_engine.analyze_content(
@@ -304,8 +304,8 @@ class SemanticIndexingStage(ProcessingStageHandler):
     async def process(
         self,
         content: ContentItem,
-        context: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Index content for semantic search."""
         try:
             embedding = await self.semantic_engine.index_content(
@@ -336,7 +336,7 @@ class SemanticIndexingStage(ProcessingStageHandler):
 class QualityFilteringStage(ProcessingStageHandler):
     """Quality filtering processing stage."""
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
         self._stage = ProcessingStage.QUALITY_FILTERING
 
@@ -347,8 +347,8 @@ class QualityFilteringStage(ProcessingStageHandler):
     async def process(
         self,
         content: ContentItem,
-        context: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Filter content based on quality metrics."""
         try:
             # Get quality score from context (from cognitive analysis)
@@ -392,7 +392,7 @@ class EdgeProcessor:
             "average_processing_time": 0.0,
         }
 
-    async def process_item(self, content: ContentItem) -> Dict[str, Any]:
+    async def process_item(self, content: ContentItem) -> dict[str, Any]:
         """Process content item using edge computing optimizations."""
         start_time = time.time()
 
@@ -427,7 +427,7 @@ class EdgeProcessor:
             logger.error("Edge processing failed for %s: %s", content.content_id, e)
             return {"edge_processed": False, "error": str(e)}
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get edge processor statistics."""
         return self.stats.copy()
 
@@ -437,7 +437,7 @@ class RealTimeProcessingPipeline:
     Integrates cognitive analysis, semantic search, and edge computing.
     """
 
-    def __init__(self, config: Dict[str, Any] | None = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or PipelineConfig()
 
         # Initialize AI engines
@@ -516,7 +516,6 @@ class RealTimeProcessingPipeline:
             try:
                 await self._pipeline_task
             except asyncio.CancelledError as e:
-
                 logger.debug(f"Exception in realtime_processing_pipeline.py: {e}")
 
                 # Continue gracefully
@@ -551,9 +550,9 @@ class RealTimeProcessingPipeline:
         self.metrics["queue_sizes"][content.priority] += 1
 
         logger.debug(
-            "Content %s queued with priority %s", content.content_id,
-                content.priority.value
-            ,
+            "Content %s queued with priority %s",
+            content.content_id,
+            content.priority.value,
         )
         return content.content_id
 
@@ -757,7 +756,8 @@ class RealTimeProcessingPipeline:
                 self.metrics["processing_times"].append(processing_time)
 
                 logger.debug(
-                    "Content %s processed successfully in %sms", content.content_id,
+                    "Content %s processed successfully in %sms",
+                    content.content_id,
                     processing_time,
                 )
                 return result
@@ -779,7 +779,8 @@ class RealTimeProcessingPipeline:
             self.metrics["failed_processed"] += 1
 
             logger.warning(
-                "Content %s processing timed out after %sms", content.content_id,
+                "Content %s processing timed out after %sms",
+                content.content_id,
                 processing_time,
             )
             return result
@@ -806,7 +807,6 @@ class RealTimeProcessingPipeline:
     async def _collect_metrics(self) -> None:
         """Collect and update pipeline metrics."""
         try:
-            pass
             # Update processing metrics every few seconds
             if not hasattr(self, "_last_metrics_update"):
                 self._last_metrics_update = time.time()
@@ -922,7 +922,6 @@ if __name__ == "__main__":
         await pipeline.start_pipeline()
 
         try:
-            pass
             # Submit test content
             test_items = [
                 ContentItem(

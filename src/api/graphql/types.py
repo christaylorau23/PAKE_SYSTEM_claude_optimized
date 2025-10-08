@@ -1,4 +1,5 @@
 from typing import List
+
 """GraphQL Types.
 
 Defines the GraphQL schema types for the PAKE System including entities,
@@ -168,8 +169,8 @@ class InsightRecommendation:
     confidence: float
     category: str
     priority: str  # "high", "medium", "low"
-    supporting_data: List[str]
-    action_suggestions: List[str]
+    supporting_data: list[str]
+    action_suggestions: list[str]
     created_at: datetime
 
 
@@ -180,7 +181,7 @@ class GraphVisualization:
     nodes: list[Entity]
     edges: list[Relationship]
     layout_data: str | None = None  # JSON string
-    filters_applied: List[str] | None = None
+    filters_applied: list[str] | None = None
     node_count: int
     edge_count: int
 
@@ -194,7 +195,7 @@ class SystemHealth:
     timestamp: datetime
     components: str | None = None  # JSON string
     performance_metrics: list[AnalyticsMetric]
-    capabilities: List[str]
+    capabilities: list[str]
 
 
 @strawberry.input
@@ -234,7 +235,7 @@ class SearchInput:
 class AnalyticsInput:
     """Input type for analytics operations."""
 
-    metrics: List[str]
+    metrics: list[str]
     start_date: datetime | None = None
     end_date: datetime | None = None
     aggregation: str | None = "daily"  # "hourly", "daily", "weekly", "monthly"

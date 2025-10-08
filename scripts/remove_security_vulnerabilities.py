@@ -13,7 +13,7 @@ import sys
 
 
 class SecurityVulnerabilityRemover:
-    def __init__(self) -> None:
+def __init__(self, project_root: Any = None) -> None:
         self.project_root = Path(project_root)
         self.vulnerabilities_found = 0
         self.files_modified = 0

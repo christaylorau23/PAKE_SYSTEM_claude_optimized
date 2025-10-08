@@ -1,4 +1,5 @@
 from typing import Dict
+
 #!/usr/bin/env python3
 """
 PAKE System Security Manager
@@ -28,7 +29,7 @@ class SecurityManager:
     Comprehensive security management for the PAKE System
     """
 
-    def __init__(self) -> None:
+def __init__(self, project_root: Any = None) -> None:
         self.project_root = project_root
         self.results = {
             "timestamp": datetime.now(UTC).isoformat(),
@@ -43,7 +44,7 @@ class SecurityManager:
             },
         }
 
-    async def audit_nodejs_service(self, service_path: Path) -> Dict[str, Any]:
+    async def audit_nodejs_service(self, service_path: Path) -> dict[str, Any]:
         """Audit a Node.js service for vulnerabilities"""
         service_name = service_path.name
         logger.info("Auditing Node.js service: %s", service_name)
@@ -115,7 +116,7 @@ class SecurityManager:
                 "status": "error",
             }
 
-    async def audit_python_service(self, service_path: Path) -> Dict[str, Any]:
+    async def audit_python_service(self, service_path: Path) -> dict[str, Any]:
         """Audit a Python service for vulnerabilities"""
         service_name = service_path.name
         logger.info("Auditing Python service: %s", service_name)
@@ -178,7 +179,7 @@ class SecurityManager:
                 "status": "error",
             }
 
-    async def scan_docker_images(self) -> Dict[str, Any]:
+    async def scan_docker_images(self) -> dict[str, Any]:
         """Scan Docker images for vulnerabilities"""
         logger.info("Scanning Docker images")
 
@@ -327,7 +328,7 @@ class SecurityManager:
 
         return "\\n".join(report)
 
-    async def run_full_audit(self, fix_issues: bool = False) -> Dict[str, Any]:
+    async def run_full_audit(self, fix_issues: bool = False) -> dict[str, Any]:
         """Run a comprehensive security audit"""
         logger.info("Starting comprehensive security audit")
 

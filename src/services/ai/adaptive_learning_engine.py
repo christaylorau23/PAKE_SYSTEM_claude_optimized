@@ -52,10 +52,10 @@ class UserInteraction:
     interaction_type: UserBehaviorType
     content_id: str | None = None
     content_category: str | None = None
-    content_topics: List[str] = field(default_factory=list)
+    content_topics: list[str] = field(default_factory=list)
     interaction_score: float = 1.0  # Positive/negative weight
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
-    context_metadata: Dict[str, Any] = field(default_factory=dict)
+    context_metadata: dict[str, Any] = field(default_factory=dict)
     session_id: str | None = None
 
 
@@ -70,7 +70,7 @@ class UserProfile:
     time_preferences: dict[str, float] = field(
         default_factory=dict,
     )  # Hour of day patterns
-    interaction_patterns: Dict[str, Any] = field(default_factory=dict)
+    interaction_patterns: dict[str, Any] = field(default_factory=dict)
     learning_confidence: LearningConfidence = LearningConfidence.LOW
     last_updated: datetime = field(default_factory=lambda: datetime.now(UTC))
     total_interactions: int = 0
@@ -82,7 +82,7 @@ class RecommendationRequest:
 
     user_id: str
     context: str | None = None
-    content_types: List[str] = field(default_factory=list)
+    content_types: list[str] = field(default_factory=list)
     max_recommendations: int = 10
     diversity_factor: float = 0.3  # Balance between relevance and diversity
     exclude_seen: bool = True
@@ -98,9 +98,9 @@ class Recommendation:
     content_id: str
     relevance_score: float
     confidence: LearningConfidence
-    reasoning: List[str] = field(default_factory=list)
+    reasoning: list[str] = field(default_factory=list)
     recommendation_type: str = "personalized"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -143,7 +143,7 @@ class CollaborativeFilter:
         self.user_similarities: dict[str, dict[str, float]] = {}
         self.content_user_matrix: dict[str, set[str]] = defaultdict(set)
 
-    def update_user_interactions(self, interactions: List[UserInteraction]) -> None:
+    def update_user_interactions(self, interactions: list[UserInteraction]) -> None:
         """Update the collaborative filtering model with new interactions."""
         for interaction in interactions:
             if interaction.content_id:
@@ -216,7 +216,9 @@ class ContentBasedFilter:
             "quality_score": 0.2,
         }
 
-    def update_content_features(self, content_id: str, features: Dict[str, Any]) -> None:
+    def update_content_features(
+        self, content_id: str, features: dict[str, Any]
+    ) -> None:
         """Update content feature representation."""
         self.content_features[content_id] = {}
 
@@ -671,7 +673,7 @@ class AdaptiveLearningEngine:
         """Get current user profile."""
         return self.user_profiles.get(user_id)
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get learning engine metrics."""
         return {
             **self.metrics,

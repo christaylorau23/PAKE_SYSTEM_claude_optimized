@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 #!/usr/bin/env python3
 """PAKE+ Distributed Caching with Redis Cluster
@@ -442,7 +443,7 @@ class DistributedCache:
 
         return await self._execute_operation("delete", operation)
 
-    async def get_many(self, keys: List[str]) -> Dict[str, Any]:
+    async def get_many(self, keys: list[str]) -> dict[str, Any]:
         """Get multiple values from cache."""
 
         async def operation() -> None:
@@ -450,7 +451,7 @@ class DistributedCache:
             values = await self._client.mget(formatted_keys)
 
             result = {}
-            for i, (original_key, value) in enumerate(zip(keys, values, strict=False)):
+            for _i, (original_key, value) in enumerate(zip(keys, values, strict=False)):
                 if value is not None:
                     result[original_key] = self._deserialize_value(value)
                     self.stats.hits += 1
@@ -465,7 +466,7 @@ class DistributedCache:
 
         return await self._execute_operation("get_many", operation)
 
-    async def set_many(self, data: Dict[str, Any], ttl: int | None = None) -> bool:
+    async def set_many(self, data: dict[str, Any], ttl: int | None = None) -> bool:
         """Set multiple values in cache."""
 
         async def operation() -> None:
@@ -539,7 +540,7 @@ class DistributedCache:
 
         return await self._execute_operation("clear_pattern", operation)
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
             "cache_stats": {
@@ -607,7 +608,9 @@ class CacheManager:
 
 
 # Decorators for automatic caching
-def cached(cache_name: str = "default", cache_key: str = "func", ttl: int = 3600) -> Callable:
+def cached(
+    cache_name: str = "default", cache_key: str = "func", ttl: int = 3600
+) -> Callable:
     """Decorator for automatic function result caching."""
 
     def decorator(func: Callable) -> Callable:
